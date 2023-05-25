@@ -1,0 +1,43 @@
+{
+  "app": {
+    "checkForUpdates": true,
+    "shutdown": {
+      "stopGracePeriod": "5m",
+      "log": {
+        "enabled": true,
+        "filePath": "shutdown.log"
+      }
+    }
+  },
+  "logger": {
+    "level": "info",
+    "disableCaller": true,
+    "disableStacktrace": false,
+    "stacktraceLevel": "panic",
+    "encoding": "console",
+    "outputPaths": [
+      "stdout"
+    ],
+    "disableEvents": true
+  },
+  "inx": {
+    "address": "localhost:9029",
+    "maxConnectionAttempts": 30,
+    "targetNetworkName": ""
+  },
+  "participation": {
+    "db": {
+      "engine": "rocksdb",
+      "path": "database"
+    }
+  },
+  "restAPI": {
+    "bindAddress": "localhost:9892",
+    "advertiseAddress": "",
+    "debugRequestLoggerEnabled": false
+  },
+  "profiling": {
+    "enabled": false,
+    "bindAddress": "localhost:6060"
+  }
+}
