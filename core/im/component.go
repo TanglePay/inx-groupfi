@@ -62,12 +62,13 @@ func provide(c *dig.Container) error {
 		if err != nil {
 			CoreComponent.LogErrorAndExit(err)
 		}
-		isCorrupted, err := imStore.Has([]byte("dbCorrupted"))
+		hstore, _ := imStore.WithRealm([]byte{im.StorePrefixHealth})
+		isCorrupted, err := hstore.Has([]byte("dbCorrupted"))
 		CoreComponent.LogInfo("dbCorrupted:", isCorrupted)
 		if err != nil {
 			CoreComponent.LogErrorAndExit(err)
 		}
-		pm, err := im.NewManager(
+		im, err := im.NewManager(
 			CoreComponent.Daemon().ContextStopped(),
 			imStore,
 			deps.NodeBridge.ProtocolParameters,
@@ -79,7 +80,7 @@ func provide(c *dig.Container) error {
 		}
 		CoreComponent.LogInfof("Initialized ImManager at milestone %d", pm.LedgerIndex())
 
-		return pm
+		return im
 	})
 }
 
