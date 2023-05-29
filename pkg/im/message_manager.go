@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	StorePrefixHealth byte = 255
+	StorePrefixHealth byte = 253
 )
 
 var (
