@@ -25,7 +25,7 @@
     "maxConnectionAttempts": 30,
     "targetNetworkName": ""
   },
-  "participation": {
+  "im": {
     "db": {
       "engine": "rocksdb",
       "path": "database"

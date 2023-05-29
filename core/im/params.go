@@ -30,8 +30,8 @@ var ParamsRestAPI = &ParametersRestAPI{}
 
 var params = &app.ComponentParams{
 	Params: map[string]any{
-		"participation": ParamsIM,
-		"restAPI":       ParamsRestAPI,
+		"im":      ParamsIM,
+		"restAPI": ParamsRestAPI,
 	},
 	Masked: nil,
 }
