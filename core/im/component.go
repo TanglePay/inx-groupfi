@@ -78,7 +78,7 @@ func provide(c *dig.Container) error {
 		if err != nil {
 			CoreComponent.LogErrorAndExit(err)
 		}
-		CoreComponent.LogInfof("Initialized ImManager at milestone %d", pm.LedgerIndex())
+		CoreComponent.LogInfof("Initialized ImManager at milestone %d", im.LedgerIndex())
 
 		return im
 	})
