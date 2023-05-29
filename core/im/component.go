@@ -57,7 +57,7 @@ func provide(c *dig.Container) error {
 		if err != nil {
 			CoreComponent.LogErrorAndExit(err)
 		}
-
+		CoreComponent.LogDebug("ParamsIM.Database.Path:", ParamsIM.Database.Path)
 		imStore, err := hornetdb.StoreWithDefaultSettings(ParamsIM.Database.Path, true, dbEngine)
 		if err != nil {
 			CoreComponent.LogErrorAndExit(err)
