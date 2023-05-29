@@ -62,7 +62,11 @@ func provide(c *dig.Container) error {
 		if err != nil {
 			CoreComponent.LogErrorAndExit(err)
 		}
-
+		isCorrupted, err := imStore.Has([]byte("dbCorrupted"))
+		CoreComponent.LogInfo("dbCorrupted:", isCorrupted)
+		if err != nil {
+			CoreComponent.LogErrorAndExit(err)
+		}
 		pm, err := im.NewManager(
 			CoreComponent.Daemon().ContextStopped(),
 			imStore,
