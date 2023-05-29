@@ -1,4 +1,4 @@
-module github.com/iotaledger/inx-participation
+module github.com/TanglePay/inx-iotacat
 
 go 1.19
 

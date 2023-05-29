@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/iotaledger/inx-participation/core/app"
+	"github.com/TanglePay/inx-iotacat/core/app"
 )
 
 func main() {

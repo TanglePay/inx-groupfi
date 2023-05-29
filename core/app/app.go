@@ -1,19 +1,19 @@
 package app
 
 import (
+	"github.com/TanglePay/inx-iotacat/core/im"
 	"github.com/iotaledger/hive.go/core/app"
 	"github.com/iotaledger/hive.go/core/app/core/shutdown"
 	"github.com/iotaledger/hive.go/core/app/plugins/profiling"
 	"github.com/iotaledger/inx-app/core/inx"
-	"github.com/iotaledger/inx-participation/core/participation"
 )
 
 var (
 	// Name of the app.
-	Name = "inx-participation"
+	Name = "inx-iotacat"
 
 	// Version of the app.
-	Version = "1.0.0-rc.3"
+	Version = "0.0.1"
 )
 
 func App() *app.App {
@@ -21,7 +21,7 @@ func App() *app.App {
 		app.WithInitComponent(InitComponent),
 		app.WithCoreComponents([]*app.CoreComponent{
 			inx.CoreComponent,
-			participation.CoreComponent,
+			im.CoreComponent,
 			shutdown.CoreComponent,
 		}...),
 		app.WithPlugins([]*app.Plugin{
