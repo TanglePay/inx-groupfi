@@ -91,7 +91,7 @@ func NewManager(
 	if err != nil {
 		return nil, err
 	}
-
+	healthTracker.MarkHealthy()
 	manager := &Manager{
 		ctx:                    ctx,
 		protocolParametersFunc: protocolParametersProvider,
