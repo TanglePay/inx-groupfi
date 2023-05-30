@@ -146,30 +146,9 @@ func run() error {
 			}
 		}()
 
-		ctxRegister, cancelRegister := context.WithTimeout(ctx, 5*time.Second)
-
-		advertisedAddress := ParamsRestAPI.BindAddress
-		if ParamsRestAPI.AdvertiseAddress != "" {
-			advertisedAddress = ParamsRestAPI.AdvertiseAddress
-		}
-
-		if err := deps.NodeBridge.RegisterAPIRoute(ctxRegister, APIRoute, advertisedAddress); err != nil {
-			CoreComponent.LogErrorfAndExit("Registering INX api route failed: %s", err)
-		}
-
-		cancelRegister()
-
 		CoreComponent.LogInfo("Starting API server ... done")
 		<-ctx.Done()
 		CoreComponent.LogInfo("Stopping API ...")
-
-		ctxUnregister, cancelUnregister := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancelUnregister()
-
-		//nolint:contextcheck // false positive
-		if err := deps.NodeBridge.UnregisterAPIRoute(ctxUnregister, APIRoute); err != nil {
-			CoreComponent.LogWarnf("Unregistering INX api route failed: %s", err)
-		}
 
 		shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer shutdownCtxCancel()
