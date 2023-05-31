@@ -64,7 +64,9 @@ func messageKeyFromGroupIdMileStoneAndOutputId(groupId []byte, mileStoneIndex ui
 
 	timeSuffix := maxUint32 - mileStoneIndex
 	index := 0
-	key := make([]byte, GroupIdLen+4+OutputIdLen) // 4 bytes for uint32
+	key := make([]byte, 1+GroupIdLen+4+OutputIdLen) // 4 bytes for uint32
+	key[index] = ImStoreKeyPrefixMessage
+	index++
 	copy(key[index:], groupId)
 	index += GroupIdLen
 	binary.BigEndian.PutUint32(key[index:], timeSuffix)
@@ -75,9 +77,13 @@ func messageKeyFromGroupIdMileStoneAndOutputId(groupId []byte, mileStoneIndex ui
 
 func messageKeyPrefixFromGroupIdAndMileStone(groupId []byte, mileStoneIndex uint32) []byte {
 	timeSuffix := maxUint32 - mileStoneIndex
-	key := make([]byte, GroupIdLen+4) // 4 bytes for uint64
-	copy(key, groupId)
-	binary.BigEndian.PutUint32(key[GroupIdLen:], timeSuffix)
+	index := 0
+	key := make([]byte, 1+GroupIdLen+4) // 4 bytes for uint64
+	key[index] = ImStoreKeyPrefixMessage
+	index++
+	copy(key[index:], groupId)
+	index += GroupIdLen
+	binary.BigEndian.PutUint32(key[index:], timeSuffix)
 	return key
 }
 
@@ -110,7 +116,7 @@ func (im *Manager) readMessageAfterToken(groupId []byte, token uint32, size int)
 	res := make([]*Message, size)
 	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		res = append(res, &Message{
-			OutputId:           key[GroupIdLen:],
+			OutputId:           key[(1 + GroupIdLen + 4):],
 			MileStoneTimestamp: binary.BigEndian.Uint32(value),
 		})
 		ct++

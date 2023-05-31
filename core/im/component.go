@@ -57,14 +57,10 @@ func provide(c *dig.Container) error {
 		if err != nil {
 			CoreComponent.LogErrorAndExit(err)
 		}
-		CoreComponent.LogInfo("ParamsIM.Database.Path:", ParamsIM.Database.Path)
 		imStore, err := hornetdb.StoreWithDefaultSettings(ParamsIM.Database.Path, true, dbEngine)
 		if err != nil {
 			CoreComponent.LogErrorAndExit(err)
 		}
-		hstore, _ := imStore.WithRealm([]byte{im.StorePrefixHealth})
-		isCorrupted, err := hstore.Has([]byte("dbCorrupted"))
-		CoreComponent.LogInfo("dbCorrupted:", isCorrupted)
 		if err != nil {
 			CoreComponent.LogErrorAndExit(err)
 		}
