@@ -107,13 +107,13 @@ func run() error {
 		}
 
 		if err := LedgerUpdates(ctx, startIndex, 0, func(index iotago.MilestoneIndex, created []*im.Message) error {
-			timeStart := time.Now()
+			//timeStart := time.Now()
 			if err := deps.IMManager.ApplyNewLedgerUpdate(index, created); err != nil {
 				CoreComponent.LogErrorfAndExit("ApplyNewLedgerUpdate failed: %s", err)
 
 				return err
 			}
-			CoreComponent.LogInfof("Applying milestone %d with %d new outputs took %s", index, len(created), time.Since(timeStart).Truncate(time.Millisecond))
+			// CoreComponent.LogInfof("Applying milestone %d with %d new outputs took %s", index, len(created), time.Since(timeStart).Truncate(time.Millisecond))
 
 			return nil
 		}); err != nil {
