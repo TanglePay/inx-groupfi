@@ -30,6 +30,9 @@ func messageFromINXOutput(output *inx.LedgerOutput) *im.Message {
 		return nil
 	}
 	tagPayload := tag.Tag
+	tagString := string(tagPayload)
+
+	CoreComponent.LogInfof("Found output with id: %s and tag: %s", output.OutputId.Id, tagString)
 	metaPayload := meta.Data
 	if !bytes.Equal(tagPayload, iotacatTag) {
 		return nil
