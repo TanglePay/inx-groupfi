@@ -108,7 +108,7 @@ func run() error {
 
 		if err := LedgerUpdates(ctx, startIndex, 0, func(index iotago.MilestoneIndex, created []*im.Message) error {
 			//timeStart := time.Now()
-			if err := deps.IMManager.ApplyNewLedgerUpdate(index, created); err != nil {
+			if err := deps.IMManager.ApplyNewLedgerUpdate(index, created, CoreComponent.Logger()); err != nil {
 				CoreComponent.LogErrorfAndExit("ApplyNewLedgerUpdate failed: %s", err)
 
 				return err

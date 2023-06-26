@@ -38,7 +38,6 @@ func messageFromINXOutput(output *inx.LedgerOutput) *im.Message {
 	if !bytes.Equal(tagPayload, iotacatTag) {
 		return nil
 	}
-	CoreComponent.LogInfof("Found IOTACAT output: %s", iotago.EncodeHex(output.OutputId.Id))
 	// groupid is first xxx bytes of meta feature
 	groupId := metaPayload[im.GroupIdLen:]
 	outputId := output.OutputId.Id
