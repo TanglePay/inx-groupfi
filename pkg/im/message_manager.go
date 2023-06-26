@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	Core "github.com/TanglePay/inx-iotacat/core/im"
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/syncutils"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -176,6 +177,10 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, created []*
 
 	if err := im.storeLedgerIndex(index); err != nil {
 		return err
+	}
+	if created != nil && len(created) > 0 {
+		msg := created[0]
+		Core.CoreComponent.LogInfof("store new message: groupId:%s, outputId:%s, milestoneindex:%d, milestonetimestamp:%d", msg.GetGroupIdStr(), msg.GetOutputIdStr(), msg.MileStoneIndex, msg.MileStoneTimestamp)
 	}
 	if err := im.storeNewMessages(created); err != nil {
 		return err

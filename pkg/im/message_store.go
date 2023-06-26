@@ -7,7 +7,6 @@ import (
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/marshalutil"
-
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 

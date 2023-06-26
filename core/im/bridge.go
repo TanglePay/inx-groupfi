@@ -18,13 +18,9 @@ func messageFromINXOutput(output *inx.LedgerOutput) *im.Message {
 	if err != nil {
 		return nil
 	}
-	jsonBytes, err := iotaOutput.MarshalJSON()
 	if err != nil {
 		return nil
 	}
-	jsonString := string(jsonBytes)
-	CoreComponent.LogInfof("Found output %s", jsonString)
-	CoreComponent.LogInfof("Found output with block id: %s,output id:%s", iotago.EncodeHex(output.BlockId.Id), iotago.EncodeHex(output.OutputId.Id))
 	// Ignore anything other than BasicOutputs
 	if iotaOutput.Type() != iotago.OutputBasic {
 		return nil
@@ -37,14 +33,12 @@ func messageFromINXOutput(output *inx.LedgerOutput) *im.Message {
 		return nil
 	}
 	tagPayload := tag.Tag
-	tagString := string(tagPayload)
 
-	CoreComponent.LogInfof("Found output with id: %s and tag: %s", output.OutputId.Id, tagString)
 	metaPayload := meta.Data
 	if !bytes.Equal(tagPayload, iotacatTag) {
 		return nil
 	}
-	CoreComponent.LogInfof("Found IOTACAT output: %s", output.OutputId.Id)
+	CoreComponent.LogInfof("Found IOTACAT output: %s", iotago.EncodeHex(output.OutputId.Id))
 	// groupid is first xxx bytes of meta feature
 	groupId := metaPayload[im.GroupIdLen:]
 	outputId := output.OutputId.Id

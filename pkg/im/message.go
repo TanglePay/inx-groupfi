@@ -1,5 +1,7 @@
 package im
 
+import iotago "github.com/iotaledger/iota.go/v3"
+
 type Message struct {
 	// group id
 	GroupId []byte
@@ -18,6 +20,13 @@ func NewMessage(groupId []byte, outputId []byte, mileStoneIndex uint32, mileSton
 		MileStoneIndex:     mileStoneIndex,
 		MileStoneTimestamp: mileStoneTimestamp,
 	}
+}
+
+func (m *Message) GetGroupIdStr() string {
+	return iotago.EncodeHex(m.GroupId)
+}
+func (m *Message) GetOutputIdStr() string {
+	return iotago.EncodeHex(m.OutputId)
 }
 
 const GroupIdLen = 10
