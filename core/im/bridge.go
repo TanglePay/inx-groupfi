@@ -23,7 +23,8 @@ func messageFromINXOutput(output *inx.LedgerOutput) *im.Message {
 		return nil
 	}
 	jsonString := string(jsonBytes)
-	CoreComponent.LogInfof("Found output", jsonString, iotago.EncodeHex(output.BlockId.Id), iotago.EncodeHex(output.OutputId.Id))
+	CoreComponent.LogInfof("Found output %s", jsonString)
+	CoreComponent.LogInfof("Found output with block id: %s,output id:%s", iotago.EncodeHex(output.BlockId.Id), iotago.EncodeHex(output.OutputId.Id))
 	// Ignore anything other than BasicOutputs
 	if iotaOutput.Type() != iotago.OutputBasic {
 		return nil
