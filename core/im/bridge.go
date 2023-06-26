@@ -18,6 +18,12 @@ func messageFromINXOutput(output *inx.LedgerOutput) *im.Message {
 	if err != nil {
 		return nil
 	}
+	jsonBytes, err := iotaOutput.MarshalJSON()
+	if err != nil {
+		return nil
+	}
+	jsonString := string(jsonBytes)
+	CoreComponent.LogInfof("Found output", jsonString)
 	// Ignore anything other than BasicOutputs
 	if iotaOutput.Type() != iotago.OutputBasic {
 		return nil
