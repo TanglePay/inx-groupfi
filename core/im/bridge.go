@@ -39,7 +39,7 @@ func messageFromINXOutput(output *inx.LedgerOutput) *im.Message {
 		return nil
 	}
 	// groupid is first xxx bytes of meta feature
-	groupId := metaPayload[im.GroupIdLen:]
+	groupId := metaPayload[:im.GroupIdLen]
 	outputId := output.OutputId.Id
 	CoreComponent.LogInfof("Found IOTACAT output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d",
 		len(metaPayload),
