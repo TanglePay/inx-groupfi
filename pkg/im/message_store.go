@@ -112,7 +112,7 @@ func (im *Manager) storeNewMessages(messages []*Message) error {
 func (im *Manager) readMessageAfterToken(groupId []byte, token uint32, size int) ([]*Message, error) {
 	keyPrefix := messageKeyPrefixFromGroupIdAndMileStone(groupId, token)
 	ct := 0
-	res := make([]*Message, size)
+	var res []*Message
 	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		res = append(res, &Message{
 			OutputId:           key[(1 + GroupIdLen + 4):],
