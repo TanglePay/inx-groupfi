@@ -29,5 +29,5 @@ func (m *Message) GetOutputIdStr() string {
 	return iotago.EncodeHex(m.OutputId)
 }
 
-const GroupIdLen = 10
+const GroupIdLen = 32
 const OutputIdLen = 34
