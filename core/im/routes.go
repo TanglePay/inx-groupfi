@@ -9,7 +9,7 @@ import (
 )
 
 const (
-	APIRoute = "im/v1"
+	APIRoute = "iotacatim/v1"
 
 	// RouteIMMessages is the route to get a slice of messages belong to the given groupID, get first size of messages, start from token
 	RouteIMMessages = "/messages"
