@@ -4,6 +4,7 @@ import (
 	"strconv"
 
 	"github.com/TanglePay/inx-iotacat/pkg/im"
+	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"
 )
@@ -25,7 +26,10 @@ func parseGroupIdQueryParam(c echo.Context) ([]byte, error) {
 	if len(groupIdParams) == 0 {
 		return nil, echo.ErrBadRequest
 	}
-	groupId := []byte(groupIdParams[0])
+	groupId, err := iotago.DecodeHex(groupIdParams[0])
+	if err != nil {
+		return nil, err
+	}
 	if len(groupId) != im.GroupIdLen {
 		return nil, errors.Errorf("invalid groupId length: %d", len(groupId))
 	}
