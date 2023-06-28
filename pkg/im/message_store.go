@@ -125,6 +125,46 @@ func (im *Manager) GetSingleMessage2(groupID []byte, mileStoneIndex uint32, outp
 	logger.Infof("get message with key %s, value %s", keyHex, valueHex)
 	return value, nil
 }
+func (im *Manager) GetMessageList1(key []byte, logger *logger.Logger) ([]*Message, error) {
+	size := 10
+	ct := 0
+	var res []*Message
+	err := im.imStore.Iterate(key, func(key kvstore.Key, value kvstore.Value) bool {
+		res = append(res, &Message{
+			OutputId:           key[(1 + GroupIdLen + 4):],
+			MileStoneTimestamp: binary.BigEndian.Uint32(value),
+		})
+		ct++
+		return ct >= size
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+func (im *Manager) GetMessageList2(groupID []byte, mileStoneIndex uint32, outputId []byte, logger *logger.Logger) ([]*Message, error) {
+	key := messageKeyFromGroupIdMileStoneAndOutputId(
+		groupID,
+		mileStoneIndex,
+		outputId)
+	size := 10
+	ct := 0
+	var res []*Message
+	err := im.imStore.Iterate(key, func(key kvstore.Key, value kvstore.Value) bool {
+		res = append(res, &Message{
+			OutputId:           key[(1 + GroupIdLen + 4):],
+			MileStoneTimestamp: binary.BigEndian.Uint32(value),
+		})
+		ct++
+		return ct >= size
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
 func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger) error {
 
 	for _, message := range messages {
