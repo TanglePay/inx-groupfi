@@ -111,6 +111,20 @@ func (im *Manager) GetSingleMessage(key []byte, logger *logger.Logger) ([]byte, 
 	logger.Infof("get message with key %s, value %s", keyHex, valueHex)
 	return value, nil
 }
+func (im *Manager) GetSingleMessage2(groupID []byte, mileStoneIndex uint32, outputId []byte, logger *logger.Logger) ([]byte, error) {
+	key := messageKeyFromGroupIdMileStoneAndOutputId(
+		groupID,
+		mileStoneIndex,
+		outputId)
+	value, err := im.imStore.Get(key)
+	if err != nil {
+		return nil, err
+	}
+	keyHex := iotago.EncodeHex(key)
+	valueHex := iotago.EncodeHex(value)
+	logger.Infof("get message with key %s, value %s", keyHex, valueHex)
+	return value, nil
+}
 func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger) error {
 
 	for _, message := range messages {
