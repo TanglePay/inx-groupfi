@@ -96,13 +96,21 @@ func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) e
 	timePayload := make([]byte, 4)
 	binary.BigEndian.PutUint32(timePayload, message.MileStoneTimestamp)
 	seterr := im.imStore.Set(key, timePayload)
+	if seterr != nil {
+		logger.Errorf("storeSingleMessage SetErr: %v", seterr)
+	}
+	flushErr := im.imStore.Flush()
+	if flushErr != nil {
+		logger.Errorf("storeSingleMessage FlushErr: %v", flushErr)
+	}
+	record, getErr := im.imStore.Get(key)
 
-	record, err := im.imStore.Get(key)
-
-	if err == nil {
+	if getErr == nil {
 		// compare if the record is the same as the one we just stored
 		isEqual := bytes.Equal(record, timePayload)
-		logger.Infof("storeSingleMessage: %v, %v, %v", key, record, isEqual)
+		logger.Infof("storeSingleMessage: %v", isEqual)
+	} else {
+		logger.Errorf("storeSingleMessage GetErr: %v", getErr)
 	}
 	return seterr
 }
