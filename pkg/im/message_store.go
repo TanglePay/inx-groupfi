@@ -1,11 +1,13 @@
 package im
 
 import (
+	"bytes"
 	"encoding/binary"
 
 	"github.com/pkg/errors"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/core/marshalutil"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -86,27 +88,33 @@ func messageKeyPrefixFromGroupIdAndMileStone(groupId []byte, mileStoneIndex uint
 	return key
 }
 
-func storeSingleMessage(message *Message, mutation kvstore.BatchedMutations) error {
+func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) error {
 	key := messageKeyFromGroupIdMileStoneAndOutputId(
 		message.GroupId,
 		message.MileStoneIndex,
 		message.OutputId)
 	timePayload := make([]byte, 4)
 	binary.BigEndian.PutUint32(timePayload, message.MileStoneTimestamp)
-	return mutation.Set(key, timePayload)
+	seterr := im.imStore.Set(key, timePayload)
+
+	record, err := im.imStore.Get(key)
+
+	if err == nil {
+		// compare if the record is the same as the one we just stored
+		isEqual := bytes.Equal(record, timePayload)
+		logger.Infof("storeSingleMessage: %v, %v, %v", key, record, isEqual)
+	}
+	return seterr
 }
 
-func (im *Manager) storeNewMessages(messages []*Message) error {
-	mutations, err := im.imStore.Batched()
-	if err != nil {
-		return err
-	}
+func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger) error {
+
 	for _, message := range messages {
-		if err := storeSingleMessage(message, mutations); err != nil {
+		if err := im.storeSingleMessage(message, logger); err != nil {
 			return err
 		}
 	}
-	return mutations.Commit()
+	return nil
 }
 
 func (im *Manager) readMessageAfterToken(groupId []byte, token uint32, size int) ([]*Message, error) {

@@ -182,7 +182,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, created []*
 		msg := created[0]
 		logger.Infof("store new message: groupId:%s, outputId:%s, milestoneindex:%d, milestonetimestamp:%d", msg.GetGroupIdStr(), msg.GetOutputIdStr(), msg.MileStoneIndex, msg.MileStoneTimestamp)
 	}
-	if err := im.storeNewMessages(created); err != nil {
+	if err := im.storeNewMessages(created,logger); err != nil {
 		return err
 	}
 	return nil
