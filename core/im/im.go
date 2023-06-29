@@ -74,13 +74,13 @@ func getMesssages(c echo.Context) (*MessagesResponse, error) {
 	CoreComponent.LogInfof("get messages,groupId:%s,token:%d,size:%d,found messages:%d", iotago.EncodeHex(groupId), token, size, len(messages))
 
 	messageResponseArr := make([]*MessageResponse, len(messages))
-	var continuationToken uint32
+	var continuationToken string
 	for i, message := range messages {
 		messageResponseArr[i] = &MessageResponse{
 			OutputId:  iotago.EncodeHex(message.OutputId),
 			Timestamp: message.MileStoneTimestamp,
 		}
-		continuationToken = message.MileStoneIndex
+		continuationToken = iotago.EncodeHex(message.Token)
 	}
 	return &MessagesResponse{
 		Messages: messageResponseArr,
