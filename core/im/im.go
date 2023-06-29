@@ -66,7 +66,8 @@ func getMesssages(c echo.Context) (*MessagesResponse, error) {
 	}
 
 	CoreComponent.LogInfof("get messages,groupId:%s,token:%d,size:%d", iotago.EncodeHex(groupId), token, size)
-	messages, err := deps.IMManager.ReadMessageFromPrefix(groupId, size, token)
+	keyPrefix := deps.IMManager.MessageKeyFromGroupId(groupId)
+	messages, err := deps.IMManager.ReadMessageFromPrefix(keyPrefix, size, token)
 	if err != nil {
 		return nil, err
 	}
