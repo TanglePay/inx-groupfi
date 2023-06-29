@@ -126,7 +126,7 @@ func (im *Manager) LogAllData(logger *logger.Logger) error {
 		keyHex := iotago.EncodeHex(key)
 		valueHex := iotago.EncodeHex(value)
 		logger.Infof("key %s, value %s", keyHex, valueHex)
-		return false
+		return true
 	})
 	if err != nil {
 		return err
@@ -140,7 +140,7 @@ func (im *Manager) ReadMessageFromPrefix(keyPrefix []byte, size int, skip int) (
 
 		if skip > 0 {
 			skip--
-			return false
+			return true
 		}
 		res = append(res, &Message{
 			OutputId:           value[4:],
@@ -148,7 +148,7 @@ func (im *Manager) ReadMessageFromPrefix(keyPrefix []byte, size int, skip int) (
 			MileStoneTimestamp: binary.BigEndian.Uint32(value[:4]),
 		})
 		ct++
-		return ct >= size
+		return ct < size
 	})
 	if err != nil {
 		return nil, err
