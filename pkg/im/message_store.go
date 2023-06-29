@@ -137,7 +137,7 @@ func (im *Manager) LogAllData(logger *logger.Logger) error {
 func (im *Manager) ReadMessageFromPrefix(keyPrefix []byte, size int, coninueationToken []byte) ([]*Message, error) {
 	ct := 0
 	var res []*Message
-	skiping := coninueationToken != nil
+	skiping := len(coninueationToken) > 0
 	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 
 		if skiping {
