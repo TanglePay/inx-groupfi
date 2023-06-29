@@ -122,7 +122,7 @@ func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger) 
 	return nil
 }
 func (im *Manager) LogAllData(logger *logger.Logger) error {
-	err := im.imStore.Iterate([]byte{ImStoreKeyPrefixMessage}, func(key kvstore.Key, value kvstore.Value) bool {
+	err := im.imStore.Iterate(kvstore.EmptyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		keyHex := iotago.EncodeHex(key)
 		valueHex := iotago.EncodeHex(value)
 		logger.Infof("key %s, value %s", keyHex, valueHex)
