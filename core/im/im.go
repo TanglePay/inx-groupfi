@@ -9,16 +9,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-func parseTokenQueryParam(c echo.Context) (uint32, error) {
+func parseTokenQueryParam(c echo.Context, groupId []byte) ([]byte, int, error) {
 	tokenParams := c.QueryParams()["token"]
 	if len(tokenParams) == 0 {
-		return 0, echo.ErrBadRequest
+		return deps.IMManager.MessageKeyFromGroupId(groupId), 0, echo.ErrBadRequest
 	}
-	token, err := strconv.ParseUint(tokenParams[0], 10, 32)
+	token, err := iotago.DecodeHex(tokenParams[0])
 	if err != nil {
-		return 0, err
+		return nil, 0, err
 	}
-	return uint32(token), nil
+	return token, 1, nil
 }
 
 func parseGroupIdQueryParam(c echo.Context) ([]byte, error) {
@@ -51,13 +51,11 @@ func parseSizeQueryParam(c echo.Context) (int, error) {
 }
 
 func getMesssages(c echo.Context) (*MessagesResponse, error) {
-
-	token, err := parseTokenQueryParam(c)
+	groupId, err := parseGroupIdQueryParam(c)
 	if err != nil {
 		return nil, err
 	}
-
-	groupId, err := parseGroupIdQueryParam(c)
+	token, skip, err := parseTokenQueryParam(c, groupId)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +66,7 @@ func getMesssages(c echo.Context) (*MessagesResponse, error) {
 	}
 
 	CoreComponent.LogInfof("get messages,groupId:%s,token:%d,size:%d", iotago.EncodeHex(groupId), token, size)
-	messages, err := deps.IMManager.GetMessages(groupId, token, size)
+	messages, err := deps.IMManager.ReadMessageFromPrefix(token, size, skip)
 	if err != nil {
 		return nil, err
 	}

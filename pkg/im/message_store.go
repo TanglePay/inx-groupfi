@@ -60,21 +60,30 @@ func (im *Manager) readLedgerIndex() (iotago.MilestoneIndex, error) {
 // Message
 const maxUint32 = ^uint32(0)
 
-func messageKeyFromGroupIdMileStoneAndOutputId(groupId []byte, mileStoneIndex uint32, outputId []byte) []byte {
-
+func messageKeyFromGroupIdMileStone(groupId []byte, mileStoneIndex uint32) []byte {
+	incrementer := GetIncrementer()
+	counter := maxUint32 - incrementer.Increment(mileStoneIndex)
 	timeSuffix := maxUint32 - mileStoneIndex
 	index := 0
-	key := make([]byte, 1+GroupIdLen+4+OutputIdLen) // 4 bytes for uint32
+	key := make([]byte, 1+GroupIdLen+4+4) // 4 bytes for uint32
 	key[index] = ImStoreKeyPrefixMessage
 	index++
 	copy(key[index:], groupId)
 	index += GroupIdLen
 	binary.BigEndian.PutUint32(key[index:], timeSuffix)
 	index += 4
-	copy(key[index:], outputId)
+	binary.BigEndian.PutUint32(key[index:], counter)
 	return key
 }
 
+func (im *Manager) MessageKeyFromGroupId(groupId []byte) []byte {
+	index := 0
+	key := make([]byte, 1+GroupIdLen)
+	key[index] = ImStoreKeyPrefixMessage
+	index++
+	copy(key[index:], groupId)
+	return key
+}
 func messageKeyPrefixFromGroupIdAndMileStone(groupId []byte, mileStoneIndex uint32) []byte {
 	timeSuffix := maxUint32 - mileStoneIndex
 	index := 0
@@ -88,83 +97,20 @@ func messageKeyPrefixFromGroupIdAndMileStone(groupId []byte, mileStoneIndex uint
 }
 
 func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) error {
-	key := messageKeyFromGroupIdMileStoneAndOutputId(
+	key := messageKeyFromGroupIdMileStone(
 		message.GroupId,
-		message.MileStoneIndex,
-		message.OutputId)
-	timePayload := make([]byte, 4)
-	binary.BigEndian.PutUint32(timePayload, message.MileStoneTimestamp)
-	err := im.imStore.Set(key, timePayload)
+		message.MileStoneIndex)
+	valuePayload := make([]byte, 4+OutputIdLen)
+	binary.BigEndian.PutUint32(valuePayload, message.MileStoneTimestamp)
+	copy(valuePayload[4:], message.OutputId)
+	err := im.imStore.Set(key, valuePayload)
 
 	keyHex := iotago.EncodeHex(key)
-	valueHex := iotago.EncodeHex(timePayload)
+	valueHex := iotago.EncodeHex(valuePayload)
 	logger.Infof("store message with key %s, value %s", keyHex, valueHex)
 	return err
 }
-func (im *Manager) GetSingleMessage(key []byte, logger *logger.Logger) ([]byte, error) {
-	value, err := im.imStore.Get(key)
-	if err != nil {
-		return nil, err
-	}
-	keyHex := iotago.EncodeHex(key)
-	valueHex := iotago.EncodeHex(value)
-	logger.Infof("get message with key %s, value %s", keyHex, valueHex)
-	return value, nil
-}
-func (im *Manager) GetSingleMessage2(groupID []byte, mileStoneIndex uint32, outputId []byte, logger *logger.Logger) ([]byte, error) {
-	key := messageKeyFromGroupIdMileStoneAndOutputId(
-		groupID,
-		mileStoneIndex,
-		outputId)
-	value, err := im.imStore.Get(key)
-	if err != nil {
-		return nil, err
-	}
-	keyHex := iotago.EncodeHex(key)
-	valueHex := iotago.EncodeHex(value)
-	logger.Infof("get message with key %s, value %s", keyHex, valueHex)
-	return value, nil
-}
-func (im *Manager) GetMessageList1(key []byte, logger *logger.Logger) ([]*Message, error) {
-	size := 10
-	ct := 0
-	var res []*Message
-	err := im.imStore.Iterate(key, func(key kvstore.Key, value kvstore.Value) bool {
-		res = append(res, &Message{
-			OutputId:           key[(1 + GroupIdLen + 4):],
-			MileStoneTimestamp: binary.BigEndian.Uint32(value),
-		})
-		ct++
-		return ct >= size
-	})
-	if err != nil {
-		return nil, err
-	}
 
-	return res, nil
-}
-func (im *Manager) GetMessageList2(groupID []byte, mileStoneIndex uint32, outputId []byte, logger *logger.Logger) ([]*Message, error) {
-	key := messageKeyFromGroupIdMileStoneAndOutputId(
-		groupID,
-		mileStoneIndex,
-		outputId)
-	size := 10
-	ct := 0
-	var res []*Message
-	err := im.imStore.Iterate(key, func(key kvstore.Key, value kvstore.Value) bool {
-		res = append(res, &Message{
-			OutputId:           key[(1 + GroupIdLen + 4):],
-			MileStoneTimestamp: binary.BigEndian.Uint32(value),
-		})
-		ct++
-		return ct >= size
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return res, nil
-}
 func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger) error {
 
 	for _, message := range messages {
@@ -176,14 +122,18 @@ func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger) 
 	return nil
 }
 
-func (im *Manager) readMessageAfterToken(groupId []byte, token uint32, size int) ([]*Message, error) {
-	keyPrefix := messageKeyPrefixFromGroupIdAndMileStone(groupId, token)
+func (im *Manager) ReadMessageFromPrefix(keyPrefix []byte, size int, skip int) ([]*Message, error) {
 	ct := 0
 	var res []*Message
 	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
+
+		if skip > 0 {
+			skip--
+			return false
+		}
 		res = append(res, &Message{
-			OutputId:           key[(1 + GroupIdLen + 4):],
-			MileStoneTimestamp: binary.BigEndian.Uint32(value),
+			OutputId:           value[4:],
+			MileStoneTimestamp: binary.BigEndian.Uint32(value[:4]),
 		})
 		ct++
 		return ct >= size
