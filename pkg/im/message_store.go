@@ -1,6 +1,7 @@
 package im
 
 import (
+	"bytes"
 	"encoding/binary"
 
 	"github.com/pkg/errors"
@@ -133,13 +134,16 @@ func (im *Manager) LogAllData(logger *logger.Logger) error {
 	}
 	return nil
 }
-func (im *Manager) ReadMessageFromPrefix(keyPrefix []byte, size int, skip int) ([]*Message, error) {
+func (im *Manager) ReadMessageFromPrefix(keyPrefix []byte, size int, coninueationToken []byte) ([]*Message, error) {
 	ct := 0
 	var res []*Message
+	skiping := coninueationToken != nil
 	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 
-		if skip > 0 {
-			skip--
+		if skiping {
+			if bytes.Equal(key, coninueationToken) {
+				skiping = false
+			}
 			return true
 		}
 		res = append(res, &Message{

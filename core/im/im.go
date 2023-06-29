@@ -9,16 +9,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-func parseTokenQueryParam(c echo.Context, groupId []byte) ([]byte, int, error) {
+func parseTokenQueryParam(c echo.Context) ([]byte, error) {
 	tokenParams := c.QueryParams()["token"]
 	if len(tokenParams) == 0 {
-		return deps.IMManager.MessageKeyFromGroupId(groupId), 0, nil
+		return nil, nil
 	}
 	token, err := iotago.DecodeHex(tokenParams[0])
 	if err != nil {
-		return nil, 0, err
+		return nil, err
 	}
-	return token, 1, nil
+	return token, nil
 }
 
 func parseGroupIdQueryParam(c echo.Context) ([]byte, error) {
@@ -55,7 +55,7 @@ func getMesssages(c echo.Context) (*MessagesResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	token, skip, err := parseTokenQueryParam(c, groupId)
+	token, err := parseTokenQueryParam(c)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +66,7 @@ func getMesssages(c echo.Context) (*MessagesResponse, error) {
 	}
 
 	CoreComponent.LogInfof("get messages,groupId:%s,token:%d,size:%d", iotago.EncodeHex(groupId), token, size)
-	messages, err := deps.IMManager.ReadMessageFromPrefix(token, size, skip)
+	messages, err := deps.IMManager.ReadMessageFromPrefix(groupId, size, token)
 	if err != nil {
 		return nil, err
 	}
