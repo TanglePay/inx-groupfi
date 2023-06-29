@@ -77,7 +77,7 @@ func getMesssages(c echo.Context) (*MessagesResponse, error) {
 	var continuationToken uint32
 	for i, message := range messages {
 		messageResponseArr[i] = &MessageResponse{
-			OutputId:  string(message.OutputId),
+			OutputId:  iotago.EncodeHex(message.OutputId),
 			Timestamp: message.MileStoneTimestamp,
 		}
 		continuationToken = message.MileStoneIndex

@@ -60,7 +60,7 @@ func (im *Manager) readLedgerIndex() (iotago.MilestoneIndex, error) {
 // Message
 const maxUint32 = ^uint32(0)
 
-func messageKeyFromGroupIdMileStone(groupId []byte, mileStoneIndex uint32) []byte {
+func (im *Manager) MessageKeyFromGroupIdMileStone(groupId []byte, mileStoneIndex uint32) []byte {
 	incrementer := GetIncrementer()
 	counter := maxUint32 - incrementer.Increment(mileStoneIndex)
 	timeSuffix := maxUint32 - mileStoneIndex
@@ -97,7 +97,7 @@ func messageKeyPrefixFromGroupIdAndMileStone(groupId []byte, mileStoneIndex uint
 }
 
 func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) error {
-	key := messageKeyFromGroupIdMileStone(
+	key := im.MessageKeyFromGroupIdMileStone(
 		message.GroupId,
 		message.MileStoneIndex)
 	valuePayload := make([]byte, 4+OutputIdLen)
@@ -133,6 +133,7 @@ func (im *Manager) ReadMessageFromPrefix(keyPrefix []byte, size int, skip int) (
 		}
 		res = append(res, &Message{
 			OutputId:           value[4:],
+			Token:              key,
 			MileStoneTimestamp: binary.BigEndian.Uint32(value[:4]),
 		})
 		ct++

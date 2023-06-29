@@ -8,6 +8,8 @@ type Message struct {
 	// OutputId of the Output that store message body payload
 	OutputId []byte
 
+	Token []byte
+
 	MileStoneIndex uint32
 
 	MileStoneTimestamp uint32
