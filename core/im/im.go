@@ -12,7 +12,7 @@ import (
 func parseTokenQueryParam(c echo.Context, groupId []byte) ([]byte, int, error) {
 	tokenParams := c.QueryParams()["token"]
 	if len(tokenParams) == 0 {
-		return deps.IMManager.MessageKeyFromGroupId(groupId), 0, echo.ErrBadRequest
+		return deps.IMManager.MessageKeyFromGroupId(groupId), 0, nil
 	}
 	token, err := iotago.DecodeHex(tokenParams[0])
 	if err != nil {
