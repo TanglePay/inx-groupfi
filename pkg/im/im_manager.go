@@ -170,19 +170,33 @@ func (im *Manager) LedgerIndex() iotago.MilestoneIndex {
 	return index
 }
 
-func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, created []*Message, logger *logger.Logger) error {
+func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMessage []*Message, createdNft []*NFT, createdShared []*Message, logger *logger.Logger) error {
 	// Lock the state to avoid anyone reading partial results while we apply the state
 	im.Lock()
 	defer im.Unlock()
-
+	defer im.imStore.Flush()
 	if err := im.storeLedgerIndex(index); err != nil {
 		return err
 	}
-	if len(created) > 0 {
-		msg := created[0]
+	if len(createdMessage) > 0 {
+		msg := createdMessage[0]
 		logger.Infof("store new message: groupId:%s, outputId:%s, milestoneindex:%d, milestonetimestamp:%d", msg.GetGroupIdStr(), msg.GetOutputIdStr(), msg.MileStoneIndex, msg.MileStoneTimestamp)
 	}
-	if err := im.storeNewMessages(created, logger); err != nil {
+	if err := im.storeNewMessages(createdMessage, logger); err != nil {
+		return err
+	}
+	if len(createdNft) > 0 {
+		nft := createdNft[0]
+		logger.Infof("store new nft: groupId:%s, subgroupId:%s, nftId:%s, milestoneindex:%d, milestonetimestamp:%d", nft.GetGroupIdStr(), nft.GetSubGroupIdStr(), nft.GetAddressStr(), nft.MileStoneIndex, nft.MileStoneTimestamp)
+	}
+	if err := im.storeNewNFTs(createdNft, logger); err != nil {
+		return err
+	}
+	if len(createdShared) > 0 {
+		shared := createdShared[0]
+		logger.Infof("store new shared: groupId:%s, outputId:%s, milestoneindex:%d, milestonetimestamp:%d", shared.GetGroupIdStr(), shared.GetOutputIdStr(), shared.MileStoneIndex, shared.MileStoneTimestamp)
+	}
+	if err := im.storeNewShareds(createdShared, logger); err != nil {
 		return err
 	}
 	return nil

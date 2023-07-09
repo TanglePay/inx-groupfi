@@ -106,9 +106,9 @@ func run() error {
 			startIndex++
 		}
 
-		if err := LedgerUpdates(ctx, startIndex, 0, func(index iotago.MilestoneIndex, created []*im.Message) error {
+		if err := LedgerUpdates(ctx, startIndex, 0, func(index iotago.MilestoneIndex, createdMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error {
 			//timeStart := time.Now()
-			if err := deps.IMManager.ApplyNewLedgerUpdate(index, created, CoreComponent.Logger()); err != nil {
+			if err := deps.IMManager.ApplyNewLedgerUpdate(index, createdMessage, createdNft, createdShared, CoreComponent.Logger()); err != nil {
 				CoreComponent.LogErrorfAndExit("ApplyNewLedgerUpdate failed: %s", err)
 
 				return err

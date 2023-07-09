@@ -119,7 +119,6 @@ func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger) 
 			return err
 		}
 	}
-	im.imStore.Flush()
 	return nil
 }
 func (im *Manager) LogAllData(logger *logger.Logger) error {
