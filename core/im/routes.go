@@ -38,7 +38,14 @@ func setupRoutes(e *echo.Echo) {
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	//
+	//shared
+	e.GET(RouteIMShared, func(c echo.Context) error {
+		resp, err := getSharedFromGroupId(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 
 	e.GET("/testlist2", func(c echo.Context) error {
 

@@ -113,4 +113,23 @@ func getNFTsFromGroupId(c echo.Context) ([]*NFTResponse, error) {
 	return nftResponseArr, nil
 }
 
-//
+// get shared from groupId
+func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get shared from group:%s", groupId)
+	shared, err := deps.IMManager.ReadSharedFromGroupId(groupId)
+	if err != nil {
+		return nil, err
+	}
+	if shared == nil {
+		return nil, nil
+	}
+	CoreComponent.LogInfof("get shared from groupId:%s,found shared:%d", groupId, len(shared))
+	resp := &SharedResponse{
+		OutputId: iotago.EncodeHex(shared.OutputId),
+	}
+	return resp, nil
+}

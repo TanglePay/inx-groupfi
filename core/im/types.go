@@ -13,3 +13,6 @@ type NFTResponse struct {
 	OwnerAddress string `json:"ownerAddress"`
 	NFTId        string `json:"nftId"`
 }
+type SharedResponse struct {
+	OutputId string `json:"outputId"`
+}
