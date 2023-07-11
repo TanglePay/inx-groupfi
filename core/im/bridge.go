@@ -136,7 +136,8 @@ func NodeStatus(ctx context.Context) (confirmedIndex iotago.MilestoneIndex, prun
 func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex, handler func(index iotago.MilestoneIndex, createdMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error) error {
 	return deps.NodeBridge.ListenToLedgerUpdates(ctx, startIndex, endIndex, func(update *nodebridge.LedgerUpdate) error {
 		index := update.MilestoneIndex
-
+		// log
+		CoreComponent.LogInfof("LedgerUpdate start:%d, end::%d, milestoneIndex:%d", startIndex, endIndex, index)
 		var createdMessage []*im.Message
 		var createdNft []*im.NFT
 		var createdShared []*im.Message
