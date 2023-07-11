@@ -102,6 +102,8 @@ func run() error {
 		CoreComponent.LogInfo("Starting LedgerUpdates ... done")
 
 		startIndex := deps.IMManager.LedgerIndex()
+		// log start index
+		CoreComponent.LogInfof("LedgerUpdates start index:%d", startIndex)
 		if startIndex > 0 {
 			startIndex++
 		}
