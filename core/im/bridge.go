@@ -36,6 +36,12 @@ func nftFromINXOutput(output *inx.LedgerOutput) *im.NFT {
 		return nil
 	}
 	issuerAddress := issuer.Address.Bech32(iotago.PrefixShimmer)
+	// log
+	CoreComponent.LogInfof("Found NFT output,issuer:%s，milestoneIndex:%d,milestoneTimestamp:%d",
+		issuerAddress,
+		output.MilestoneIndexBooked,
+		output.MilestoneTimestampBooked,
+	)
 
 	groupId := im.IssuerBech32AddressToGroupId(issuerAddress)
 	if groupId == nil {
@@ -67,7 +73,7 @@ func sharedOutputFromINXOutput(output *inx.LedgerOutput) *im.Message {
 	tagPayload := tag.Tag
 
 	metaPayload := meta.Data
-	if !bytes.Equal(tagPayload, iotacatTag) {
+	if !bytes.Equal(tagPayload, iotacatsharedTag) {
 		return nil
 	}
 	// groupid is first xxx bytes of meta feature
