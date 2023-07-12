@@ -133,7 +133,7 @@ func run() error {
 		if err != nil {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
-		nodeHTTPAPIClient := nodeclient.New("http://hornet:9092")
+		nodeHTTPAPIClient := nodeclient.New("http://hornet:14265")
 
 		// loop forever when start index - end index > 1
 		for endIndex-startIndex > 1 {
