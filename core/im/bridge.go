@@ -15,11 +15,15 @@ var iotacatTag = []byte("IOTACAT")
 
 var iotacatsharedTag = []byte("IOTACATSHARED")
 
-func nftFromINXOutput(output *inx.LedgerOutput) *im.NFT {
+func nftFromINXLedgerOutput(output *inx.LedgerOutput) *im.NFT {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil
 	}
+	return nftFromINXOutput(iotaOutput, output.OutputId.Id, output.MilestoneIndexBooked, output.MilestoneTimestampBooked)
+}
+func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint32, milestoneTimestamp uint32) *im.NFT {
+
 	if iotaOutput.Type() != iotago.OutputNFT {
 		return nil
 	}
@@ -39,8 +43,8 @@ func nftFromINXOutput(output *inx.LedgerOutput) *im.NFT {
 	// log
 	CoreComponent.LogInfof("Found NFT output,issuer:%s，milestoneIndex:%d,milestoneTimestamp:%d",
 		issuerAddress,
-		output.MilestoneIndexBooked,
-		output.MilestoneTimestampBooked,
+		milestone,
+		milestoneTimestamp,
 	)
 
 	groupId := im.IssuerBech32AddressToGroupId(issuerAddress)
@@ -50,14 +54,16 @@ func nftFromINXOutput(output *inx.LedgerOutput) *im.NFT {
 	unlockConditionSet := nftOutput.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
 	nftId := nftOutput.NFTID.ToHex()
-	return im.NewNFT(groupId, ownerAddress, nftId, output.MilestoneIndexBooked, output.MilestoneTimestampBooked)
+	return im.NewNFT(groupId, ownerAddress, nftId, milestone, milestoneTimestamp)
 }
-
-func sharedOutputFromINXOutput(output *inx.LedgerOutput) *im.Message {
+func sharedOutputFromINXLedgerOutput(output *inx.LedgerOutput) *im.Message {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil
 	}
+	return sharedOutputFromINXOutput(iotaOutput, output.OutputId.Id, output.MilestoneIndexBooked, output.MilestoneTimestampBooked)
+}
+func sharedOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint32, milestoneTimestamp uint32) *im.Message {
 
 	// Ignore anything other than BasicOutputs
 	if iotaOutput.Type() != iotago.OutputBasic {
@@ -78,23 +84,24 @@ func sharedOutputFromINXOutput(output *inx.LedgerOutput) *im.Message {
 	}
 	// groupid is first xxx bytes of meta feature
 	groupId := metaPayload[:im.GroupIdLen]
-	outputId := output.OutputId.Id
 	CoreComponent.LogInfof("Found IOTACATSHARED output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d",
 		len(metaPayload),
 		len(groupId),
 		iotago.EncodeHex(groupId),
 		iotago.EncodeHex(outputId),
-		output.MilestoneIndexBooked,
-		output.MilestoneTimestampBooked,
+		milestone,
+		milestoneTimestamp,
 	)
-	return im.NewMessage(groupId, outputId, output.MilestoneIndexBooked, output.MilestoneTimestampBooked)
+	return im.NewMessage(groupId, outputId, milestone, milestoneTimestamp)
 }
-
-func messageFromINXOutput(output *inx.LedgerOutput) *im.Message {
+func messageFromINXLedgerOutput(output *inx.LedgerOutput) *im.Message {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil
 	}
+	return messageFromINXOutput(iotaOutput, output.OutputId.Id, output.MilestoneIndexBooked, output.MilestoneTimestampBooked)
+}
+func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint32, milestoneTimestamp uint32) *im.Message {
 
 	// Ignore anything other than BasicOutputs
 	if iotaOutput.Type() != iotago.OutputBasic {
@@ -115,16 +122,15 @@ func messageFromINXOutput(output *inx.LedgerOutput) *im.Message {
 	}
 	// groupid is first xxx bytes of meta feature
 	groupId := metaPayload[:im.GroupIdLen]
-	outputId := output.OutputId.Id
 	CoreComponent.LogInfof("Found IOTACAT output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d",
 		len(metaPayload),
 		len(groupId),
 		iotago.EncodeHex(groupId),
 		iotago.EncodeHex(outputId),
-		output.MilestoneIndexBooked,
-		output.MilestoneTimestampBooked,
+		milestone,
+		milestoneTimestamp,
 	)
-	return im.NewMessage(groupId, outputId, output.MilestoneIndexBooked, output.MilestoneTimestampBooked)
+	return im.NewMessage(groupId, outputId, milestone, milestoneTimestamp)
 }
 
 func NodeStatus(ctx context.Context) (confirmedIndex iotago.MilestoneIndex, pruningIndex iotago.MilestoneIndex) {
@@ -142,15 +148,15 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		var createdNft []*im.NFT
 		var createdShared []*im.Message
 		for _, output := range update.Created {
-			o := messageFromINXOutput(output)
+			o := messageFromINXLedgerOutput(output)
 			if o != nil {
 				createdMessage = append(createdMessage, o)
 			}
-			nft := nftFromINXOutput(output)
+			nft := nftFromINXLedgerOutput(output)
 			if nft != nil {
 				createdNft = append(createdNft, nft)
 			}
-			shared := sharedOutputFromINXOutput(output)
+			shared := sharedOutputFromINXLedgerOutput(output)
 			if shared != nil {
 				createdShared = append(createdShared, shared)
 			}
