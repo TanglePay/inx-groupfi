@@ -180,7 +180,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMess
 			return err
 		}
 	} else {
-		if err := im.storeInitStartIndex(index); err != nil {
+		if err := im.StoreInitStartIndex(index); err != nil {
 			return err
 		}
 	}

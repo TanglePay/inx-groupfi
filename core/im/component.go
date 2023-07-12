@@ -17,6 +17,7 @@ import (
 	"github.com/iotaledger/inx-app/pkg/httpserver"
 	"github.com/iotaledger/inx-app/pkg/nodebridge"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
 func init() {
@@ -103,7 +104,10 @@ func run() error {
 	// create a background worker that handles the init situation
 	if err := CoreComponent.Daemon().BackgroundWorker("LedgerInit", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting LedgerInit ... done")
-		isInited := deps.IMManager.IsInited()
+		isInited, err := deps.IMManager.IsInited()
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
+		}
 		if !isInited {
 			CoreComponent.LogInfo("LedgerInitFirstTime ... start")
 			// make initChan non blocking, contain at most one element
@@ -112,18 +116,24 @@ func run() error {
 			firstMilestoneIndex := <-initChan
 			CoreComponent.LogInfof("LedgerInitFirstTime ... firstMilestoneIndex:%d", firstMilestoneIndex)
 			// store as init end index
-			dep.IMManager.StoreInitEndIndex(firstMilestoneIndex)
+			deps.IMManager.StoreInitEndIndex(firstMilestoneIndex)
 			// store zero as init start index
-			dep.IMManager.StoreInitStartIndex(0)
+			deps.IMManager.StoreInitStartIndex(0)
 			// mark inited
-			dep.IMManager.MarkInited()
+			deps.IMManager.MarkInited()
 			CoreComponent.LogInfo("LedgerInitFirstTime ... done")
 		}
 		// get init start index
-		startIndex := dep.IMManager.ReadInitStartIndex()
+		startIndex, err := deps.IMManager.ReadInitStartIndex()
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
+		}
 		// get init end index
-		endIndex := dep.IMManager.ReadInitEndIndex()
-		nodeHTTPAPIClient := iotago.NewNodeHTTPAPIClient("https://test.api.iotacat.com")
+		endIndex, err := deps.IMManager.ReadInitEndIndex()
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
+		}
+		nodeHTTPAPIClient := nodeclient.New("https://test.api.iotacat.com")
 
 		// loop forever when start index - end index > 1
 		for endIndex-startIndex > 1 {
@@ -134,8 +144,8 @@ func run() error {
 			for tryLefted > 0 {
 				tryLefted--
 				mileStoneResp, err := nodeHTTPAPIClient.MilestoneByIndex(ctx, startIndex)
-				mileStoneTimestamp := mileStoneResp.Time
-				milestone := startIndex
+				mileStoneTimestamp := mileStoneResp.Timestamp
+				milestone := mileStoneResp.Index
 				resp, err := nodeHTTPAPIClient.MilestoneUTXOChangesByIndex(ctx, startIndex)
 				if err != nil {
 					// log then continue
@@ -147,17 +157,24 @@ func run() error {
 				// outputResp, err := nodeHTTPAPIClient.OutputByID(ctx context.Context, outputId)
 				// output, err := outputResp.Output()
 				// map outputIds to outputs via OutputByID
-				var outputs []*iotago.Output
+				var outputs []iotago.Output
 				var isFailed = false
-				for _, outputId := range outputIds {
-					outputResp, err := nodeHTTPAPIClient.OutputByID(ctx, outputId)
+				for _, outputIdHex := range outputIds {
+					outputId, err := iotago.OutputIDFromHex(outputIdHex)
+					if err != nil {
+						// log then break, continue outer loop
+						CoreComponent.LogWarnf("LedgerInit ... OutputIDFromHex failed:%s", err)
+						isFailed = true
+						break
+					}
+					output, err := nodeHTTPAPIClient.OutputByID(ctx, outputId)
 					if err != nil {
 						// log then break, continue outer loop
 						CoreComponent.LogWarnf("LedgerInit ... OutputByID failed:%s", err)
 						isFailed = true
 						break
 					}
-					output, err := outputResp.Output()
+
 					if err != nil {
 						// log then break, continue outer loop
 						CoreComponent.LogWarnf("LedgerInit ... Output failed:%s", err)
@@ -174,7 +191,13 @@ func run() error {
 				var createdNft []*im.NFT
 				var createdShared []*im.Message
 				for outputInx, output := range outputs {
-					outputId := outputIds[outputInx]
+					outputIdHex := outputIds[outputInx]
+					outputId, err := iotago.DecodeHex(outputIdHex)
+					if err != nil {
+						// log then break, continue outer loop
+						CoreComponent.LogWarnf("LedgerInit ... OutputIDFromHex failed:%s", err)
+						break
+					}
 					o := messageFromINXOutput(output, outputId, milestone, mileStoneTimestamp)
 					if o != nil {
 						createdMessage = append(createdMessage, o)
@@ -190,7 +213,7 @@ func run() error {
 						createdShared = append(createdShared, shared)
 					}
 				}
-				err := deps.IMManager.ApplyNewLedgerUpdate(index, createdMessage, createdNft, createdShared, CoreComponent.Logger(), true)
+				err = deps.IMManager.ApplyNewLedgerUpdate(milestone, createdMessage, createdNft, createdShared, CoreComponent.Logger(), true)
 				if err != nil {
 					CoreComponent.LogWarnf("Listening to LedgerUpdates failed: %s", err)
 					deps.ShutdownHandler.SelfShutdown("disconnected from INX", false)
