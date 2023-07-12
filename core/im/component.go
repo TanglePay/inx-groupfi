@@ -144,6 +144,11 @@ func run() error {
 			for tryLefted > 0 {
 				tryLefted--
 				mileStoneResp, err := nodeHTTPAPIClient.MilestoneByIndex(ctx, startIndex)
+				if err != nil {
+					// log then continue
+					CoreComponent.LogWarnf("LedgerInit ... MilestoneByIndex failed:%s", err)
+					continue
+				}
 				mileStoneTimestamp := mileStoneResp.Timestamp
 				milestone := mileStoneResp.Index
 				resp, err := nodeHTTPAPIClient.MilestoneUTXOChangesByIndex(ctx, startIndex)
