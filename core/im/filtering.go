@@ -14,6 +14,7 @@ import (
 
 var iotacatTagStr = "IOTACAT"
 var iotacatTag = []byte(iotacatTagStr)
+var iotacatTagHex = iotago.EncodeHex(iotacatTag)
 var iotacatsharedTagStr = "IOTACATSHARED"
 var iotacatsharedTag = []byte(iotacatsharedTagStr)
 
@@ -136,7 +137,7 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 }
 
 func fetchNextMessage(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) ([]*im.Message, *string, error) {
-	outputHexIds, offset, err := deps.IMManager.QueryOutputIdsByTag(ctx, indexerClient, iotacatTagStr, offset, log)
+	outputHexIds, offset, err := deps.IMManager.QueryOutputIdsByTag(ctx, indexerClient, iotacatTagHex, offset, log)
 	if err != nil {
 		return nil, nil, err
 	}
