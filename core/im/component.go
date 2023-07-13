@@ -106,7 +106,7 @@ func processInitializationForMessage(ctx context.Context, client *nodeclient.Cli
 		return nil, err
 	}
 	// get next batch of outputIds
-	outputIds, nextOffset, err := deps.IMManager.QueryOutputIdsByTag(ctx, client, indexerClient, iotacatTagStr, initOffset)
+	outputIds, nextOffset, err := deps.IMManager.QueryOutputIdsByTag(ctx, indexerClient, iotacatTagStr, initOffset)
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... QueryOutputIdsByTag failed:%s", err)
