@@ -136,7 +136,9 @@ func run() error {
 
 		nodeHTTPAPIClient := nodeclient.New("https://api.shimmer.network")
 		indexerClient, err := nodeHTTPAPIClient.Indexer(ctx)
-
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
+		}
 		// loop until isMessageInitializationFinished is true
 		for !isMessageInitializationFinished {
 			if !isMessageInitializationFinished {
