@@ -5,6 +5,7 @@ import (
 	"context"
 
 	"github.com/TanglePay/inx-iotacat/pkg/im"
+	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -134,8 +135,8 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 	return im.NewMessage(groupId, outputId, milestone, milestoneTimestamp)
 }
 
-func fetchNextMessage(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string) ([]*im.Message, *string, error) {
-	outputHexIds, offset, err := deps.IMManager.QueryOutputIdsByTag(ctx, indexerClient, iotacatTagStr, offset)
+func fetchNextMessage(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) ([]*im.Message, *string, error) {
+	outputHexIds, offset, err := deps.IMManager.QueryOutputIdsByTag(ctx, indexerClient, iotacatTagStr, offset, log)
 	if err != nil {
 		return nil, nil, err
 	}

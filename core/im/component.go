@@ -105,33 +105,12 @@ func processInitializationForMessage(ctx context.Context, client *nodeclient.Cli
 		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
 		return nil, err
 	}
-	// get next batch of outputIds
-	outputIds, nextOffset, err := deps.IMManager.QueryOutputIdsByTag(ctx, indexerClient, iotacatTagStr, initOffset)
+	// get outputs and meta data
+	messages, nextOffset, err := fetchNextMessage(ctx, client, indexerClient, initOffset, CoreComponent.Logger())
 	if err != nil {
 		// log error
-		CoreComponent.LogWarnf("LedgerInit ... QueryOutputIdsByTag failed:%s", err)
+		CoreComponent.LogWarnf("LedgerInit ... fetchNextMessage failed:%s", err)
 		return nil, err
-	}
-	// get outputs and meta data
-	var messages []*im.Message
-	for _, outputIdHex := range outputIds {
-		o, milestoneIndex, milestoneTimestamp, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(ctx, client, outputIdHex)
-		if err != nil {
-			// log error then continue
-			CoreComponent.LogWarnf("LedgerInit ... OutputIdToOutputAndMilestoneInfo failed:%s", err)
-			continue
-		}
-		outputIdBytes, err := iotago.DecodeHex(outputIdHex)
-		if err != nil {
-			// log error then continue
-			CoreComponent.LogWarnf("LedgerInit ... DecodeHex failed:%s", err)
-			continue
-		}
-
-		message := messageFromINXOutput(o, outputIdBytes, milestoneIndex, milestoneTimestamp)
-		if message != nil {
-			messages = append(messages, message)
-		}
 	}
 	// update init offset
 	err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType)
