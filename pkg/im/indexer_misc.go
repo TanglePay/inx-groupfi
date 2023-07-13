@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/core/marshalutil"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
@@ -112,10 +113,12 @@ func (im *Manager) OutputIdToOutputAndMilestoneInfo(ctx context.Context, client 
 }
 
 // query basic output based on tag, with offset, return outputIds and new offset
-func (im *Manager) QueryOutputIdsByTag(ctx context.Context, client nodeclient.IndexerClient, tag string, offset *string) (iotago.HexOutputIDs, *string, error) {
+func (im *Manager) QueryOutputIdsByTag(ctx context.Context, client nodeclient.IndexerClient, tag string, offset *string, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
 	query := &nodeclient.BasicOutputsQuery{
 		Tag: tag,
 	}
+	// log offset and tag
+	logger.Infof("QueryOutputIdsByTag ... offset:%s,tag:%s", *offset, tag)
 	if offset != nil {
 		query.SetOffset(offset)
 	}
