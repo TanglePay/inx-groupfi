@@ -6,6 +6,7 @@ import (
 	"github.com/labstack/echo/v4"
 
 	"github.com/iotaledger/inx-app/pkg/httpserver"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -47,7 +48,7 @@ func setupRoutes(e *echo.Echo) {
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	e.GET("/testlist2", func(c echo.Context) error {
+	e.GET("/testlist", func(c echo.Context) error {
 
 		err := deps.IMManager.LogAllData(CoreComponent.Logger())
 		if err != nil {
@@ -56,4 +57,12 @@ func setupRoutes(e *echo.Echo) {
 		return httpserver.JSONResponse(c, http.StatusOK, "ok")
 	})
 
+	e.GET("/testGroupName", func(c echo.Context) error {
+		groupName, err := parseGroupNameQueryParam(c)
+		if err != nil {
+			return err
+		}
+		groupId := deps.IMManager.GroupNameToGroupId(groupName)
+		return httpserver.JSONResponse(c, http.StatusOK, iotago.EncodeHex(groupId))
+	})
 }

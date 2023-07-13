@@ -36,6 +36,16 @@ func parseGroupIdQueryParam(c echo.Context) ([]byte, error) {
 	return groupId, nil
 }
 
+// parse groupName from query param
+func parseGroupNameQueryParam(c echo.Context) (string, error) {
+	groupNameParams := c.QueryParams()["groupName"]
+	if len(groupNameParams) == 0 {
+		return "", echo.ErrBadRequest
+	}
+	groupName := groupNameParams[0]
+	return groupName, nil
+}
+
 const defaultSize = 100
 
 func parseSizeQueryParam(c echo.Context) (int, error) {

@@ -4,8 +4,6 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"sort"
-
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const IcebergGroup = "iceberg"
@@ -21,15 +19,10 @@ func IssuerBech32AddressToGroupId(address string) []byte {
 		"smr1zr8s7kv070hr0zcrjp40fhjgqv9uvzpgx80u7emnp0ncpgchmxpx25paqmf": "iceberg-collection-7",
 		"smr1zpvjkgxkzrhyvxy5nh20j6wm0l7grkf5s6l7r2mrhyspvx9khcaysmam589": "iceberg-collection-8",
 	}
-	groupId := iceberg[address]
-	if groupId == "" {
-		return nil
-	}
-	bytes, err := iotago.DecodeHex(groupId)
-	if err != nil {
-		return nil
-	}
-	return bytes
+	groupName := iceberg[address]
+	groupId := GroupNameToGroupId(groupName)
+
+	return groupId
 }
 
 func GroupNameToGroupMeta(group string) map[string]string {
@@ -107,5 +100,9 @@ func sortAndSha256Map(m map[string]string) []byte {
 	return h.Sum(nil)
 }
 func GroupNameToGroupId(group string) []byte {
+	return sortAndSha256Map(GroupNameToGroupMeta(group))
+}
+
+func (im *Manager) GroupNameToGroupId(group string) []byte {
 	return sortAndSha256Map(GroupNameToGroupMeta(group))
 }
