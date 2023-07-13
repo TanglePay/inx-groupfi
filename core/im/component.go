@@ -224,7 +224,7 @@ func run() error {
 					}
 				}
 				if !isHasMore {
-					err = deps.IMManager.MarkInitFinished(im.MessageType)
+					err = deps.IMManager.MarkInitFinished(im.MessageType, "")
 					if err != nil {
 						// log error then continue
 						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
@@ -249,7 +249,7 @@ func run() error {
 					}
 				}
 				if !isHasMore {
-					err = deps.IMManager.MarkInitFinished(im.SharedType)
+					err = deps.IMManager.MarkInitFinished(im.SharedType, "")
 					if err != nil {
 						// log error then continue
 						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
