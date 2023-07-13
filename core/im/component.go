@@ -96,142 +96,87 @@ func configure() error {
 
 	return nil
 }
+func processInitializationForMessage(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) ([]*im.Message, error) {
+	// get init offset
+	itemType := im.MessageType
+	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType)
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
+		return nil, err
+	}
+	// get next batch of outputIds
+	outputIds, nextOffset, err := deps.IMManager.QueryOutputIdsByTag(ctx, client, indexerClient, iotacatTagStr, initOffset)
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("LedgerInit ... QueryOutputIdsByTag failed:%s", err)
+		return nil, err
+	}
+	// get outputs and meta data
+	var messages []*im.Message
+	for _, outputIdHex := range outputIds {
+		o, milestoneIndex, milestoneTimestamp, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(ctx, client, outputIdHex)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("LedgerInit ... OutputIdToOutputAndMilestoneInfo failed:%s", err)
+			continue
+		}
+		outputIdBytes, err := iotago.DecodeHex(outputIdHex)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("LedgerInit ... DecodeHex failed:%s", err)
+			continue
+		}
+
+		message := messageFromINXOutput(o, outputIdBytes, milestoneIndex, milestoneTimestamp)
+		if message != nil {
+			messages = append(messages, message)
+		}
+	}
+	// update init offset
+	err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType)
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
+		return nil, err
+	}
+	return messages, nil
+}
 
 func run() error {
 
-	var initChan chan iotago.MilestoneIndex
-	var isInitSent = false
 	// create a background worker that handles the init situation
 	if err := CoreComponent.Daemon().BackgroundWorker("LedgerInit", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting LedgerInit ... done")
-		isInited, err := deps.IMManager.IsInited()
-		if err != nil {
-			CoreComponent.LogPanicf("failed to start worker: %s", err)
-		}
-		if !isInited {
-			CoreComponent.LogInfo("LedgerInitFirstTime ... start")
-			// make initChan non blocking, contain at most one element
-			initChan = make(chan iotago.MilestoneIndex, 1)
-			// blocking to wait first milestone to start initing
-			firstMilestoneIndex := <-initChan
-			CoreComponent.LogInfof("LedgerInitFirstTime ... firstMilestoneIndex:%d", firstMilestoneIndex)
-			// store as init end index
-			deps.IMManager.StoreInitEndIndex(firstMilestoneIndex)
-			// store zero as init start index
-			deps.IMManager.StoreInitStartIndex(0)
-			// mark inited
-			deps.IMManager.MarkInited()
-			CoreComponent.LogInfo("LedgerInitFirstTime ... done")
-		}
-		// get init start index
-		startIndex, err := deps.IMManager.ReadInitStartIndex()
-		if err != nil {
-			CoreComponent.LogPanicf("failed to start worker: %s", err)
-		}
-		// get init end index
-		endIndex, err := deps.IMManager.ReadInitEndIndex()
-		if err != nil {
-			CoreComponent.LogPanicf("failed to start worker: %s", err)
-		}
+
+		// handle messsages init
+		isMessageInitializationFinished, err := deps.IMManager.IsInitFinished(im.MessageType)
 		nodeHTTPAPIClient := nodeclient.New("https://test.shimmer.node.tanglepay.com")
-
-		// loop forever when start index - end index > 1
-		for endIndex-startIndex > 1 {
-			CoreComponent.LogInfof("LedgerInit ... StartIndex:%d, EndIndex:%d", startIndex, endIndex)
-			var shouldExit = false
-			// retry once
-			var tryLefted = 2
-			for tryLefted > 0 {
-				tryLefted--
-				mileStoneResp, err := nodeHTTPAPIClient.MilestoneByIndex(ctx, startIndex)
+		indexerClient, err := nodeHTTPAPIClient.Indexer(ctx)
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
+		}
+		// loop until isMessageInitializationFinished is true
+		for !isMessageInitializationFinished {
+			if !isMessageInitializationFinished {
+				messages, err := processInitializationForMessage(ctx, nodeHTTPAPIClient, indexerClient)
 				if err != nil {
-					// log then continue
-					CoreComponent.LogWarnf("LedgerInit ... MilestoneByIndex failed:%s", err)
+					// log error then continue
+					CoreComponent.LogWarnf("LedgerInit ... processInitializationForMessage failed:%s", err)
 					continue
 				}
-				mileStoneTimestamp := mileStoneResp.Timestamp
-				milestone := mileStoneResp.Index
-				resp, err := nodeHTTPAPIClient.MilestoneUTXOChangesByIndex(ctx, startIndex)
-				if err != nil {
-					// log then continue
-					CoreComponent.LogWarnf("LedgerInit ... MilestoneUTXOChangesByIndex failed:%s", err)
-					continue
-				}
-				outputIds := resp.CreatedOutputs
-				// get outputs
-				// outputResp, err := nodeHTTPAPIClient.OutputByID(ctx context.Context, outputId)
-				// output, err := outputResp.Output()
-				// map outputIds to outputs via OutputByID
-				var outputs []iotago.Output
-				var isFailed = false
-				for _, outputIdHex := range outputIds {
-					outputId, err := iotago.OutputIDFromHex(outputIdHex)
-					if err != nil {
-						// log then break, continue outer loop
-						CoreComponent.LogWarnf("LedgerInit ... OutputIDFromHex failed:%s", err)
-						isFailed = true
-						break
-					}
-					output, err := nodeHTTPAPIClient.OutputByID(ctx, outputId)
-					if err != nil {
-						// log then break, continue outer loop
-						CoreComponent.LogWarnf("LedgerInit ... OutputByID failed:%s", err)
-						isFailed = true
-						break
-					}
-
-					if err != nil {
-						// log then break, continue outer loop
-						CoreComponent.LogWarnf("LedgerInit ... Output failed:%s", err)
-						isFailed = true
-						break
-					}
-					outputs = append(outputs, output)
-				}
-				if isFailed {
-					continue
-				}
-
-				var createdMessage []*im.Message
-				var createdNft []*im.NFT
-				var createdShared []*im.Message
-				for outputInx, output := range outputs {
-					outputIdHex := outputIds[outputInx]
-					outputId, err := iotago.DecodeHex(outputIdHex)
-					if err != nil {
-						// log then break, continue outer loop
-						CoreComponent.LogWarnf("LedgerInit ... OutputIDFromHex failed:%s", err)
-						break
-					}
-					o := messageFromINXOutput(output, outputId, milestone, mileStoneTimestamp)
-					if o != nil {
-						createdMessage = append(createdMessage, o)
-					}
-					// nft
-					nft := nftFromINXOutput(output, outputId, milestone, mileStoneTimestamp)
-					if nft != nil {
-						createdNft = append(createdNft, nft)
-					}
-					// shared
-					shared := sharedOutputFromINXOutput(output, outputId, milestone, mileStoneTimestamp)
-					if shared != nil {
-						createdShared = append(createdShared, shared)
-					}
-				}
-				err = deps.IMManager.ApplyNewLedgerUpdate(milestone, createdMessage, createdNft, createdShared, CoreComponent.Logger(), true)
-				if err != nil {
-					CoreComponent.LogWarnf("Listening to LedgerUpdates failed: %s", err)
-					deps.ShutdownHandler.SelfShutdown("disconnected from INX", false)
-					shouldExit = true
-					break
+				if len(messages) > 0 {
+					err = deps.IMManager.ApplyNewLedgerUpdate(0, messages, nil, nil, CoreComponent.Logger(), true)
 				} else {
-					break
+					err = deps.IMManager.MarkInitFinished(im.MessageType)
+					if err != nil {
+						// log error then continue
+						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+						continue
+					}
+					isMessageInitializationFinished = true
 				}
 			}
-			if shouldExit {
-				break
-			}
-			startIndex++
 		}
 		CoreComponent.LogInfo("Stopping LedgerInit ... done")
 	}, daemon.PriorityStopIM); err != nil {
@@ -250,12 +195,6 @@ func run() error {
 		}
 
 		if err := LedgerUpdates(ctx, startIndex, 0, func(index iotago.MilestoneIndex, createdMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error {
-			deps.IMManager.Lock()
-			if !isInitSent {
-				isInitSent = true
-				initChan <- index
-			}
-			deps.IMManager.Unlock()
 			if err := deps.IMManager.ApplyNewLedgerUpdate(index, createdMessage, createdNft, createdShared, CoreComponent.Logger(), false); err != nil {
 				CoreComponent.LogErrorfAndExit("ApplyNewLedgerUpdate failed: %s", err)
 

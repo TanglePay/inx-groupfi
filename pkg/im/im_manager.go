@@ -170,17 +170,13 @@ func (im *Manager) LedgerIndex() iotago.MilestoneIndex {
 	return index
 }
 
-func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMessage []*Message, createdNft []*NFT, createdShared []*Message, logger *logger.Logger, isInit bool) error {
+func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMessage []*Message, createdNft []*NFT, createdShared []*Message, logger *logger.Logger, isSkipUpdate bool) error {
 	// Lock the state to avoid anyone reading partial results while we apply the state
 	im.Lock()
 	defer im.Unlock()
 	defer im.imStore.Flush()
-	if !isInit {
+	if !isSkipUpdate {
 		if err := im.storeLedgerIndex(index); err != nil {
-			return err
-		}
-	} else {
-		if err := im.StoreInitStartIndex(index); err != nil {
 			return err
 		}
 	}

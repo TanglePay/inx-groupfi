@@ -4,9 +4,7 @@ const (
 	// Holds the database status.
 	ImStoreKeyPrefixStatus byte = 0
 
-	ImStoreKeyPrefixInitStartStatus byte = 1
-
-	ImStoreKeyPrefixInitEndStatus byte = 2
+	ImStoreKeyPrefixInitOffsetMessage byte = 1
 
 	// Holds the Message.
 	ImStoreKeyPrefixMessage byte = 11
