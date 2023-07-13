@@ -117,8 +117,11 @@ func (im *Manager) QueryOutputIdsByTag(ctx context.Context, client nodeclient.In
 	query := &nodeclient.BasicOutputsQuery{
 		Tag: tag,
 	}
-	// log offset and tag
-	logger.Infof("QueryOutputIdsByTag ... offset:%s,tag:%s", *offset, tag)
+	offsetStr := "nil"
+	if offset != nil {
+		offsetStr = *offset
+	}
+	logger.Infof("QueryOutputIdsByTag ... offset:%s,tag:%s", offsetStr, tag)
 	if offset != nil {
 		query.SetOffset(offset)
 	}
@@ -126,7 +129,11 @@ func (im *Manager) QueryOutputIdsByTag(ctx context.Context, client nodeclient.In
 	if err != nil {
 		return nil, nil, err
 	}
+	logger.Infof("QueryOutputIdsByTag ... got result set")
+
 	nextOffset := resultSet.Response.Cursor
 	outputIds := resultSet.Response.Items
+	// log lens of outputIds
+	logger.Infof("QueryOutputIdsByTag ... got result set,offset:%s,outputIds len:%d", nextOffset, len(outputIds))
 	return outputIds, nextOffset, nil
 }
