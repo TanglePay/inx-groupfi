@@ -130,6 +130,9 @@ func (im *Manager) QueryOutputIdsByTag(ctx context.Context, client nodeclient.In
 		return nil, nil, err
 	}
 	logger.Infof("QueryOutputIdsByTag ... got result set")
+	if resultSet.Error != nil {
+		logger.Infof("QueryOutputIdsByTag ... got result set,error:%s", resultSet.Error)
+	}
 	resp := resultSet.Response
 	if resp == nil {
 		logger.Infof("QueryOutputIdsByTag ... got result set,resp is nil")
