@@ -96,32 +96,64 @@ func configure() error {
 
 	return nil
 }
-func processInitializationForMessage(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) ([]*im.Message, error) {
+func processInitializationForMessage(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) ([]*im.Message, bool, error) {
 	// get init offset
 	itemType := im.MessageType
 	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType)
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
-		return nil, err
+		return nil, false, err
 	}
 	// get outputs and meta data
 	messages, nextOffset, err := fetchNextMessage(ctx, client, indexerClient, initOffset, CoreComponent.Logger())
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... fetchNextMessage failed:%s", err)
-		return nil, err
+		return nil, false, err
 	}
 	// update init offset
-	err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType)
-	if err != nil {
-		// log error
-		CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
-		return nil, err
+	if nextOffset != nil {
+		err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType)
+		if err != nil {
+			// log error
+			CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
+			return nil, false, err
+		}
 	}
-	return messages, nil
+	isHasMore := nextOffset != nil
+	return messages, isHasMore, nil
 }
 
+// processInitializationForShared
+func processInitializationForShared(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) ([]*im.Message, bool, error) {
+	// get init offset
+	itemType := im.SharedType
+	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType)
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
+		return nil, false, err
+	}
+	// get outputs and meta data
+	messages, nextOffset, err := fetchNextShared(ctx, client, indexerClient, initOffset, CoreComponent.Logger())
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("LedgerInit ... fetchNextShared failed:%s", err)
+		return nil, false, err
+	}
+	// update init offset
+	if nextOffset != nil {
+		err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType)
+		if err != nil {
+			// log error
+			CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
+			return nil, false, err
+		}
+	}
+	isHasMore := nextOffset != nil
+	return messages, isHasMore, nil
+}
 func run() error {
 
 	// create a background worker that handles the init situation
@@ -134,15 +166,20 @@ func run() error {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
 
+		// shared init
+		isSharedInitializationFinished, err := deps.IMManager.IsInitFinished(im.SharedType)
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
+		}
 		nodeHTTPAPIClient := nodeclient.New("https://api.shimmer.network")
 		indexerClient, err := nodeHTTPAPIClient.Indexer(ctx)
 		if err != nil {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
 		// loop until isMessageInitializationFinished is true
-		for !isMessageInitializationFinished {
+		for !isMessageInitializationFinished || !isSharedInitializationFinished {
 			if !isMessageInitializationFinished {
-				messages, err := processInitializationForMessage(ctx, nodeHTTPAPIClient, indexerClient)
+				messages, isHasMore, err := processInitializationForMessage(ctx, nodeHTTPAPIClient, indexerClient)
 				if err != nil {
 					// log error then continue
 					CoreComponent.LogWarnf("LedgerInit ... processInitializationForMessage failed:%s", err)
@@ -150,7 +187,13 @@ func run() error {
 				}
 				if len(messages) > 0 {
 					err = deps.IMManager.ApplyNewLedgerUpdate(0, messages, nil, nil, CoreComponent.Logger(), true)
-				} else {
+					if err != nil {
+						// log error then continue
+						CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
+						continue
+					}
+				}
+				if !isHasMore {
 					err = deps.IMManager.MarkInitFinished(im.MessageType)
 					if err != nil {
 						// log error then continue
@@ -158,6 +201,31 @@ func run() error {
 						continue
 					}
 					isMessageInitializationFinished = true
+				}
+			}
+			if !isSharedInitializationFinished {
+				messages, isHasMore, err := processInitializationForShared(ctx, nodeHTTPAPIClient, indexerClient)
+				if err != nil {
+					// log error then continue
+					CoreComponent.LogWarnf("LedgerInit ... processInitializationForShared failed:%s", err)
+					continue
+				}
+				if len(messages) > 0 {
+					err = deps.IMManager.ApplyNewLedgerUpdate(0, nil, nil, messages, CoreComponent.Logger(), true)
+					if err != nil {
+						// log error then continue
+						CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
+						continue
+					}
+				}
+				if !isHasMore {
+					err = deps.IMManager.MarkInitFinished(im.SharedType)
+					if err != nil {
+						// log error then continue
+						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+						continue
+					}
+					isSharedInitializationFinished = true
 				}
 			}
 		}

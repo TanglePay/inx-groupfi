@@ -17,6 +17,7 @@ var iotacatTag = []byte(iotacatTagStr)
 var iotacatTagHex = iotago.EncodeHex(iotacatTag)
 var iotacatsharedTagStr = "IOTACATSHARED"
 var iotacatsharedTag = []byte(iotacatsharedTagStr)
+var iotacatsharedTagHex = iotago.EncodeHex(iotacatsharedTag)
 
 func nftFromINXLedgerOutput(output *inx.LedgerOutput) *im.NFT {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
@@ -157,4 +158,27 @@ func fetchNextMessage(ctx context.Context, client *nodeclient.Client, indexerCli
 		}
 	}
 	return messages, offset, nil
+}
+
+func fetchNextShared(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) ([]*im.Message, *string, error) {
+	outputHexIds, offset, err := deps.IMManager.QueryOutputIdsByTag(ctx, indexerClient, iotacatsharedTagHex, offset, log)
+	if err != nil {
+		return nil, nil, err
+	}
+	var shareds []*im.Message
+	for _, outputHexId := range outputHexIds {
+		output, milestoneIndex, milestoneTimestamp, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(ctx, client, outputHexId)
+		if err != nil {
+			return nil, nil, err
+		}
+		outputId, err := iotago.DecodeHex(outputHexId)
+		if err != nil {
+			return nil, nil, err
+		}
+		shared := sharedOutputFromINXOutput(output, outputId, milestoneIndex, milestoneTimestamp)
+		if shared != nil {
+			shareds = append(shareds, shared)
+		}
+	}
+	return shareds, offset, nil
 }
