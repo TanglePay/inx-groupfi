@@ -99,7 +99,7 @@ func configure() error {
 func processInitializationForMessage(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) ([]*im.Message, bool, error) {
 	// get init offset
 	itemType := im.MessageType
-	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType)
+	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, "")
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
@@ -114,7 +114,7 @@ func processInitializationForMessage(ctx context.Context, client *nodeclient.Cli
 	}
 	// update init offset
 	if nextOffset != nil {
-		err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType)
+		err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType, "")
 		if err != nil {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
@@ -129,7 +129,7 @@ func processInitializationForMessage(ctx context.Context, client *nodeclient.Cli
 func processInitializationForShared(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) ([]*im.Message, bool, error) {
 	// get init offset
 	itemType := im.SharedType
-	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType)
+	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, "")
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
@@ -144,7 +144,7 @@ func processInitializationForShared(ctx context.Context, client *nodeclient.Clie
 	}
 	// update init offset
 	if nextOffset != nil {
-		err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType)
+		err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType, "")
 		if err != nil {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
@@ -154,6 +154,36 @@ func processInitializationForShared(ctx context.Context, client *nodeclient.Clie
 	isHasMore := nextOffset != nil
 	return messages, isHasMore, nil
 }
+
+// processInitializationForNFT
+func processInitializationForNFT(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, issuerBech32Address string) ([]*im.NFT, bool, error) {
+	// get init offset
+	itemType := im.NFTType
+	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, issuerBech32Address)
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
+		return nil, false, err
+	}
+	// get outputs and meta data
+	nfts, nextOffset, err := fetchNextNFTs(ctx, client, indexerClient, initOffset, issuerBech32Address, CoreComponent.Logger())
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("LedgerInit ... fetchNextNFTs failed:%s", err)
+		return nil, false, err
+	}
+	// update init offset
+	if nextOffset != nil {
+		err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType, issuerBech32Address)
+		if err != nil {
+			// log error
+			CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
+			return nil, false, err
+		}
+	}
+	isHasMore := nextOffset != nil
+	return nfts, isHasMore, nil
+}
 func run() error {
 
 	// create a background worker that handles the init situation
@@ -161,13 +191,13 @@ func run() error {
 		CoreComponent.LogInfo("Starting LedgerInit ... done")
 
 		// handle messsages init
-		isMessageInitializationFinished, err := deps.IMManager.IsInitFinished(im.MessageType)
+		isMessageInitializationFinished, err := deps.IMManager.IsInitFinished(im.MessageType, "")
 		if err != nil {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
 
 		// shared init
-		isSharedInitializationFinished, err := deps.IMManager.IsInitFinished(im.SharedType)
+		isSharedInitializationFinished, err := deps.IMManager.IsInitFinished(im.SharedType, "")
 		if err != nil {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
@@ -229,6 +259,48 @@ func run() error {
 				}
 			}
 		}
+		issuerBech32AddressList := []string{
+			"smr1zqry6r4wlwr2jn4nymlkx0pzehm5fhkv492thya32u45f8fjftn3wkng2mp",
+			"smr1zpz3430fdn4zmheenyjvughsu44ykjzu5st6hg2rp609eevz6czlye60pe7",
+			"smr1zpqndszdf0p9qy04kq7un5clgzptclqeyv70av5q8thjgxcmk2wfy7pspe5",
+			"smr1zp46qmajxu0vxc2l73tx0g2j7u579jdzgeplfcnwq6ef0hh3a8zt7wnx9dv",
+			"smr1zqa6juwmk7lad4rxsddqeprrz60zksdd0k3xa37lelthzsxsal6vjygkl9e",
+			"smr1zptkmnyuxxvk2qv8exqmyxcytmcf74j3t4apc3hfg4h6n9pnfun5q26j6w4",
+			"smr1zr8s7kv070hr0zcrjp40fhjgqv9uvzpgx80u7emnp0ncpgchmxpx25paqmf",
+			"smr1zpvjkgxkzrhyvxy5nh20j6wm0l7grkf5s6l7r2mrhyspvx9khcaysmam589",
+		}
+		for _, issuerBech32Address := range issuerBech32AddressList {
+			isNFTInitializationFinished, err := deps.IMManager.IsInitFinished(im.NFTType, issuerBech32Address)
+			if err != nil {
+				CoreComponent.LogPanicf("failed to start worker: %s", err)
+			}
+			for !isNFTInitializationFinished {
+				nfts, isHasMore, err := processInitializationForNFT(ctx, nodeHTTPAPIClient, indexerClient, issuerBech32Address)
+				if err != nil {
+					// log error then continue
+					CoreComponent.LogWarnf("LedgerInit ... processInitializationForNFT failed:%s", err)
+					continue
+				}
+				if len(nfts) > 0 {
+					err = deps.IMManager.ApplyNewLedgerUpdate(0, nil, nfts, nil, CoreComponent.Logger(), true)
+					if err != nil {
+						// log error then continue
+						CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
+						continue
+					}
+				}
+				if !isHasMore {
+					err = deps.IMManager.MarkInitFinished(im.NFTType, issuerBech32Address)
+					if err != nil {
+						// log error then continue
+						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+						continue
+					}
+					isNFTInitializationFinished = true
+				}
+			}
+		}
+
 		CoreComponent.LogInfo("Stopping LedgerInit ... done")
 	}, daemon.PriorityStopIM); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)

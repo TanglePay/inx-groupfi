@@ -5,7 +5,6 @@ import (
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
-	"github.com/iotaledger/hive.go/core/marshalutil"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 	"github.com/pkg/errors"
@@ -19,22 +18,24 @@ const (
 	SharedType
 )
 
-func initFinishedStoreKeyFromType(indexerItemType IndexerItemType) []byte {
+func initFinishedStoreKeyFromType(indexerItemType IndexerItemType, extra string) []byte {
+	prefixBytes := []byte{ImStoreKeyPrefixInitStatus}
+	extraBytes := Sha256Hash(extra)
 	switch indexerItemType {
 	case MessageType:
-		return []byte("messageInitFinished")
+		return ConcatByteSlices(prefixBytes, Sha256Hash("messageInitFinished"), extraBytes)
 	case NFTType:
-		return []byte("nftInitFinished")
+		return ConcatByteSlices(prefixBytes, Sha256Hash("nftInitFinished"), extraBytes)
 	case SharedType:
-		return []byte("sharedInitFinished")
+		return ConcatByteSlices(prefixBytes, Sha256Hash("sharedInitFinished"), extraBytes)
 	}
 
-	return []byte("unknownInitFinished")
+	return nil
 }
 
 // is inited
-func (im *Manager) IsInitFinished(indexerItemType IndexerItemType) (bool, error) {
-	key := initFinishedStoreKeyFromType(indexerItemType)
+func (im *Manager) IsInitFinished(indexerItemType IndexerItemType, extra string) (bool, error) {
+	key := initFinishedStoreKeyFromType(indexerItemType, extra)
 	contains, err := im.imStore.Has(key)
 	if err != nil {
 		msg := "failed to read IsInitFinished status for " + string(indexerItemType)
@@ -45,43 +46,38 @@ func (im *Manager) IsInitFinished(indexerItemType IndexerItemType) (bool, error)
 }
 
 // mark inited
-func (im *Manager) MarkInitFinished(indexerItemType IndexerItemType) error {
-	key := initFinishedStoreKeyFromType(indexerItemType)
+func (im *Manager) MarkInitFinished(indexerItemType IndexerItemType, extra string) error {
+	key := initFinishedStoreKeyFromType(indexerItemType, extra)
 	if err := im.imStore.Set(key, []byte{}); err != nil {
 		return errors.New("failed to MarkInitFinished for " + string(indexerItemType))
 	}
 	return im.imStore.Flush()
 }
 
-func initCurrentOffsetKey(indexerItemType IndexerItemType) []byte {
-	m := marshalutil.New(12)
-
+func initCurrentOffsetKey(indexerItemType IndexerItemType, extra string) []byte {
+	prefixBytes := []byte{ImStoreKeyPrefixInitStatus}
+	extraBytes := Sha256Hash(extra)
 	switch indexerItemType {
 	case MessageType:
-		m.WriteByte(ImStoreKeyPrefixMessage)
+		return ConcatByteSlices(prefixBytes, Sha256Hash("messageInitOffset"), extraBytes)
 	case NFTType:
-		m.WriteByte(ImStoreKeyPrefixNFT)
+		return ConcatByteSlices(prefixBytes, Sha256Hash("nftInitOffset"), extraBytes)
 	case SharedType:
-		m.WriteByte(ImStoreKeyPrefixShared)
+		return ConcatByteSlices(prefixBytes, Sha256Hash("sharedInitOffset"), extraBytes)
 	}
 
-	m.WriteBytes([]byte("offset"))
-
-	return m.Bytes()
+	return nil
 }
 
 // store init start index
-func (im *Manager) StoreInitCurrentOffset(offset *string, indexerItemType IndexerItemType) error {
-	key := initCurrentOffsetKey(indexerItemType)
-	m := marshalutil.New(4)
-	m.WriteBytes([]byte(*offset))
-
-	return im.imStore.Set(key, m.Bytes())
+func (im *Manager) StoreInitCurrentOffset(offset *string, indexerItemType IndexerItemType, extra string) error {
+	key := initCurrentOffsetKey(indexerItemType, extra)
+	return im.imStore.Set(key, []byte(*offset))
 }
 
 // read init start index
-func (im *Manager) ReadInitCurrentOffset(indexerItemType IndexerItemType) (*string, error) {
-	key := initCurrentOffsetKey(indexerItemType)
+func (im *Manager) ReadInitCurrentOffset(indexerItemType IndexerItemType, extra string) (*string, error) {
+	key := initCurrentOffsetKey(indexerItemType, extra)
 	v, err := im.imStore.Get(key)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
@@ -130,27 +126,59 @@ func (im *Manager) QueryOutputIdsByTag(ctx context.Context, client nodeclient.In
 		return nil, nil, err
 	}
 
-	logger.Infof("QueryOutputIdsByTag ... got result set")
-	if resultSet.Next() {
-		logger.Infof("QueryOutputIdsByTag ... got result set,has next")
-	} else {
-		logger.Infof("QueryOutputIdsByTag ... got result set,no next")
-	}
+	isNext := resultSet.Next()
+	// log isNext
+	logger.Infof("QueryOutputIdsByTag ... isNext:%v", isNext)
+
 	if resultSet.Error != nil {
 		logger.Infof("QueryOutputIdsByTag ... got result set,error:%s", resultSet.Error)
+		return nil, nil, resultSet.Error
 	}
 	resp := resultSet.Response
 	if resp == nil {
 		logger.Infof("QueryOutputIdsByTag ... got result set,resp is nil")
+		return nil, nil, errors.New("resp is nil")
 	}
 
 	nextOffset := resultSet.Response.Cursor
 	outputIds := resultSet.Response.Items
-	if len(outputIds) == 0 {
-		logger.Infof("QueryOutputIdsByTag ... got result set,outputIds len:%d", len(outputIds))
+
+	return outputIds, nextOffset, nil
+}
+
+// query nfts based on issuer address, with offset, return outputIds and new offset
+func (im *Manager) QueryNFTIdsByIssuer(ctx context.Context, client nodeclient.IndexerClient, issuerBech32Address string, offset *string, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
+	query := &nodeclient.NFTsQuery{
+		IssuerBech32: issuerBech32Address,
 	}
-	if nextOffset == nil {
-		logger.Infof("QueryOutputIdsByTag ... got result set,nextOffset is nil")
+	offsetStr := "nil"
+	if offset != nil {
+		offsetStr = *offset
 	}
+	logger.Infof("QueryOutputIdsByIssuer ... offset:%s,issuer address:%s", offsetStr, issuerBech32Address)
+	if offset != nil {
+		query.SetOffset(offset)
+	}
+	resultSet, err := client.Outputs(ctx, query)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	isNext := resultSet.Next()
+	// log isNext
+	logger.Infof("QueryOutputIdsByIssuer ... isNext:%v", isNext)
+	if resultSet.Error != nil {
+		logger.Infof("QueryOutputIdsByIssuer ... got result set,error:%s", resultSet.Error)
+		return nil, nil, resultSet.Error
+	}
+	resp := resultSet.Response
+	if resp == nil {
+		logger.Infof("QueryOutputIdsByIssuer ... got result set,resp is nil")
+		return nil, nil, errors.New("resp is nil")
+	}
+
+	nextOffset := resultSet.Response.Cursor
+	outputIds := resultSet.Response.Items
+
 	return outputIds, nextOffset, nil
 }

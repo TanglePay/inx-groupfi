@@ -182,3 +182,27 @@ func fetchNextShared(ctx context.Context, client *nodeclient.Client, indexerClie
 	}
 	return shareds, offset, nil
 }
+
+// fetchNextNFTs fetches next NFTs from indexer
+func fetchNextNFTs(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, issuerBech32Address string, log *logger.Logger) ([]*im.NFT, *string, error) {
+	outputHexIds, offset, err := deps.IMManager.QueryNFTIdsByIssuer(ctx, indexerClient, issuerBech32Address, offset, log)
+	if err != nil {
+		return nil, nil, err
+	}
+	var nfts []*im.NFT
+	for _, outputHexId := range outputHexIds {
+		output, milestoneIndex, milestoneTimestamp, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(ctx, client, outputHexId)
+		if err != nil {
+			return nil, nil, err
+		}
+		outputId, err := iotago.DecodeHex(outputHexId)
+		if err != nil {
+			return nil, nil, err
+		}
+		nft := nftFromINXOutput(output, outputId, milestoneIndex, milestoneTimestamp)
+		if nft != nil {
+			nfts = append(nfts, nft)
+		}
+	}
+	return nfts, offset, nil
+}

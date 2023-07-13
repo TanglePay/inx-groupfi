@@ -1,6 +1,7 @@
 package im
 
 import (
+	"crypto/sha256"
 	"sync"
 )
 
@@ -33,4 +34,24 @@ func (inc *Incrementer) Increment(index uint32) uint32 {
 
 	inc.counter++
 	return inc.counter
+}
+func Sha256Hash(str string) []byte {
+	hasher := sha256.New()
+	hasher.Write([]byte(str))
+	return hasher.Sum(nil)
+}
+
+func ConcatByteSlices(slices ...[]byte) []byte {
+	var totalLen int
+	for _, s := range slices {
+		totalLen += len(s)
+	}
+	result := make([]byte, totalLen)
+
+	var offset int
+	for _, s := range slices {
+		copy(result[offset:], s)
+		offset += len(s)
+	}
+	return result
 }
