@@ -130,10 +130,18 @@ func (im *Manager) QueryOutputIdsByTag(ctx context.Context, client nodeclient.In
 		return nil, nil, err
 	}
 	logger.Infof("QueryOutputIdsByTag ... got result set")
+	resp := resultSet.Response
+	if resp == nil {
+		logger.Infof("QueryOutputIdsByTag ... got result set,resp is nil")
+	}
 
 	nextOffset := resultSet.Response.Cursor
 	outputIds := resultSet.Response.Items
-	// log lens of outputIds
-	logger.Infof("QueryOutputIdsByTag ... got result set,offset:%s,outputIds len:%d", nextOffset, len(outputIds))
+	if len(outputIds) == 0 {
+		logger.Infof("QueryOutputIdsByTag ... got result set,outputIds len:%d", len(outputIds))
+	}
+	if nextOffset == nil {
+		logger.Infof("QueryOutputIdsByTag ... got result set,nextOffset is nil")
+	}
 	return outputIds, nextOffset, nil
 }
