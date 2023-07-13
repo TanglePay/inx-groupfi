@@ -130,11 +130,13 @@ func run() error {
 
 		// handle messsages init
 		isMessageInitializationFinished, err := deps.IMManager.IsInitFinished(im.MessageType)
-		nodeHTTPAPIClient := nodeclient.New("https://test.shimmer.node.tanglepay.com")
-		indexerClient, err := nodeHTTPAPIClient.Indexer(ctx)
 		if err != nil {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
+
+		nodeHTTPAPIClient := nodeclient.New("https://api.shimmer.network")
+		indexerClient, err := nodeHTTPAPIClient.Indexer(ctx)
+
 		// loop until isMessageInitializationFinished is true
 		for !isMessageInitializationFinished {
 			if !isMessageInitializationFinished {
