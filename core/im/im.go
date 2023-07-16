@@ -112,7 +112,7 @@ func getNFTsFromGroupId(c echo.Context) ([]*NFTResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	CoreComponent.LogInfof("get nfts from groupId:%s,found nfts:%d", groupId, len(nfts))
+	CoreComponent.LogInfof("get nfts from groupId:%s,found nfts:%d", iotago.EncodeHex(groupId), len(nfts))
 	nftResponseArr := make([]*NFTResponse, len(nfts))
 	for i, nft := range nfts {
 		// nft.OwnerAddress is []bytes{OwnerAddress}

@@ -31,7 +31,12 @@ func (im *Manager) NftKeyToGroupIdAndNftId(key []byte, logger *logger.Logger) ([
 
 // nft keyprefix from collection(subgroup) name
 func (im *Manager) NftKeyPrefixFromGroupId(groupId []byte) []byte {
-	return im.NftKeyFromGroupIdAndNftId(groupId, []byte{})
+	index := 0
+	key := make([]byte, 1+GroupIdLen)
+	key[index] = ImStoreKeyPrefixNFT
+	index++
+	copy(key[index:], groupId)
+	return key
 }
 
 func (im *Manager) storeSingleNFT(nft *NFT, logger *logger.Logger) error {
