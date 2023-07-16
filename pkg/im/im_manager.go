@@ -187,10 +187,6 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMess
 	if err := im.storeNewMessages(createdMessage, logger); err != nil {
 		return err
 	}
-	if len(createdNft) > 0 {
-		nft := createdNft[0]
-		logger.Infof("store new nft: groupId:%s, nftId:%s, milestoneindex:%d, milestonetimestamp:%d", nft.GetGroupIdStr(), nft.GetAddressStr(), nft.MileStoneIndex, nft.MileStoneTimestamp)
-	}
 	if err := im.storeNewNFTs(createdNft, logger); err != nil {
 		return err
 	}

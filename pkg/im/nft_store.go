@@ -24,6 +24,7 @@ func (im *Manager) NftKeyPrefixFromGroupId(groupId []byte) []byte {
 	return im.NftKeyFromGroupIdAndNftId(groupId, []byte{})
 }
 func (im *Manager) storeSingleNFT(nft *NFT, logger *logger.Logger) error {
+	logger.Infof("store new nft: groupId:%s, nftId:%s, milestoneindex:%d, milestonetimestamp:%d", nft.GetGroupIdStr(), nft.GetAddressStr(), nft.MileStoneIndex, nft.MileStoneTimestamp)
 	key := im.NftKeyFromGroupIdAndNftId(
 		nft.GroupId,
 		nft.NFTId)
