@@ -105,8 +105,9 @@ func getNFTsFromGroupId(c echo.Context) ([]*NFTResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	CoreComponent.LogInfof("get nfts from group:%s", groupId)
+
 	keyPrefix := deps.IMManager.NftKeyPrefixFromGroupId(groupId)
+	CoreComponent.LogInfof("get nfts from groupid:%s, with prefix:%s", iotago.EncodeHex(groupId), iotago.EncodeHex(keyPrefix))
 	nfts, err := deps.IMManager.ReadNFTFromPrefix(keyPrefix)
 	if err != nil {
 		return nil, err
