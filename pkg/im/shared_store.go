@@ -1,6 +1,9 @@
 package im
 
 import (
+	"errors"
+
+	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -41,6 +44,9 @@ func (im *Manager) ReadSharedFromGroupId(groupId []byte) (*Message, error) {
 	keyPrefix := im.SharedKeyFromGroupId(groupId)
 	res, err := im.imStore.Get(keyPrefix)
 	if err != nil {
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	shared := &Message{
