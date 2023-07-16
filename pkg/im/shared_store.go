@@ -55,3 +55,9 @@ func (im *Manager) ReadSharedFromGroupId(groupId []byte) (*Message, error) {
 	}
 	return shared, nil
 }
+
+// delete shared for one group
+func (im *Manager) DeleteSharedFromGroupId(groupId []byte) error {
+	keyPrefix := im.SharedKeyFromGroupId(groupId)
+	return im.imStore.Delete(keyPrefix)
+}

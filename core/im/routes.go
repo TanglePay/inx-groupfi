@@ -48,6 +48,15 @@ func setupRoutes(e *echo.Echo) {
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
+	// delete shared
+	e.GET("/deleteshared", func(c echo.Context) error {
+		err := deleteSharedFromGroupId(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, "ok")
+	})
+
 	e.GET("/testlist", func(c echo.Context) error {
 
 		err := deps.IMManager.LogAllData(CoreComponent.Logger())

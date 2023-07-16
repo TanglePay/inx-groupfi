@@ -144,3 +144,17 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 	}
 	return resp, nil
 }
+
+// delete shared from groupId
+func deleteSharedFromGroupId(c echo.Context) error {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return err
+	}
+	CoreComponent.LogInfof("delete shared from group:%s", groupId)
+	err = deps.IMManager.DeleteSharedFromGroupId(groupId)
+	if err != nil {
+		return err
+	}
+	return nil
+}
