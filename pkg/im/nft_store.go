@@ -19,10 +19,21 @@ func (im *Manager) NftKeyFromGroupIdAndNftId(groupId []byte, nftId []byte) []byt
 	return key
 }
 
+// given a nft key decompose it into groupId and nftId and just log then
+func (im *Manager) NftKeyToGroupIdAndNftId(key []byte, logger *logger.Logger) ([]byte, []byte) {
+	index := 0
+	groupId := key[index+1 : index+1+GroupIdLen]
+	index += 1 + GroupIdLen
+	nftId := key[index:]
+	logger.Infof("nft key %s, groupId %s, nftId %s", iotago.EncodeHex(key), iotago.EncodeHex(groupId), iotago.EncodeHex(nftId))
+	return groupId, nftId
+}
+
 // nft keyprefix from collection(subgroup) name
 func (im *Manager) NftKeyPrefixFromGroupId(groupId []byte) []byte {
 	return im.NftKeyFromGroupIdAndNftId(groupId, []byte{})
 }
+
 func (im *Manager) storeSingleNFT(nft *NFT, logger *logger.Logger) error {
 	logger.Infof("store new nft: groupId:%s, nftId:%s, milestoneindex:%d, milestonetimestamp:%d", nft.GetGroupIdStr(), nft.GetAddressStr(), nft.MileStoneIndex, nft.MileStoneTimestamp)
 	key := im.NftKeyFromGroupIdAndNftId(

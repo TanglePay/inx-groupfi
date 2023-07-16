@@ -57,6 +57,16 @@ func setupRoutes(e *echo.Echo) {
 		return httpserver.JSONResponse(c, http.StatusOK, "ok")
 	})
 
+	// test nft key
+	e.GET("/testnftkey", func(c echo.Context) error {
+		key, err := parseTokenQueryParam(c)
+		if err != nil {
+			return err
+		}
+		groupId, nftId := deps.IMManager.NftKeyToGroupIdAndNftId(key, CoreComponent.Logger())
+		return httpserver.JSONResponse(c, http.StatusOK, iotago.EncodeHex(groupId)+iotago.EncodeHex(nftId))
+	})
+
 	e.GET("/testGroupName", func(c echo.Context) error {
 		groupName, err := parseGroupNameQueryParam(c)
 		if err != nil {
