@@ -55,6 +55,9 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	if groupId == nil {
 		return nil
 	}
+	// log
+	CoreComponent.LogInfof("Found NFT output,groupId:%s", iotago.EncodeHex(groupId))
+
 	unlockConditionSet := nftOutput.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
 	nftId := nftOutput.NFTID.ToHex()
