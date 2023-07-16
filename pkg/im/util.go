@@ -40,6 +40,11 @@ func Sha256Hash(str string) []byte {
 	hasher.Write([]byte(str))
 	return hasher.Sum(nil)
 }
+func Sha256HashBytes(bytes []byte) []byte {
+	hasher := sha256.New()
+	hasher.Write(bytes)
+	return hasher.Sum(nil)
+}
 
 func ConcatByteSlices(slices ...[]byte) []byte {
 	var totalLen int

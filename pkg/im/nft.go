@@ -15,13 +15,13 @@ type NFT struct {
 }
 
 // newNFT creates a new NFT.
-func NewNFT(groupId []byte, ownerAddress string, nftId iotago.NFTID, mileStoneIndex uint32, mileStoneTimestamp uint32) *NFT {
+func NewNFT(groupId []byte, ownerAddress string, nftId []byte, mileStoneIndex uint32, mileStoneTimestamp uint32) *NFT {
 	ownerAddressBytes := []byte(ownerAddress)
 
 	return &NFT{
 		GroupId:            groupId,
 		OwnerAddress:       ownerAddressBytes,
-		NFTId:              nftId[:],
+		NFTId:              nftId,
 		MileStoneIndex:     mileStoneIndex,
 		MileStoneTimestamp: mileStoneTimestamp,
 	}
