@@ -56,11 +56,23 @@ func (im *Manager) storeSingleNFT(nft *NFT, logger *logger.Logger) error {
 }
 
 func (im *Manager) storeNewNFTs(nfts []*NFT, logger *logger.Logger) error {
-
+	// hash set store all groupId, groupId is []byte
+	groupIdSet := make(map[string]bool)
+	defer func() {
+		for groupId := range groupIdSet {
+			groupIdBytes, err := iotago.DecodeHex(groupId)
+			if err != nil {
+				logger.Errorf("failed to decode groupId %s", groupId)
+				continue
+			}
+			im.DeleteSharedFromGroupId(groupIdBytes)
+		}
+	}()
 	for _, nft := range nfts {
 		if err := im.storeSingleNFT(nft, logger); err != nil {
 			return err
 		}
+		groupIdSet[iotago.EncodeHex(nft.GroupId)] = true
 	}
 	return nil
 }
