@@ -2,8 +2,9 @@ package im
 
 // MessagesResponse defines the response of a GET RouteIMMessages REST API call.
 type MessagesResponse struct {
-	Messages []*MessageResponse `json:"messages"`
-	Token    string             `json:"token"`
+	Messages  []*MessageResponse `json:"messages"`
+	HeadToken string             `json:"headToken"`
+	TailToken string             `json:"tailToken"`
 }
 type MessageResponse struct {
 	OutputId  string `json:"outputId"`

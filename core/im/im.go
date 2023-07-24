@@ -84,21 +84,8 @@ func getMesssagesFrom(c echo.Context) (*MessagesResponse, error) {
 	// log messages length
 	CoreComponent.LogInfof("get messages,groupId:%s,token:%d,size:%d,found messages:%d", iotago.EncodeHex(groupId), token, size, len(messages))
 
-	messageResponseArr := make([]*MessageResponse, len(messages))
-	var continuationToken string
-	for i, message := range messages {
-		messageResponseArr[i] = &MessageResponse{
-			OutputId:  iotago.EncodeHex(message.OutputId),
-			Timestamp: message.MileStoneTimestamp,
-		}
-		if continuationToken == "" {
-			continuationToken = iotago.EncodeHex(message.Token)
-		}
-	}
-	return &MessagesResponse{
-		Messages: messageResponseArr,
-		Token:    continuationToken,
-	}, nil
+	messagesResponse := makeMessageResponse(messages)
+	return messagesResponse, nil
 }
 func getMesssagesUntil(c echo.Context) (*MessagesResponse, error) {
 	groupId, err := parseGroupIdQueryParam(c)
@@ -123,20 +110,31 @@ func getMesssagesUntil(c echo.Context) (*MessagesResponse, error) {
 	}
 	// log messages length
 	CoreComponent.LogInfof("get messages,groupId:%s,token:%d,size:%d,found messages:%d", iotago.EncodeHex(groupId), token, size, len(messages))
+	messagesResponse := makeMessageResponse(messages)
+	return messagesResponse, nil
+}
 
+// make messsage response from messages
+func makeMessageResponse(messages []*im.Message) *MessagesResponse {
 	messageResponseArr := make([]*MessageResponse, len(messages))
-	var continuationToken string
+	var headToken string
+	var tailToken string
 	for i, message := range messages {
 		messageResponseArr[i] = &MessageResponse{
 			OutputId:  iotago.EncodeHex(message.OutputId),
 			Timestamp: message.MileStoneTimestamp,
 		}
-		continuationToken = iotago.EncodeHex(message.Token)
+		tokenHex := iotago.EncodeHex(message.Token)
+		if headToken == "" {
+			headToken = tokenHex
+		}
+		tailToken = tokenHex
 	}
 	return &MessagesResponse{
-		Messages: messageResponseArr,
-		Token:    continuationToken,
-	}, nil
+		Messages:  messageResponseArr,
+		HeadToken: headToken,
+		TailToken: tailToken,
+	}
 }
 
 // get nfts
