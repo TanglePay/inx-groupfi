@@ -46,7 +46,7 @@ func parseGroupNameQueryParam(c echo.Context) (string, error) {
 	return groupName, nil
 }
 
-const defaultSize = 100
+const defaultSize = 5
 
 func parseSizeQueryParam(c echo.Context) (int, error) {
 	sizeParams := c.QueryParams()["size"]
@@ -60,7 +60,7 @@ func parseSizeQueryParam(c echo.Context) (int, error) {
 	return size, nil
 }
 
-func getMesssages(c echo.Context) (*MessagesResponse, error) {
+func getMesssagesFrom(c echo.Context) (*MessagesResponse, error) {
 	groupId, err := parseGroupIdQueryParam(c)
 	if err != nil {
 		return nil, err
@@ -75,7 +75,47 @@ func getMesssages(c echo.Context) (*MessagesResponse, error) {
 		return nil, err
 	}
 
-	CoreComponent.LogInfof("get messages,groupId:%s,token:%d,size:%d", iotago.EncodeHex(groupId), token, size)
+	CoreComponent.LogInfof("get messages from,groupId:%s,token:%d,size:%d", iotago.EncodeHex(groupId), token, size)
+	keyPrefix := deps.IMManager.MessageKeyFromGroupId(groupId)
+	messages, err := deps.IMManager.ReadMessageUntilPrefix(keyPrefix, size, token)
+	if err != nil {
+		return nil, err
+	}
+	// log messages length
+	CoreComponent.LogInfof("get messages,groupId:%s,token:%d,size:%d,found messages:%d", iotago.EncodeHex(groupId), token, size, len(messages))
+
+	messageResponseArr := make([]*MessageResponse, len(messages))
+	var continuationToken string
+	for i, message := range messages {
+		messageResponseArr[i] = &MessageResponse{
+			OutputId:  iotago.EncodeHex(message.OutputId),
+			Timestamp: message.MileStoneTimestamp,
+		}
+		if continuationToken == "" {
+			continuationToken = iotago.EncodeHex(message.Token)
+		}
+	}
+	return &MessagesResponse{
+		Messages: messageResponseArr,
+		Token:    continuationToken,
+	}, nil
+}
+func getMesssagesUntil(c echo.Context) (*MessagesResponse, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	token, err := parseTokenQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	size, err := parseSizeQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	CoreComponent.LogInfof("get messages until,groupId:%s,token:%d,size:%d", iotago.EncodeHex(groupId), token, size)
 	keyPrefix := deps.IMManager.MessageKeyFromGroupId(groupId)
 	messages, err := deps.IMManager.ReadMessageFromPrefix(keyPrefix, size, token)
 	if err != nil {

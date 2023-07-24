@@ -159,3 +159,25 @@ func (im *Manager) ReadMessageFromPrefix(keyPrefix []byte, size int, coninueatio
 
 	return res, nil
 }
+
+func (im *Manager) ReadMessageUntilPrefix(keyPrefix []byte, size int, coninueationToken []byte) ([]*Message, error) {
+	ct := 0
+	var res []*Message
+	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
+		if bytes.Equal(key, coninueationToken) {
+			return false
+		}
+		res = append(res, &Message{
+			OutputId:           value[4:],
+			Token:              key,
+			MileStoneTimestamp: binary.BigEndian.Uint32(value[:4]),
+		})
+		ct++
+		return ct < size
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}

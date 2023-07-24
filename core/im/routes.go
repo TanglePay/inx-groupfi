@@ -13,7 +13,8 @@ const (
 	APIRoute = "iotacatim/v1"
 
 	// RouteIMMessages is the route to get a slice of messages belong to the given groupID, get first size of messages, start from token
-	RouteIMMessages = "/messages"
+	RouteIMMessages      = "/messages"
+	RouteIMMessagesUntil = "/messages/until"
 	// nft
 	RouteIMNFTs = "/nfts"
 	// shared
@@ -23,13 +24,21 @@ const (
 func setupRoutes(e *echo.Echo) {
 
 	e.GET(RouteIMMessages, func(c echo.Context) error {
-		resp, err := getMesssages(c)
+		resp, err := getMesssagesFrom(c)
 		if err != nil {
 			return err
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
+	//messages until
+	e.GET(RouteIMMessagesUntil, func(c echo.Context) error {
+		resp, err := getMesssagesUntil(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 	//nft
 	e.GET(RouteIMNFTs, func(c echo.Context) error {
 		resp, err := getNFTsFromGroupId(c)
