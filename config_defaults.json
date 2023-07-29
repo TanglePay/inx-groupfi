@@ -36,6 +36,11 @@
     "advertiseAddress": "",
     "debugRequestLoggerEnabled": false
   },
+  "mqtt": {
+    "websocket": {
+      "bindAddress": "localhost:1888"
+    }
+  },
   "profiling": {
     "enabled": false,
     "bindAddress": "localhost:6060"

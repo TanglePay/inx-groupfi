@@ -32,5 +32,6 @@ func (m *Message) GetOutputIdStr() string {
 }
 
 const GroupIdLen = 32
+const Sha256HashLen = 32
 const OutputIdLen = 34
 const NFTIdLen = 32

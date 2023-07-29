@@ -31,6 +31,9 @@ COPY ./config_defaults.json /app/config.json
 # using distroless cc "nonroot" image, which includes everything in the base image (glibc, libssl and openssl)
 FROM gcr.io/distroless/cc-debian11:nonroot
 
+EXPOSE 1883/tcp
+EXPOSE 1888/tcp
+
 # Copy the app dir into distroless image
 COPY --chown=nonroot:nonroot --from=build /app /app
 

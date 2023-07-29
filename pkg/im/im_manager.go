@@ -45,6 +45,7 @@ type Manager struct {
 
 	imStore       kvstore.KVStore
 	imStoreHealth *kvstore.StoreHealthTracker
+	mqttServer    *MQTTServer
 }
 
 // the default options applied to the Manager.
@@ -184,7 +185,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMess
 		msg := createdMessage[0]
 		logger.Infof("store new message: groupId:%s, outputId:%s, milestoneindex:%d, milestonetimestamp:%d", msg.GetGroupIdStr(), msg.GetOutputIdStr(), msg.MileStoneIndex, msg.MileStoneTimestamp)
 	}
-	if err := im.storeNewMessages(createdMessage, logger); err != nil {
+	if err := im.storeNewMessages(createdMessage, logger, !isSkipUpdate); err != nil {
 		return err
 	}
 	if err := im.storeNewNFTs(createdNft, logger); err != nil {
@@ -198,4 +199,19 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMess
 		return err
 	}
 	return nil
+}
+
+// make mqtt server
+func (im *Manager) StartMqttServer(websocketBindAddress string) (*MQTTServer, error) {
+	opts := &MQTTOpts{
+		WebsocketBindAddress: websocketBindAddress,
+		qos:                  1,
+	}
+
+	server, err := NewMQTTServer(opts)
+	if err != nil {
+		return nil, err
+	}
+	im.mqttServer = server
+	return server, nil
 }

@@ -94,3 +94,8 @@ func (im *Manager) ReadNFTFromPrefix(keyPrefix []byte) ([]*NFT, error) {
 	}
 	return res, nil
 }
+
+// get all nfts from a group
+func (im *Manager) ReadNFTsFromGroupId(groupId []byte) ([]*NFT, error) {
+	return im.ReadNFTFromPrefix(im.NftKeyPrefixFromGroupId(groupId))
+}

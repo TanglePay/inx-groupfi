@@ -14,4 +14,11 @@ const (
 
 	// Holds the Shared
 	ImStoreKeyPrefixShared byte = 13
+
+	// Holds the Inbox
+	ImStoreKeyPrefixInbox byte = 14
+
+	// inbox messsage types
+	// plain text, new message
+	ImInboxMessageTypeNewMessage byte = 1
 )

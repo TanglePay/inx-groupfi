@@ -390,6 +390,24 @@ func run() error {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
+	// create a mqtt server that handles the MQTT connection
+	if err := CoreComponent.Daemon().BackgroundWorker("MQTT", func(ctx context.Context) {
+		CoreComponent.LogInfo("Starting MQTT server ...")
+
+		server, err := deps.IMManager.StartMqttServer(ParamsMQTT.Websocket.BindAddress)
+		if err != nil {
+			CoreComponent.LogErrorfAndExit("Starting MQTT server failed: %s", err)
+		}
+		CoreComponent.LogInfo("Starting MQTT server ... done")
+		//wait ctx done
+		<-ctx.Done()
+		CoreComponent.LogInfo("Stopping MQTT server ...")
+		server.Close()
+		CoreComponent.LogInfo("Stopping MQTT server ... done")
+	}, daemon.PriorityStopIMMQTT); err != nil {
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
+	}
+
 	return nil
 }
 

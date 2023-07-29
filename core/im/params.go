@@ -13,6 +13,13 @@ type ParametersIM struct {
 	} `name:"db"`
 }
 
+/*
+"restAPI": {
+    "bindAddress": "localhost:9892",
+    "advertiseAddress": "",
+    "debugRequestLoggerEnabled": false
+  },
+*/
 // ParametersRestAPI contains the definition of the parameters used by the IM HTTP server.
 type ParametersRestAPI struct {
 	// BindAddress defines the bind address on which the IM HTTP server listens.
@@ -24,13 +31,27 @@ type ParametersRestAPI struct {
 	DebugRequestLoggerEnabled bool `default:"false" usage:"whether the debug logging for requests should be enabled"`
 }
 
+/*
+	"mqtt": {
+	  "websocket": {
+	    "bindAddress": "localhost:1888"
+	  }
+	},
+*/
+type ParametersMQTT struct {
+	Websocket struct {
+		BindAddress string `default:"localhost:1888" usage:"the bind address on which the MQTT server listens"`
+	} `name:"websocket"`
+}
+
 var ParamsIM = &ParametersIM{}
 var ParamsRestAPI = &ParametersRestAPI{}
-
+var ParamsMQTT = &ParametersMQTT{}
 var params = &app.ComponentParams{
 	Params: map[string]any{
 		"im":      ParamsIM,
 		"restAPI": ParamsRestAPI,
+		"mqtt":    ParamsMQTT,
 	},
 	Masked: nil,
 }

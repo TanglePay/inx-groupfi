@@ -31,6 +31,7 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	if iotaOutput.Type() != iotago.OutputNFT {
 		return nil
 	}
+
 	nftOutput, is := iotaOutput.(*iotago.NFTOutput)
 	if !is {
 		return nil

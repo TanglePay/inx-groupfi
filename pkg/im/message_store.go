@@ -112,15 +112,70 @@ func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) e
 	return err
 }
 
-func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger) error {
+func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, isPush bool) error {
 
 	for _, message := range messages {
 		if err := im.storeSingleMessage(message, logger); err != nil {
 			return err
 		}
+		groupId := message.GroupId
+		nfts, err := im.ReadNFTsFromGroupId(im.NftKeyPrefixFromGroupId(groupId))
+		if err != nil {
+			return err
+		}
+		for _, nft := range nfts {
+			key, err := im.storeInbox(nft.OwnerAddress, message, logger)
+			if err != nil {
+				return err
+			}
+			if isPush {
+				go im.pushInbox(nft.OwnerAddress, key, logger)
+			}
+		}
+
 	}
 	return nil
 }
+
+// handle inbox storage
+func (im *Manager) storeInbox(receiverAddress []byte, message *Message, logger *logger.Logger) ([]byte, error) {
+	key := make([]byte, 1+Sha256HashLen+4+4)
+	index := 0
+	key[index] = ImStoreKeyPrefixInbox
+	index++
+	addressSha256Hash := Sha256HashBytes(receiverAddress)
+	copy(key[index:], addressSha256Hash)
+	index += Sha256HashLen
+	binary.BigEndian.PutUint32(key[index:], maxUint32-message.MileStoneTimestamp)
+	index += 4
+	incrementer := GetIncrementer()
+	counter := maxUint32 - incrementer.Increment(message.MileStoneIndex)
+	binary.BigEndian.PutUint32(key[index:], counter)
+	// value = one byte type + groupId + outputId
+	value := make([]byte, 1+GroupIdLen+OutputIdLen)
+	value[0] = ImInboxMessageTypeNewMessage
+	copy(value[1:], message.GroupId)
+	copy(value[1+GroupIdLen:], message.OutputId)
+	err := im.imStore.Set(key, value)
+	keyHex := iotago.EncodeHex(key)
+	valueHex := iotago.EncodeHex(value)
+	logger.Infof("store inbox with key %s, value %s", keyHex, valueHex)
+	return key, err
+}
+
+// push message via mqtt
+func (im *Manager) pushInbox(receiverAddress []byte, token []byte, logger *logger.Logger) {
+	// payload = groupId + outputId
+
+	err := im.mqttServer.Publish("inbox/"+string(receiverAddress), token)
+	//log topic only
+	logger.Infof("push message to inbox/%s", string(receiverAddress))
+
+	if err != nil {
+		logger.Errorf("pushMessage error %v", err)
+	}
+}
+
 func (im *Manager) LogAllData(logger *logger.Logger) error {
 	err := im.imStore.Iterate(kvstore.EmptyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		keyHex := iotago.EncodeHex(key)
