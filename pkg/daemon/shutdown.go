@@ -5,4 +5,5 @@ const (
 	PriorityCloseIMDatabase
 	PriorityStopIM
 	PriorityStopIMAPI
+	PriorityStopIMMQTT
 )
