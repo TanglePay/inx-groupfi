@@ -393,15 +393,35 @@ func run() error {
 	// create a mqtt server that handles the MQTT connection
 	if err := CoreComponent.Daemon().BackgroundWorker("MQTT", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting MQTT server ...")
+		var server *im.MQTTServer
+		go func() {
+			var err error
+			server, err = deps.IMManager.StartMqttServer(ParamsMQTT.Websocket.BindAddress)
+			if err != nil {
+				CoreComponent.LogErrorfAndExit("Starting MQTT server failed: %s", err)
+			}
 
-		server, err := deps.IMManager.StartMqttServer(ParamsMQTT.Websocket.BindAddress)
-		if err != nil {
-			CoreComponent.LogErrorfAndExit("Starting MQTT server failed: %s", err)
+		}()
+		ctxRegister, cancelRegister := context.WithTimeout(ctx, 5*time.Second)
+
+		advertisedAddress := ParamsMQTT.Websocket.BindAddress
+
+		if err := deps.NodeBridge.RegisterAPIRoute(ctxRegister, MQTTAPIRoute, advertisedAddress); err != nil {
+			CoreComponent.LogErrorfAndExit("Registering INX api route failed: %s", err)
 		}
+
+		cancelRegister()
 		CoreComponent.LogInfo("Starting MQTT server ... done")
 		//wait ctx done
 		<-ctx.Done()
 		CoreComponent.LogInfo("Stopping MQTT server ...")
+		ctxUnregister, cancelUnregister := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelUnregister()
+
+		//nolint:contextcheck // false positive
+		if err := deps.NodeBridge.UnregisterAPIRoute(ctxUnregister, MQTTAPIRoute); err != nil {
+			CoreComponent.LogWarnf("Unregistering INX api route failed: %s", err)
+		}
 		server.Close()
 		CoreComponent.LogInfo("Stopping MQTT server ... done")
 	}, daemon.PriorityStopIMMQTT); err != nil {
