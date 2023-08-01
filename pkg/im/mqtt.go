@@ -3,10 +3,12 @@ package im
 import (
 	"bytes"
 
-	"github.com/mochi-co/mqtt/v2"
-	"github.com/mochi-co/mqtt/v2/hooks/auth"
-	"github.com/mochi-co/mqtt/v2/listeners"
-	"github.com/mochi-co/mqtt/v2/packets"
+	mqtt "github.com/mochi-mqtt/server/v2"
+	"github.com/mochi-mqtt/server/v2/hooks/auth"
+	"github.com/mochi-mqtt/server/v2/hooks/debug"
+	"github.com/mochi-mqtt/server/v2/listeners"
+	"github.com/mochi-mqtt/server/v2/packets"
+	"github.com/rs/zerolog"
 )
 
 type MQTTOpts struct {
@@ -75,8 +77,13 @@ func (h *ExampleHook) OnPublished(cl *mqtt.Client, pk packets.Packet) {
 }
 func NewMQTTServer(opts *MQTTOpts) (*MQTTServer, error) {
 	server := mqtt.New(nil)
+	l := server.Log.Level(zerolog.DebugLevel)
+	server.Log = &l
+	_ = server.AddHook(new(debug.Hook), &debug.Options{
+		ShowPacketData: true,
+	})
 	_ = server.AddHook(new(auth.AllowHook), nil)
-	_ = server.AddHook(new(ExampleHook), map[string]any{})
+	//_ = server.AddHook(new(ExampleHook), map[string]any{})
 	ws := listeners.NewWebsocket("ws1", opts.WebsocketBindAddress, nil)
 	err := server.AddListener(ws)
 	if err != nil {
