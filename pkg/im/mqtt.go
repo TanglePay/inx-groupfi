@@ -83,7 +83,7 @@ func NewMQTTServer(opts *MQTTOpts) (*MQTTServer, error) {
 		ShowPacketData: true,
 	})
 	_ = server.AddHook(new(auth.AllowHook), nil)
-	//_ = server.AddHook(new(ExampleHook), map[string]any{})
+	_ = server.AddHook(new(ExampleHook), map[string]any{})
 	ws := listeners.NewWebsocket("ws1", opts.WebsocketBindAddress, nil)
 	err := server.AddListener(ws)
 	if err != nil {
