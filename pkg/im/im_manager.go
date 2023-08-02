@@ -202,7 +202,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMess
 }
 
 // make mqtt server
-func (im *Manager) StartMqttServer(websocketBindAddress string) (*MQTTServer, error) {
+func (im *Manager) MakeMqttServer(websocketBindAddress string) (*MQTTServer, error) {
 	opts := &MQTTOpts{
 		WebsocketBindAddress: websocketBindAddress,
 		qos:                  1,

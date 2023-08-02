@@ -393,10 +393,12 @@ func run() error {
 	// create a mqtt server that handles the MQTT connection
 	if err := CoreComponent.Daemon().BackgroundWorker("MQTT", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting MQTT server ...")
-		var server *im.MQTTServer
+		server, err := deps.IMManager.MakeMqttServer(ParamsMQTT.Websocket.BindAddress)
+		if err != nil {
+			CoreComponent.LogErrorfAndExit("Starting MQTT server failed: %s", err)
+		}
 		go func() {
-			var err error
-			server, err = deps.IMManager.StartMqttServer(ParamsMQTT.Websocket.BindAddress)
+			err := server.Serve()
 			if err != nil {
 				CoreComponent.LogErrorfAndExit("Starting MQTT server failed: %s", err)
 			}

@@ -101,6 +101,11 @@ func (s *MQTTServer) Publish(topic string, payload []byte) error {
 	return s.server.Publish(topic, payload, false, s.opts.qos)
 }
 
+// serve
+func (s *MQTTServer) Serve() error {
+	return s.server.Serve()
+}
+
 // stop the server, server.Close()
 func (s *MQTTServer) Close() {
 	s.server.Close()
