@@ -405,6 +405,9 @@ func run() error {
 		ctxRegister, cancelRegister := context.WithTimeout(ctx, 5*time.Second)
 
 		advertisedAddress := ParamsMQTT.Websocket.BindAddress
+		if ParamsMQTT.Websocket.AdvertiseAddress != "" {
+			advertisedAddress = ParamsMQTT.Websocket.AdvertiseAddress
+		}
 
 		if err := deps.NodeBridge.RegisterAPIRoute(ctxRegister, MQTTAPIRoute, advertisedAddress); err != nil {
 			CoreComponent.LogErrorfAndExit("Registering INX api route failed: %s", err)

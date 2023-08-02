@@ -35,12 +35,14 @@ type ParametersRestAPI struct {
 	"mqtt": {
 	  "websocket": {
 	    "bindAddress": "localhost:1888"
+		"advertiseAddress" : 'inx-iotacat:1888'
 	  }
 	},
 */
 type ParametersMQTT struct {
 	Websocket struct {
-		BindAddress string `default:"localhost:1888" usage:"the bind address on which the MQTT server listens"`
+		BindAddress      string `default:"localhost:1888" usage:"the bind address on which the MQTT server listens"`
+		AdvertiseAddress string `default:"" usage:"the address of the MQTT server which is advertised to the INX Server (optional)"`
 	} `name:"websocket"`
 }
 
