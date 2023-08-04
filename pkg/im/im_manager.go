@@ -171,6 +171,10 @@ func (im *Manager) LedgerIndex() iotago.MilestoneIndex {
 	return index
 }
 
+// get imStore
+func (im *Manager) GetImStore() kvstore.KVStore {
+	return im.imStore
+}
 func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMessage []*Message, createdNft []*NFT, createdShared []*Message, logger *logger.Logger, isSkipUpdate bool) error {
 	// Lock the state to avoid anyone reading partial results while we apply the state
 	im.Lock()

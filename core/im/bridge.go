@@ -35,8 +35,12 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if shared != nil {
 				createdShared = append(createdShared, shared)
 			}
+			handleTokenFromINXLedgerOutput(output, ImOutputTypeCreated)
 		}
-
+		for _, spent := range update.Consumed {
+			output := spent.GetOutput()
+			handleTokenFromINXLedgerOutput(output, ImOutputTypeConsumed)
+		}
 		return handler(index, createdMessage, createdNft, createdShared)
 	})
 }

@@ -81,6 +81,12 @@ func GroupNameToGroupMeta(group string) map[string]string {
 			"messageType":   "1",
 			"authScheme":    "2",
 		},
+		"smr-whale": {
+			"groupName":     "smr-whale",
+			"schemaVersion": "1",
+			"messageType":   "1",
+			"authScheme":    "2",
+		},
 	}
 	return m[group]
 }

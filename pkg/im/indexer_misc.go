@@ -16,6 +16,8 @@ const (
 	MessageType IndexerItemType = iota
 	NFTType
 	SharedType
+	TokenBasicType
+	TokenNFTType
 )
 
 func initFinishedStoreKeyFromType(indexerItemType IndexerItemType, extra string) []byte {
@@ -113,11 +115,14 @@ func (im *Manager) QueryOutputIdsByTag(ctx context.Context, client nodeclient.In
 	query := &nodeclient.BasicOutputsQuery{
 		Tag: tag,
 	}
+	return executeQuery(ctx, client, query, offset, logger)
+}
+func executeQuery(ctx context.Context, client nodeclient.IndexerClient, query nodeclient.IndexerQuery, offset *string, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
 	offsetStr := "nil"
 	if offset != nil {
 		offsetStr = *offset
 	}
-	logger.Infof("QueryOutputIdsByTag ... offset:%s,tag:%s", offsetStr, tag)
+	logger.Infof("QueryOutputIds ... offset:%s", offsetStr)
 	if offset != nil {
 		query.SetOffset(offset)
 	}
@@ -128,15 +133,15 @@ func (im *Manager) QueryOutputIdsByTag(ctx context.Context, client nodeclient.In
 
 	isNext := resultSet.Next()
 	// log isNext
-	logger.Infof("QueryOutputIdsByTag ... isNext:%v", isNext)
+	logger.Infof("QueryOutputIds ... isNext:%v", isNext)
 
 	if resultSet.Error != nil {
-		logger.Infof("QueryOutputIdsByTag ... got result set,error:%s", resultSet.Error)
+		logger.Infof("QueryOutputIds ... got result set,error:%s", resultSet.Error)
 		return nil, nil, resultSet.Error
 	}
 	resp := resultSet.Response
 	if resp == nil {
-		logger.Infof("QueryOutputIdsByTag ... got result set,resp is nil")
+		logger.Infof("QueryOutputIds ... got result set,resp is nil")
 		return nil, nil, errors.New("resp is nil")
 	}
 
@@ -146,39 +151,22 @@ func (im *Manager) QueryOutputIdsByTag(ctx context.Context, client nodeclient.In
 	return outputIds, nextOffset, nil
 }
 
+// query any outputs, with offset, return outputIds and new offset
+func (im *Manager) QueryBasicOutputIds(ctx context.Context, client nodeclient.IndexerClient, offset *string, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
+	query := &nodeclient.BasicOutputsQuery{}
+	return executeQuery(ctx, client, query, offset, logger)
+}
+
+// query nft output ids
+func (im *Manager) QueryNFTOutputIds(ctx context.Context, client nodeclient.IndexerClient, offset *string, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
+	query := &nodeclient.NFTsQuery{}
+	return executeQuery(ctx, client, query, offset, logger)
+}
+
 // query nfts based on issuer address, with offset, return outputIds and new offset
 func (im *Manager) QueryNFTIdsByIssuer(ctx context.Context, client nodeclient.IndexerClient, issuerBech32Address string, offset *string, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
 	query := &nodeclient.NFTsQuery{
 		IssuerBech32: issuerBech32Address,
 	}
-	offsetStr := "nil"
-	if offset != nil {
-		offsetStr = *offset
-	}
-	logger.Infof("QueryOutputIdsByIssuer ... offset:%s,issuer address:%s", offsetStr, issuerBech32Address)
-	if offset != nil {
-		query.SetOffset(offset)
-	}
-	resultSet, err := client.Outputs(ctx, query)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	isNext := resultSet.Next()
-	// log isNext
-	logger.Infof("QueryOutputIdsByIssuer ... isNext:%v", isNext)
-	if resultSet.Error != nil {
-		logger.Infof("QueryOutputIdsByIssuer ... got result set,error:%s", resultSet.Error)
-		return nil, nil, resultSet.Error
-	}
-	resp := resultSet.Response
-	if resp == nil {
-		logger.Infof("QueryOutputIdsByIssuer ... got result set,resp is nil")
-		return nil, nil, errors.New("resp is nil")
-	}
-
-	nextOffset := resultSet.Response.Cursor
-	outputIds := resultSet.Response.Items
-
-	return outputIds, nextOffset, nil
+	return executeQuery(ctx, client, query, offset, logger)
 }

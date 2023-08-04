@@ -17,3 +17,9 @@ type NFTResponse struct {
 type SharedResponse struct {
 	OutputId string `json:"outputId"`
 }
+
+// enum for output type created or consumed
+const (
+	ImOutputTypeCreated = iota
+	ImOutputTypeConsumed
+)

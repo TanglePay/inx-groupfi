@@ -2,10 +2,8 @@ package im
 
 import (
 	"context"
-	"net/http"
 	"time"
 
-	"github.com/pkg/errors"
 	"go.uber.org/dig"
 
 	"github.com/TanglePay/inx-iotacat/pkg/daemon"
@@ -13,8 +11,8 @@ import (
 	"github.com/iotaledger/hive.go/core/app"
 	"github.com/iotaledger/hive.go/core/app/pkg/shutdown"
 	"github.com/iotaledger/hive.go/core/database"
+	"github.com/iotaledger/hive.go/kvstore"
 	hornetdb "github.com/iotaledger/hornet/v2/pkg/database"
-	"github.com/iotaledger/inx-app/pkg/httpserver"
 	"github.com/iotaledger/inx-app/pkg/nodebridge"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
@@ -155,6 +153,66 @@ func processInitializationForShared(ctx context.Context, client *nodeclient.Clie
 	return messages, isHasMore, nil
 }
 
+// processInitializationForToken
+func processInitializationForTokenForBasicOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) ([]iotago.Output, iotago.HexOutputIDs, bool, error) {
+	// get init offset
+	itemType := im.TokenBasicType
+	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, "")
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
+		return nil, false, err
+	}
+	// get outputs and meta data
+	outputs, outputIds, nextOffset, err := fetchNextOutputsForBasicType(ctx, client, indexerClient, initOffset, CoreComponent.Logger())
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("LedgerInit ... fetchNextTokenForBasicOutput failed:%s", err)
+		return nil, false, err
+	}
+	// update init offset
+	if nextOffset != nil {
+		err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType, "")
+		if err != nil {
+			// log error
+			CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
+			return nil, false, err
+		}
+	}
+	isHasMore := nextOffset != nil
+	return outputs, outputIds, isHasMore, nil
+}
+
+// processInitializationForTokenForNftOutput
+func processInitializationForTokenForNftOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) ([]iotago.Output, iotago.HexOutputIDs, bool, error) {
+	// get init offset
+	itemType := im.TokenNFTType
+	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, "")
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
+		return nil, false, err
+	}
+	// get outputs and meta data
+	outputs, outputIds, nextOffset, err := fetchNextOutputsForNFTType(ctx, client, indexerClient, initOffset, CoreComponent.Logger())
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("LedgerInit ... fetchNextTokenForNftOutput failed:%s", err)
+		return nil, false, err
+	}
+	// update init offset
+	if nextOffset != nil {
+		err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType, "")
+		if err != nil {
+			// log error
+			CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
+			return nil, false, err
+		}
+	}
+	isHasMore := nextOffset != nil
+	return outputs, outputIds, isHasMore, nil
+}
+
 // processInitializationForNFT
 func processInitializationForNFT(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, issuerBech32Address string) ([]*im.NFT, bool, error) {
 	// get init offset
@@ -183,6 +241,38 @@ func processInitializationForNFT(ctx context.Context, client *nodeclient.Client,
 	}
 	isHasMore := nextOffset != nil
 	return nfts, isHasMore, nil
+}
+func startListeningToLedgerUpdate() {
+	// create a background worker that handles the im events
+	if err := CoreComponent.Daemon().BackgroundWorker("LedgerUpdates", func(ctx context.Context) {
+		CoreComponent.LogInfo("Starting LedgerUpdates ... done")
+
+		startIndex := deps.IMManager.LedgerIndex()
+		// log start index
+		CoreComponent.LogInfof("LedgerUpdates start index:%d", startIndex)
+		if startIndex > 0 {
+			startIndex++
+		}
+
+		if err := LedgerUpdates(ctx, startIndex, 0, func(index iotago.MilestoneIndex, createdMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error {
+			if err := deps.IMManager.ApplyNewLedgerUpdate(index, createdMessage, createdNft, createdShared, CoreComponent.Logger(), false); err != nil {
+				CoreComponent.LogErrorfAndExit("ApplyNewLedgerUpdate failed: %s", err)
+
+				return err
+			}
+			// CoreComponent.LogInfof("Applying milestone %d with %d new outputs took %s", index, len(created), time.Since(timeStart).Truncate(time.Millisecond))
+
+			return nil
+		}); err != nil {
+			CoreComponent.LogWarnf("Listening to LedgerUpdates failed: %s", err)
+			deps.ShutdownHandler.SelfShutdown("disconnected from INX", false)
+		}
+
+		CoreComponent.LogInfo("Stopping LedgerUpdates ... done")
+	}, daemon.PriorityStopIM); err != nil {
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
+	}
+
 }
 func run() error {
 
@@ -300,93 +390,103 @@ func run() error {
 				}
 			}
 		}
-
-		CoreComponent.LogInfo("Stopping LedgerInit ... done")
-	}, daemon.PriorityStopIM); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
-	}
-
-	// create a background worker that handles the im events
-	if err := CoreComponent.Daemon().BackgroundWorker("LedgerUpdates", func(ctx context.Context) {
-		CoreComponent.LogInfo("Starting LedgerUpdates ... done")
-
-		startIndex := deps.IMManager.LedgerIndex()
-		// log start index
-		CoreComponent.LogInfof("LedgerUpdates start index:%d", startIndex)
-		if startIndex > 0 {
-			startIndex++
+		isTokenBasicFinished, err := deps.IMManager.IsInitFinished(im.TokenBasicType, "")
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
-
-		if err := LedgerUpdates(ctx, startIndex, 0, func(index iotago.MilestoneIndex, createdMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error {
-			if err := deps.IMManager.ApplyNewLedgerUpdate(index, createdMessage, createdNft, createdShared, CoreComponent.Logger(), false); err != nil {
-				CoreComponent.LogErrorfAndExit("ApplyNewLedgerUpdate failed: %s", err)
-
-				return err
+		for !isTokenBasicFinished {
+			outputs, outputIds, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient)
+			if err != nil {
+				// log error then continue
+				CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForBasicOutput failed:%s", err)
+				continue
 			}
-			// CoreComponent.LogInfof("Applying milestone %d with %d new outputs took %s", index, len(created), time.Since(timeStart).Truncate(time.Millisecond))
-
-			return nil
-		}); err != nil {
-			CoreComponent.LogWarnf("Listening to LedgerUpdates failed: %s", err)
-			deps.ShutdownHandler.SelfShutdown("disconnected from INX", false)
-		}
-
-		CoreComponent.LogInfo("Stopping LedgerUpdates ... done")
-	}, daemon.PriorityStopIM); err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
-	}
-
-	// create a background worker that handles the API
-	if err := CoreComponent.Daemon().BackgroundWorker("API", func(ctx context.Context) {
-		CoreComponent.LogInfo("Starting API ... done")
-
-		CoreComponent.LogInfo("Starting API server ...")
-
-		e := httpserver.NewEcho(CoreComponent.Logger(), nil, ParamsRestAPI.DebugRequestLoggerEnabled)
-
-		setupRoutes(e)
-		go func() {
-			CoreComponent.LogInfof("You can now access the API using: http://%s", ParamsRestAPI.BindAddress)
-			if err := e.Start(ParamsRestAPI.BindAddress); err != nil && !errors.Is(err, http.ErrServerClosed) {
-				CoreComponent.LogErrorfAndExit("Stopped REST-API server due to an error (%s)", err)
+			if len(outputs) > 0 {
+				// loop outputs
+				for i, output := range outputs {
+					outputId := outputIds[i]
+					outputIdBytes, _ := iotago.DecodeHex(outputId)
+					err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
+					if err != nil {
+						// log error then continue
+						CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
+						continue
+					}
+				}
 			}
-		}()
-
-		ctxRegister, cancelRegister := context.WithTimeout(ctx, 5*time.Second)
-
-		advertisedAddress := ParamsRestAPI.BindAddress
-		if ParamsRestAPI.AdvertiseAddress != "" {
-			advertisedAddress = ParamsRestAPI.AdvertiseAddress
+			if !isHasMore {
+				err = deps.IMManager.MarkInitFinished(im.TokenBasicType, "")
+				if err != nil {
+					// log error then continue
+					CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+					continue
+				}
+				isTokenBasicFinished = true
+			}
 		}
-
-		if err := deps.NodeBridge.RegisterAPIRoute(ctxRegister, APIRoute, advertisedAddress); err != nil {
-			CoreComponent.LogErrorfAndExit("Registering INX api route failed: %s", err)
+		isTokenNFTFinished, err := deps.IMManager.IsInitFinished(im.TokenNFTType, "")
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
-
-		cancelRegister()
-
-		CoreComponent.LogInfo("Starting API server ... done")
-		<-ctx.Done()
-		CoreComponent.LogInfo("Stopping API ...")
-
-		ctxUnregister, cancelUnregister := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancelUnregister()
-
-		//nolint:contextcheck // false positive
-		if err := deps.NodeBridge.UnregisterAPIRoute(ctxUnregister, APIRoute); err != nil {
-			CoreComponent.LogWarnf("Unregistering INX api route failed: %s", err)
+		for !isTokenNFTFinished {
+			outputs, outputIds, isHasMore, err := processInitializationForTokenForNftOutput(ctx, nodeHTTPAPIClient, indexerClient)
+			if err != nil {
+				// log error then continue
+				CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForNftOutput failed:%s", err)
+				continue
+			}
+			if len(outputs) > 0 {
+				// loop outputs
+				for i, output := range outputs {
+					outputId := outputIds[i]
+					outputIdBytes, _ := iotago.DecodeHex(outputId)
+					err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
+					if err != nil {
+						// log error then continue
+						CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
+						continue
+					}
+				}
+			}
+			if !isHasMore {
+				err = deps.IMManager.MarkInitFinished(im.TokenNFTType, "")
+				if err != nil {
+					// log error then continue
+					CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+					continue
+				}
+				isTokenNFTFinished = true
+			}
 		}
+		//TODO handle total smr
+		CoreComponent.LogInfo("Finishing LedgerInit ... done")
 
-		shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer shutdownCtxCancel()
+		smrTotalAddress := deps.IMManager.GetTotalAddressFromType(im.ImTokenTypeSMR)
 
-		//nolint:contextcheck // false positive
-		if err := e.Shutdown(shutdownCtx); err != nil {
-			CoreComponent.LogWarn(err)
+		smrTotalValue, err := deps.IMManager.GetBalanceOfOneAddress(im.ImTokenTypeSMR, smrTotalAddress)
+
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
+		smrTotal := GetSmrTokenTotal()
+		smrTotal.Add(smrTotalValue)
 
-		CoreComponent.LogInfo("Stopping API ... done")
-	}, daemon.PriorityStopIMAPI); err != nil {
+		smrTokenPrefix := deps.IMManager.TokenKeyPrefixFromTokenType(im.ImTokenTypeSMR)
+
+		// hash set for address
+		addressSet := make(map[string]struct{})
+		deps.IMManager.GetImStore().Iterate(smrTokenPrefix, func(key kvstore.Key, value kvstore.Value) bool {
+			_, address := deps.IMManager.AmountAndAddressFromTokenValuePayload(value)
+			addressSet[address] = struct{}{}
+			return true
+		})
+		// loop addressSet
+		for address := range addressSet {
+			handleTokenWhaleEligibilityFromAddressGivenTotalAmount(im.ImTokenTypeSMR, address, smrTotal.Get(), deps.IMManager, CoreComponent.Logger())
+		}
+		//
+		startListeningToLedgerUpdate()
+	}, daemon.PriorityStopIM); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 

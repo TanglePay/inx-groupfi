@@ -55,6 +55,13 @@ func (im *Manager) storeSingleNFT(nft *NFT, logger *logger.Logger) error {
 	return err
 }
 
+// delete single nft
+func (im *Manager) DeleteNFT(nft *NFT) error {
+	key := im.NftKeyFromGroupIdAndNftId(
+		nft.GroupId,
+		nft.NFTId)
+	return im.imStore.Delete(key)
+}
 func (im *Manager) storeNewNFTs(nfts []*NFT, logger *logger.Logger) error {
 	// hash set store all groupId, groupId is []byte
 	groupIdSet := make(map[string]bool)

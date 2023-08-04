@@ -3,6 +3,7 @@ package im
 import (
 	"bytes"
 	"context"
+	"math/big"
 
 	"github.com/TanglePay/inx-iotacat/pkg/im"
 	"github.com/iotaledger/hive.go/core/logger"
@@ -113,6 +114,93 @@ func sharedOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte, milest
 	)
 	return im.NewMessage(groupId, outputId, milestone, milestoneTimestamp)
 }
+
+func handleTokenFromINXLedgerOutput(output *inx.LedgerOutput, outputStatus int) error {
+	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return err
+	}
+	return handleTokenFromINXOutput(iotaOutput, output.OutputId.Id, outputStatus, true)
+}
+func handleTokenFromINXOutput(iotaOutput iotago.Output, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
+	if iotaOutput.Type() == iotago.OutputBasic {
+		basicOutput := iotaOutput.(*iotago.BasicOutput)
+		handleTokenFromBasicOutput(basicOutput, outputId, outputStatus, isUpdateGlobalAmount)
+	} else if iotaOutput.Type() == iotago.OutputNFT {
+		nftOutput := iotaOutput.(*iotago.NFTOutput)
+		handleTokenFromNFTOutput(nftOutput, outputId, outputStatus, isUpdateGlobalAmount)
+	}
+
+	return nil
+}
+func outputStatusToTokenStatus(outputStatus int) byte {
+	if outputStatus == ImOutputTypeCreated {
+		return im.ImTokenStatusCreated
+	} else if outputStatus == ImOutputTypeConsumed {
+		return im.ImTokenStatusConsumed
+	}
+	return 0
+}
+
+func handleTokenFromBasicOutput(iotaOutput *iotago.BasicOutput, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
+	// handle smr e.g basic coin
+	smrAmount := iotaOutput.Amount
+	err := handleSmrAmount(smrAmount, iotaOutput, outputId, outputStatus, isUpdateGlobalAmount)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func handleSmrAmount(smrAmount uint64, iotaOutput iotago.Output, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
+	smrAmountBig := new(big.Int).SetUint64(smrAmount)
+	tokenStatus := outputStatusToTokenStatus(outputStatus)
+	unlockConditionSet := iotaOutput.UnlockConditionSet()
+	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
+
+	if isUpdateGlobalAmount {
+		smrTotal := GetSmrTokenTotal()
+		if tokenStatus == im.ImTokenStatusCreated {
+			smrTotal.Add(smrAmountBig)
+		} else if tokenStatus == im.ImTokenStatusConsumed {
+			smrTotal.Sub(smrAmountBig)
+		}
+		// handle whale eligibility
+		handleTokenWhaleEligibilityFromAddressGivenTotalAmount(im.ImTokenTypeSMR, ownerAddress, smrTotal.Get(), deps.IMManager, CoreComponent.Logger())
+	}
+
+	smrAmountText := smrAmountBig.Text(10)
+	tokenId := im.Sha256HashBytes(outputId)
+	tokenStat := deps.IMManager.NewTokenStat(im.ImTokenTypeSMR, tokenId, ownerAddress, tokenStatus, smrAmountText)
+	return deps.IMManager.StoreOneToken(tokenStat)
+}
+func getThresholdFromTokenType(tokenType uint16) *big.Float {
+	if tokenType == im.ImTokenTypeSMR {
+		return big.NewFloat(im.ImSMRWhaleThreshold)
+	}
+	return nil
+}
+func handleTokenWhaleEligibilityFromAddressGivenTotalAmount(tokenType uint16, address string, totalAmount *big.Int, manager *im.Manager, logger *logger.Logger) error {
+	balance, err := manager.GetBalanceOfOneAddress(tokenType, address)
+	if err != nil {
+		return err
+	}
+	percentage := new(big.Float).Quo(new(big.Float).SetInt(balance), new(big.Float).SetInt(totalAmount))
+	threshold := getThresholdFromTokenType(tokenType)
+	if threshold == nil {
+		return nil
+	}
+	isEligible := percentage.Cmp(threshold) >= 0
+	return manager.SetWhaleEligibility(tokenType, address, isEligible, logger)
+}
+
+func handleTokenFromNFTOutput(iotaOutput *iotago.NFTOutput, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
+	smrAmount := iotaOutput.Amount
+	err := handleSmrAmount(smrAmount, iotaOutput, outputId, outputStatus, isUpdateGlobalAmount)
+	if err != nil {
+		return err
+	}
+	return nil
+}
 func messageFromINXLedgerOutput(output *inx.LedgerOutput) *im.Message {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
@@ -220,4 +308,36 @@ func fetchNextNFTs(ctx context.Context, client *nodeclient.Client, indexerClient
 		}
 	}
 	return nfts, offset, nil
+}
+
+func fetchNextOutputsForBasicType(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) ([]iotago.Output, iotago.HexOutputIDs, *string, error) {
+	outputHexIds, offset, err := deps.IMManager.QueryBasicOutputIds(ctx, indexerClient, offset, log)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	var outputs []iotago.Output
+	for _, outputHexId := range outputHexIds {
+		output, _, _, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(ctx, client, outputHexId)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		outputs = append(outputs, output)
+	}
+	return outputs, outputHexIds, offset, nil
+}
+
+func fetchNextOutputsForNFTType(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) ([]iotago.Output, iotago.HexOutputIDs, *string, error) {
+	outputHexIds, offset, err := deps.IMManager.QueryNFTOutputIds(ctx, indexerClient, offset, log)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	var outputs []iotago.Output
+	for _, outputHexId := range outputHexIds {
+		output, _, _, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(ctx, client, outputHexId)
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		outputs = append(outputs, output)
+	}
+	return outputs, outputHexIds, offset, nil
 }
