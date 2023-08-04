@@ -402,6 +402,8 @@ func run() error {
 				continue
 			}
 			if len(outputs) > 0 {
+				// log len(outputs)
+				CoreComponent.LogInfof("processInitializationForTokenForBasicOutput ... len(outputs):%d", len(outputs))
 				// loop outputs
 				for i, output := range outputs {
 					outputId := outputIds[i]
