@@ -161,14 +161,14 @@ func processInitializationForTokenForBasicOutput(ctx context.Context, client *no
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
-		return nil, false, err
+		return nil, nil, false, err
 	}
 	// get outputs and meta data
 	outputs, outputIds, nextOffset, err := fetchNextOutputsForBasicType(ctx, client, indexerClient, initOffset, CoreComponent.Logger())
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... fetchNextTokenForBasicOutput failed:%s", err)
-		return nil, false, err
+		return nil, nil, false, err
 	}
 	// update init offset
 	if nextOffset != nil {
@@ -176,7 +176,7 @@ func processInitializationForTokenForBasicOutput(ctx context.Context, client *no
 		if err != nil {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
-			return nil, false, err
+			return nil, nil, false, err
 		}
 	}
 	isHasMore := nextOffset != nil
@@ -191,14 +191,14 @@ func processInitializationForTokenForNftOutput(ctx context.Context, client *node
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
-		return nil, false, err
+		return nil, nil, false, err
 	}
 	// get outputs and meta data
 	outputs, outputIds, nextOffset, err := fetchNextOutputsForNFTType(ctx, client, indexerClient, initOffset, CoreComponent.Logger())
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... fetchNextTokenForNftOutput failed:%s", err)
-		return nil, false, err
+		return nil, nil, false, err
 	}
 	// update init offset
 	if nextOffset != nil {
@@ -206,7 +206,7 @@ func processInitializationForTokenForNftOutput(ctx context.Context, client *node
 		if err != nil {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
-			return nil, false, err
+			return nil, nil, false, err
 		}
 	}
 	isHasMore := nextOffset != nil

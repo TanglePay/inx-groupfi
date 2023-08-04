@@ -193,6 +193,7 @@ func (im *Manager) GetGroupNameFromTokenType(tokenType uint16) string {
 	if tokenType == ImTokenTypeSMR {
 		return "smr-whale"
 	}
+	return ""
 }
 
 var NftIdPadding = Sha256Hash("nftIdPadding")
