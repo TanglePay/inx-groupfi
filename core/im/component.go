@@ -428,7 +428,7 @@ func run() error {
 				}
 				if len(outputsMap) > 0 {
 					// log len(outputs)
-					CoreComponent.LogInfof("processInitializationForTokenForBasicOutput ... len(outputs):%d", len(outputs))
+					CoreComponent.LogInfof("processInitializationForTokenForBasicOutput ... len(outputsMap):%d", len(outputsMap))
 					// loop outputs
 					for outputId, output := range outputsMap {
 						outputIdBytes, _ := iotago.DecodeHex(outputId)
