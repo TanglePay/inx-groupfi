@@ -154,12 +154,14 @@ func executeQuery(ctx context.Context, client nodeclient.IndexerClient, query no
 // query any outputs, with offset, return outputIds and new offset
 func (im *Manager) QueryBasicOutputIds(ctx context.Context, client nodeclient.IndexerClient, offset *string, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
 	query := &nodeclient.BasicOutputsQuery{}
+	query.PageSize = 10
 	return executeQuery(ctx, client, query, offset, logger)
 }
 
 // query nft output ids
 func (im *Manager) QueryNFTOutputIds(ctx context.Context, client nodeclient.IndexerClient, offset *string, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
 	query := &nodeclient.NFTsQuery{}
+	query.PageSize = 10
 	return executeQuery(ctx, client, query, offset, logger)
 }
 

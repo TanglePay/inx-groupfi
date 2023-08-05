@@ -157,21 +157,21 @@ func processInitializationForShared(ctx context.Context, client *nodeclient.Clie
 }
 
 // processInitializationForToken
-func processInitializationForTokenForBasicOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) ([]iotago.Output, iotago.HexOutputIDs, bool, error) {
+func processInitializationForTokenForBasicOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) (map[string]iotago.Output, bool, error) {
 	// get init offset
 	itemType := im.TokenBasicType
 	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, "")
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
-		return nil, nil, false, err
+		return nil, false, err
 	}
 	// get outputs and meta data
-	outputs, outputIds, nextOffset, err := fetchNextOutputsForBasicType(ctx, client, indexerClient, initOffset, CoreComponent.Logger())
+	outputsMap, nextOffset, err := fetchNextOutputsForBasicType(ctx, client, indexerClient, initOffset, CoreComponent.Logger())
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... fetchNextTokenForBasicOutput failed:%s", err)
-		return nil, nil, false, err
+		return nil, false, err
 	}
 	// update init offset
 	if nextOffset != nil {
@@ -179,29 +179,29 @@ func processInitializationForTokenForBasicOutput(ctx context.Context, client *no
 		if err != nil {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
-			return nil, nil, false, err
+			return nil, false, err
 		}
 	}
 	isHasMore := nextOffset != nil
-	return outputs, outputIds, isHasMore, nil
+	return outputsMap, isHasMore, nil
 }
 
 // processInitializationForTokenForNftOutput
-func processInitializationForTokenForNftOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) ([]iotago.Output, iotago.HexOutputIDs, bool, error) {
+func processInitializationForTokenForNftOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) (map[string]iotago.Output, bool, error) {
 	// get init offset
 	itemType := im.TokenNFTType
 	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, "")
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
-		return nil, nil, false, err
+		return nil, false, err
 	}
 	// get outputs and meta data
-	outputs, outputIds, nextOffset, err := fetchNextOutputsForNFTType(ctx, client, indexerClient, initOffset, CoreComponent.Logger())
+	outputsMap, nextOffset, err := fetchNextOutputsForNFTType(ctx, client, indexerClient, initOffset, CoreComponent.Logger())
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... fetchNextTokenForNftOutput failed:%s", err)
-		return nil, nil, false, err
+		return nil, false, err
 	}
 	// update init offset
 	if nextOffset != nil {
@@ -209,11 +209,11 @@ func processInitializationForTokenForNftOutput(ctx context.Context, client *node
 		if err != nil {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
-			return nil, nil, false, err
+			return nil, false, err
 		}
 	}
 	isHasMore := nextOffset != nil
-	return outputs, outputIds, isHasMore, nil
+	return outputsMap, isHasMore, nil
 }
 
 // processInitializationForNFT
@@ -420,18 +420,17 @@ func run() error {
 				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
 				return
 			default:
-				outputs, outputIds, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient)
+				outputsMap, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient)
 				if err != nil {
 					// log error then continue
 					CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForBasicOutput failed:%s", err)
 					continue
 				}
-				if len(outputs) > 0 {
+				if len(outputsMap) > 0 {
 					// log len(outputs)
 					CoreComponent.LogInfof("processInitializationForTokenForBasicOutput ... len(outputs):%d", len(outputs))
 					// loop outputs
-					for i, output := range outputs {
-						outputId := outputIds[i]
+					for outputId, output := range outputsMap {
 						outputIdBytes, _ := iotago.DecodeHex(outputId)
 						err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
 						if err != nil {
@@ -463,16 +462,15 @@ func run() error {
 				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
 				return
 			default:
-				outputs, outputIds, isHasMore, err := processInitializationForTokenForNftOutput(ctx, nodeHTTPAPIClient, indexerClient)
+				outputsMap, isHasMore, err := processInitializationForTokenForNftOutput(ctx, nodeHTTPAPIClient, indexerClient)
 				if err != nil {
 					// log error then continue
 					CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForNftOutput failed:%s", err)
 					continue
 				}
-				if len(outputs) > 0 {
+				if len(outputsMap) > 0 {
 					// loop outputs
-					for i, output := range outputs {
-						outputId := outputIds[i]
+					for outputId, output := range outputsMap {
 						outputIdBytes, _ := iotago.DecodeHex(outputId)
 						err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
 						if err != nil {

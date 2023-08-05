@@ -310,34 +310,62 @@ func fetchNextNFTs(ctx context.Context, client *nodeclient.Client, indexerClient
 	return nfts, offset, nil
 }
 
-func fetchNextOutputsForBasicType(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) ([]iotago.Output, iotago.HexOutputIDs, *string, error) {
+func fetchNextOutputsForBasicType(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) (map[string]iotago.Output, *string, error) {
 	outputHexIds, offset, err := deps.IMManager.QueryBasicOutputIds(ctx, indexerClient, offset, log)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	var outputs []iotago.Output
-	for _, outputHexId := range outputHexIds {
-		output, _, _, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(ctx, client, outputHexId)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		outputs = append(outputs, output)
+	outputsMap, err := fetchNextOutputsForBasicTypeWithOutputHexIds(ctx, client, outputHexIds, log)
+	if err != nil {
+		return nil, nil, err
 	}
-	return outputs, outputHexIds, offset, nil
+	return outputsMap, offset, nil
 }
 
-func fetchNextOutputsForNFTType(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) ([]iotago.Output, iotago.HexOutputIDs, *string, error) {
+// struct for outputId and output pair
+type OutputIdOutputPair struct {
+	OutputId string
+	Output   iotago.Output
+}
+
+func fetchNextOutputsForNFTType(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) (map[string]iotago.Output, *string, error) {
 	outputHexIds, offset, err := deps.IMManager.QueryNFTOutputIds(ctx, indexerClient, offset, log)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
-	var outputs []iotago.Output
+	outputsMap, err := fetchNextOutputsForBasicTypeWithOutputHexIds(ctx, client, outputHexIds, log)
+	if err != nil {
+		return nil, nil, err
+	}
+	return outputsMap, offset, nil
+}
+
+// outputHexIds -> outputsMap := make(map[string]iotago.Output)
+func fetchNextOutputsForBasicTypeWithOutputHexIds(ctx context.Context, client *nodeclient.Client, outputHexIds iotago.HexOutputIDs, log *logger.Logger) (map[string]iotago.Output, error) {
+	outputsMap := make(map[string]iotago.Output)
+	outputsChan := make(chan OutputIdOutputPair)
 	for _, outputHexId := range outputHexIds {
-		output, _, _, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(ctx, client, outputHexId)
-		if err != nil {
-			return nil, nil, nil, err
-		}
-		outputs = append(outputs, output)
+		go func(outputHexId string) {
+			output, _, _, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(ctx, client, outputHexId)
+			if err != nil {
+				log.Errorf("failed to fetch output for outputHexId %s", outputHexId)
+				// push nil to channel
+				outputsChan <- OutputIdOutputPair{
+					OutputId: outputHexId,
+					Output:   nil,
+				}
+				return
+			}
+			outputsChan <- OutputIdOutputPair{
+				OutputId: outputHexId,
+				Output:   output,
+			}
+		}(outputHexId)
 	}
-	return outputs, outputHexIds, offset, nil
+	// reduce result from channel
+	for i := 0; i < len(outputHexIds); i++ {
+		outputIdOutputPair := <-outputsChan
+		outputsMap[outputIdOutputPair.OutputId] = outputIdOutputPair.Output
+	}
+	return outputsMap, nil
 }
