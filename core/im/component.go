@@ -303,7 +303,8 @@ func run() error {
 		for !isMessageInitializationFinished || !isSharedInitializationFinished {
 			select {
 			case <-ctx.Done():
-				break
+				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
+				return
 			default:
 				if !isMessageInitializationFinished {
 					messages, isHasMore, err := processInitializationForMessage(ctx, nodeHTTPAPIClient, indexerClient)
@@ -370,7 +371,8 @@ func run() error {
 		for _, issuerBech32Address := range issuerBech32AddressList {
 			select {
 			case <-ctx.Done():
-				break
+				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
+				return
 			default:
 				isNFTInitializationFinished, err := deps.IMManager.IsInitFinished(im.NFTType, issuerBech32Address)
 				if err != nil {
@@ -415,7 +417,8 @@ func run() error {
 		for !isTokenBasicFinished {
 			select {
 			case <-ctx.Done():
-				break
+				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
+				return
 			default:
 				outputs, outputIds, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient)
 				if err != nil {
@@ -456,7 +459,9 @@ func run() error {
 		for !isTokenNFTFinished {
 			select {
 			case <-ctx.Done():
-				break
+				// log ctx cancel then exit
+				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
+				return
 			default:
 				outputs, outputIds, isHasMore, err := processInitializationForTokenForNftOutput(ctx, nodeHTTPAPIClient, indexerClient)
 				if err != nil {
