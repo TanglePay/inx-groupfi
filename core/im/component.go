@@ -301,54 +301,59 @@ func run() error {
 		}
 		// loop until isMessageInitializationFinished is true
 		for !isMessageInitializationFinished || !isSharedInitializationFinished {
-			if !isMessageInitializationFinished {
-				messages, isHasMore, err := processInitializationForMessage(ctx, nodeHTTPAPIClient, indexerClient)
-				if err != nil {
-					// log error then continue
-					CoreComponent.LogWarnf("LedgerInit ... processInitializationForMessage failed:%s", err)
-					continue
-				}
-				if len(messages) > 0 {
-					err = deps.IMManager.ApplyNewLedgerUpdate(0, messages, nil, nil, CoreComponent.Logger(), true)
+			select {
+			case <-ctx.Done():
+				break
+			default:
+				if !isMessageInitializationFinished {
+					messages, isHasMore, err := processInitializationForMessage(ctx, nodeHTTPAPIClient, indexerClient)
 					if err != nil {
 						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
+						CoreComponent.LogWarnf("LedgerInit ... processInitializationForMessage failed:%s", err)
 						continue
 					}
+					if len(messages) > 0 {
+						err = deps.IMManager.ApplyNewLedgerUpdate(0, messages, nil, nil, CoreComponent.Logger(), true)
+						if err != nil {
+							// log error then continue
+							CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
+							continue
+						}
+					}
+					if !isHasMore {
+						err = deps.IMManager.MarkInitFinished(im.MessageType, "")
+						if err != nil {
+							// log error then continue
+							CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+							continue
+						}
+						isMessageInitializationFinished = true
+					}
 				}
-				if !isHasMore {
-					err = deps.IMManager.MarkInitFinished(im.MessageType, "")
+				if !isSharedInitializationFinished {
+					messages, isHasMore, err := processInitializationForShared(ctx, nodeHTTPAPIClient, indexerClient)
 					if err != nil {
 						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+						CoreComponent.LogWarnf("LedgerInit ... processInitializationForShared failed:%s", err)
 						continue
 					}
-					isMessageInitializationFinished = true
-				}
-			}
-			if !isSharedInitializationFinished {
-				messages, isHasMore, err := processInitializationForShared(ctx, nodeHTTPAPIClient, indexerClient)
-				if err != nil {
-					// log error then continue
-					CoreComponent.LogWarnf("LedgerInit ... processInitializationForShared failed:%s", err)
-					continue
-				}
-				if len(messages) > 0 {
-					err = deps.IMManager.ApplyNewLedgerUpdate(0, nil, nil, messages, CoreComponent.Logger(), true)
-					if err != nil {
-						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
-						continue
+					if len(messages) > 0 {
+						err = deps.IMManager.ApplyNewLedgerUpdate(0, nil, nil, messages, CoreComponent.Logger(), true)
+						if err != nil {
+							// log error then continue
+							CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
+							continue
+						}
 					}
-				}
-				if !isHasMore {
-					err = deps.IMManager.MarkInitFinished(im.SharedType, "")
-					if err != nil {
-						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
-						continue
+					if !isHasMore {
+						err = deps.IMManager.MarkInitFinished(im.SharedType, "")
+						if err != nil {
+							// log error then continue
+							CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+							continue
+						}
+						isSharedInitializationFinished = true
 					}
-					isSharedInitializationFinished = true
 				}
 			}
 		}
@@ -363,33 +368,43 @@ func run() error {
 			"smr1zpvjkgxkzrhyvxy5nh20j6wm0l7grkf5s6l7r2mrhyspvx9khcaysmam589",
 		}
 		for _, issuerBech32Address := range issuerBech32AddressList {
-			isNFTInitializationFinished, err := deps.IMManager.IsInitFinished(im.NFTType, issuerBech32Address)
-			if err != nil {
-				CoreComponent.LogPanicf("failed to start worker: %s", err)
-			}
-			for !isNFTInitializationFinished {
-				nfts, isHasMore, err := processInitializationForNFT(ctx, nodeHTTPAPIClient, indexerClient, issuerBech32Address)
+			select {
+			case <-ctx.Done():
+				break
+			default:
+				isNFTInitializationFinished, err := deps.IMManager.IsInitFinished(im.NFTType, issuerBech32Address)
 				if err != nil {
-					// log error then continue
-					CoreComponent.LogWarnf("LedgerInit ... processInitializationForNFT failed:%s", err)
-					continue
+					CoreComponent.LogPanicf("failed to start worker: %s", err)
 				}
-				if len(nfts) > 0 {
-					err = deps.IMManager.ApplyNewLedgerUpdate(0, nil, nfts, nil, CoreComponent.Logger(), true)
-					if err != nil {
-						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
-						continue
+				for !isNFTInitializationFinished {
+					select {
+					case <-ctx.Done():
+						break
+					default:
+						nfts, isHasMore, err := processInitializationForNFT(ctx, nodeHTTPAPIClient, indexerClient, issuerBech32Address)
+						if err != nil {
+							// log error then continue
+							CoreComponent.LogWarnf("LedgerInit ... processInitializationForNFT failed:%s", err)
+							continue
+						}
+						if len(nfts) > 0 {
+							err = deps.IMManager.ApplyNewLedgerUpdate(0, nil, nfts, nil, CoreComponent.Logger(), true)
+							if err != nil {
+								// log error then continue
+								CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
+								continue
+							}
+						}
+						if !isHasMore {
+							err = deps.IMManager.MarkInitFinished(im.NFTType, issuerBech32Address)
+							if err != nil {
+								// log error then continue
+								CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+								continue
+							}
+							isNFTInitializationFinished = true
+						}
 					}
-				}
-				if !isHasMore {
-					err = deps.IMManager.MarkInitFinished(im.NFTType, issuerBech32Address)
-					if err != nil {
-						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
-						continue
-					}
-					isNFTInitializationFinished = true
 				}
 			}
 		}
@@ -398,35 +413,40 @@ func run() error {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
 		for !isTokenBasicFinished {
-			outputs, outputIds, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient)
-			if err != nil {
-				// log error then continue
-				CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForBasicOutput failed:%s", err)
-				continue
-			}
-			if len(outputs) > 0 {
-				// log len(outputs)
-				CoreComponent.LogInfof("processInitializationForTokenForBasicOutput ... len(outputs):%d", len(outputs))
-				// loop outputs
-				for i, output := range outputs {
-					outputId := outputIds[i]
-					outputIdBytes, _ := iotago.DecodeHex(outputId)
-					err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
-					if err != nil {
-						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
-						continue
-					}
-				}
-			}
-			if !isHasMore {
-				err = deps.IMManager.MarkInitFinished(im.TokenBasicType, "")
+			select {
+			case <-ctx.Done():
+				break
+			default:
+				outputs, outputIds, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient)
 				if err != nil {
 					// log error then continue
-					CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+					CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForBasicOutput failed:%s", err)
 					continue
 				}
-				isTokenBasicFinished = true
+				if len(outputs) > 0 {
+					// log len(outputs)
+					CoreComponent.LogInfof("processInitializationForTokenForBasicOutput ... len(outputs):%d", len(outputs))
+					// loop outputs
+					for i, output := range outputs {
+						outputId := outputIds[i]
+						outputIdBytes, _ := iotago.DecodeHex(outputId)
+						err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
+						if err != nil {
+							// log error then continue
+							CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
+							continue
+						}
+					}
+				}
+				if !isHasMore {
+					err = deps.IMManager.MarkInitFinished(im.TokenBasicType, "")
+					if err != nil {
+						// log error then continue
+						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+						continue
+					}
+					isTokenBasicFinished = true
+				}
 			}
 		}
 		isTokenNFTFinished, err := deps.IMManager.IsInitFinished(im.TokenNFTType, "")
@@ -434,33 +454,38 @@ func run() error {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
 		for !isTokenNFTFinished {
-			outputs, outputIds, isHasMore, err := processInitializationForTokenForNftOutput(ctx, nodeHTTPAPIClient, indexerClient)
-			if err != nil {
-				// log error then continue
-				CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForNftOutput failed:%s", err)
-				continue
-			}
-			if len(outputs) > 0 {
-				// loop outputs
-				for i, output := range outputs {
-					outputId := outputIds[i]
-					outputIdBytes, _ := iotago.DecodeHex(outputId)
-					err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
-					if err != nil {
-						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
-						continue
-					}
-				}
-			}
-			if !isHasMore {
-				err = deps.IMManager.MarkInitFinished(im.TokenNFTType, "")
+			select {
+			case <-ctx.Done():
+				break
+			default:
+				outputs, outputIds, isHasMore, err := processInitializationForTokenForNftOutput(ctx, nodeHTTPAPIClient, indexerClient)
 				if err != nil {
 					// log error then continue
-					CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+					CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForNftOutput failed:%s", err)
 					continue
 				}
-				isTokenNFTFinished = true
+				if len(outputs) > 0 {
+					// loop outputs
+					for i, output := range outputs {
+						outputId := outputIds[i]
+						outputIdBytes, _ := iotago.DecodeHex(outputId)
+						err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
+						if err != nil {
+							// log error then continue
+							CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
+							continue
+						}
+					}
+				}
+				if !isHasMore {
+					err = deps.IMManager.MarkInitFinished(im.TokenNFTType, "")
+					if err != nil {
+						// log error then continue
+						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+						continue
+					}
+					isTokenNFTFinished = true
+				}
 			}
 		}
 		//TODO handle total smr
