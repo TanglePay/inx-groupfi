@@ -2,6 +2,7 @@ package im
 
 import (
 	"context"
+	"net/http"
 	"time"
 
 	"go.uber.org/dig"
@@ -13,9 +14,11 @@ import (
 	"github.com/iotaledger/hive.go/core/database"
 	"github.com/iotaledger/hive.go/core/kvstore"
 	hornetdb "github.com/iotaledger/hornet/v2/pkg/database"
+	"github.com/iotaledger/inx-app/pkg/httpserver"
 	"github.com/iotaledger/inx-app/pkg/nodebridge"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
+	"github.com/pkg/errors"
 )
 
 func init() {
@@ -491,7 +494,59 @@ func run() error {
 	}, daemon.PriorityStopIM); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
+	// create a background worker that handles the API
+	if err := CoreComponent.Daemon().BackgroundWorker("API", func(ctx context.Context) {
+		CoreComponent.LogInfo("Starting API ... done")
 
+		CoreComponent.LogInfo("Starting API server ...")
+
+		e := httpserver.NewEcho(CoreComponent.Logger(), nil, ParamsRestAPI.DebugRequestLoggerEnabled)
+
+		setupRoutes(e)
+		go func() {
+			CoreComponent.LogInfof("You can now access the API using: http://%s", ParamsRestAPI.BindAddress)
+			if err := e.Start(ParamsRestAPI.BindAddress); err != nil && !errors.Is(err, http.ErrServerClosed) {
+				CoreComponent.LogErrorfAndExit("Stopped REST-API server due to an error (%s)", err)
+			}
+		}()
+
+		ctxRegister, cancelRegister := context.WithTimeout(ctx, 5*time.Second)
+
+		advertisedAddress := ParamsRestAPI.BindAddress
+		if ParamsRestAPI.AdvertiseAddress != "" {
+			advertisedAddress = ParamsRestAPI.AdvertiseAddress
+		}
+
+		if err := deps.NodeBridge.RegisterAPIRoute(ctxRegister, APIRoute, advertisedAddress); err != nil {
+			CoreComponent.LogErrorfAndExit("Registering INX api route failed: %s", err)
+		}
+
+		cancelRegister()
+
+		CoreComponent.LogInfo("Starting API server ... done")
+		<-ctx.Done()
+		CoreComponent.LogInfo("Stopping API ...")
+
+		ctxUnregister, cancelUnregister := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancelUnregister()
+
+		//nolint:contextcheck // false positive
+		if err := deps.NodeBridge.UnregisterAPIRoute(ctxUnregister, APIRoute); err != nil {
+			CoreComponent.LogWarnf("Unregistering INX api route failed: %s", err)
+		}
+
+		shutdownCtx, shutdownCtxCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCtxCancel()
+
+		//nolint:contextcheck // false positive
+		if err := e.Shutdown(shutdownCtx); err != nil {
+			CoreComponent.LogWarn(err)
+		}
+
+		CoreComponent.LogInfo("Stopping API ... done")
+	}, daemon.PriorityStopIMAPI); err != nil {
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
+	}
 	// create a mqtt server that handles the MQTT connection
 	if err := CoreComponent.Daemon().BackgroundWorker("MQTT", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting MQTT server ...")
@@ -514,7 +569,7 @@ func run() error {
 		}
 
 		if err := deps.NodeBridge.RegisterAPIRoute(ctxRegister, MQTTAPIRoute, advertisedAddress); err != nil {
-			CoreComponent.LogErrorfAndExit("Registering INX api route failed: %s", err)
+			CoreComponent.LogErrorfAndExit("Registering INX mqtt route failed: %s", err)
 		}
 
 		cancelRegister()
