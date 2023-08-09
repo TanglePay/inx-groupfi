@@ -172,7 +172,8 @@ func (im *Manager) GetBalanceOfOneAddressSha256(tokenType uint16, addressSha256 
 	totalBalance := big.NewInt(0)
 
 	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
-		amountStr := string(value)
+		amountStr, _ := im.AmountAndAddressFromTokenValuePayload(value)
+
 		amount, _ := new(big.Int).SetString(amountStr, 10)
 		status := key[len(key)-1]
 		if status == ImTokenStatusCreated {
