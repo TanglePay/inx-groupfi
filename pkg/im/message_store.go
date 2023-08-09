@@ -124,6 +124,8 @@ func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, 
 			return err
 		}
 		for _, nft := range nfts {
+			//log nft
+			logger.Infof("message group recipient list: groupId:%s, address:%s, milestoneindex:%d, milestonetimestamp:%d", nft.GetGroupIdStr(), string(nft.OwnerAddress), nft.MileStoneIndex, nft.MileStoneTimestamp)
 			key, err := im.storeInbox(nft.OwnerAddress, message, logger)
 			if err != nil {
 				return err
