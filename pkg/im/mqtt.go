@@ -101,6 +101,8 @@ func NewMQTTServer(opts *MQTTOpts) (*MQTTServer, error) {
 
 // publish a message to a topic
 func (s *MQTTServer) Publish(topic string, payload []byte) error {
+	// log topic and payload
+	s.server.Log.Info().Str("topic", topic).Str("payload", string(payload)).Msg("publish")
 	return s.server.Publish(topic, payload, false, s.opts.qos)
 }
 
