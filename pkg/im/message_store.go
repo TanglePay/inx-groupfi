@@ -129,12 +129,12 @@ func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, 
 			if isPush {
 				logger.Infof("message group recipient list: groupId:%s, address:%s, milestoneindex:%d, milestonetimestamp:%d", nft.GetGroupIdStr(), string(nft.OwnerAddress), nft.MileStoneIndex, nft.MileStoneTimestamp)
 			}
-			key, err := im.storeInbox(nft.OwnerAddress, message, logger)
+			value, err := im.storeInbox(nft.OwnerAddress, message, logger)
 			if err != nil {
 				return err
 			}
 			if isPush {
-				go im.pushInbox(nft.OwnerAddress, key, logger)
+				go im.pushInbox(nft.OwnerAddress, value, logger)
 			}
 		}
 
@@ -165,7 +165,7 @@ func (im *Manager) storeInbox(receiverAddress []byte, message *Message, logger *
 	keyHex := iotago.EncodeHex(key)
 	valueHex := iotago.EncodeHex(value)
 	logger.Infof("store inbox with key %s, value %s", keyHex, valueHex)
-	return key, err
+	return value, err
 }
 
 // push message via mqtt
