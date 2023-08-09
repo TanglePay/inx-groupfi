@@ -184,6 +184,8 @@ func handleTokenWhaleEligibilityFromAddressGivenTotalAmount(tokenType uint16, ad
 	if err != nil {
 		return err
 	}
+	// total = total + 1 to prevent divide zero
+	totalAmount = new(big.Int).Add(totalAmount, big.NewInt(1))
 	percentage := new(big.Float).Quo(new(big.Float).SetInt(balance), new(big.Float).SetInt(totalAmount))
 	threshold := getThresholdFromTokenType(tokenType)
 	if threshold == nil {
