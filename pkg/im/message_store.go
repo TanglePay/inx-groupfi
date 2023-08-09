@@ -120,7 +120,7 @@ func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, 
 			return err
 		}
 		groupId := message.GroupId
-		nfts, err := im.ReadNFTsFromGroupId(im.NftKeyPrefixFromGroupId(groupId))
+		nfts, err := im.ReadNFTsFromGroupId(groupId)
 		if err != nil {
 			return err
 		}
