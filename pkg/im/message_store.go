@@ -113,7 +113,8 @@ func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) e
 }
 
 func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, isPush bool) error {
-
+	// log is push
+	logger.Infof("storeNewMessages : isPush %v", isPush)
 	for _, message := range messages {
 		if err := im.storeSingleMessage(message, logger); err != nil {
 			return err
@@ -125,7 +126,9 @@ func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, 
 		}
 		for _, nft := range nfts {
 			//log nft
-			logger.Infof("message group recipient list: groupId:%s, address:%s, milestoneindex:%d, milestonetimestamp:%d", nft.GetGroupIdStr(), string(nft.OwnerAddress), nft.MileStoneIndex, nft.MileStoneTimestamp)
+			if isPush {
+				logger.Infof("message group recipient list: groupId:%s, address:%s, milestoneindex:%d, milestonetimestamp:%d", nft.GetGroupIdStr(), string(nft.OwnerAddress), nft.MileStoneIndex, nft.MileStoneTimestamp)
+			}
 			key, err := im.storeInbox(nft.OwnerAddress, message, logger)
 			if err != nil {
 				return err
