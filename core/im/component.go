@@ -381,7 +381,8 @@ func run() error {
 				for !isNFTInitializationFinished {
 					select {
 					case <-ctx.Done():
-						break
+						CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
+						return
 					default:
 						nfts, isHasMore, err := processInitializationForNFT(ctx, nodeHTTPAPIClient, indexerClient, issuerBech32Address)
 						if err != nil {
