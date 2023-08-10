@@ -77,9 +77,6 @@ func (h *ExampleHook) OnPublished(cl *mqtt.Client, pk packets.Packet) {
 }
 func NewMQTTServer(opts *MQTTOpts) (*MQTTServer, error) {
 	server := mqtt.New(nil)
-	server.Options.Capabilities.Compatibilities.ObscureNotAuthorized = true
-	server.Options.Capabilities.Compatibilities.PassiveClientDisconnect = true
-	server.Options.Capabilities.Compatibilities.NoInheritedPropertiesOnAck = true
 	l := server.Log.Level(zerolog.DebugLevel)
 	server.Log = &l
 	_ = server.AddHook(new(debug.Hook), &debug.Options{
