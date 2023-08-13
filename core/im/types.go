@@ -18,6 +18,12 @@ type SharedResponse struct {
 	OutputId string `json:"outputId"`
 }
 
+type TokenBalanceResponse struct {
+	TokenType    uint16 `json:"TokenType"`
+	Balance      string `json:"Balance"`
+	TotalBalance string `json:"TotalBalance"`
+}
+
 // enum for output type created or consumed
 const (
 	ImOutputTypeCreated = iota

@@ -3,6 +3,7 @@ package im
 import (
 	"net/http"
 
+	"github.com/TanglePay/inx-iotacat/pkg/im"
 	"github.com/labstack/echo/v4"
 
 	"github.com/iotaledger/inx-app/pkg/httpserver"
@@ -92,5 +93,22 @@ func setupRoutes(e *echo.Echo) {
 		}
 		groupId := deps.IMManager.GroupNameToGroupId(groupName)
 		return httpserver.JSONResponse(c, http.StatusOK, iotago.EncodeHex(groupId))
+	})
+	e.GET("/testtoken", func(c echo.Context) error {
+		address, err := parseAddressQueryParam(c)
+		if err != nil {
+			return err
+		}
+		balance, err := deps.IMManager.GetBalanceOfOneAddress(im.ImTokenTypeSMR, address)
+		if err != nil {
+			return err
+		}
+		totalBalance := GetSmrTokenTotal().Get()
+		resp := &TokenBalanceResponse{
+			TokenType:    im.ImTokenTypeSMR,
+			Balance:      balance.Text(10),
+			TotalBalance: totalBalance.Text(10),
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 }
