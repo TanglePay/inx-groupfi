@@ -144,7 +144,9 @@ func executeQuery(ctx context.Context, client nodeclient.IndexerClient, query no
 		logger.Infof("QueryOutputIds ... got result set,resp is nil")
 		return nil, nil, errors.New("resp is nil")
 	}
-
+	// log ledgerIndex
+	ledgerIndex := resp.LedgerIndex
+	logger.Infof("QueryOutputIds ... got result set,ledgerIndex:%d", ledgerIndex)
 	nextOffset := resultSet.Response.Cursor
 	outputIds := resultSet.Response.Items
 
