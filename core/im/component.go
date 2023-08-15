@@ -411,89 +411,89 @@ func run() error {
 				}
 			}
 		}
-
-		isTokenBasicFinished, err := deps.IMManager.IsInitFinished(im.TokenBasicType, "")
-		if err != nil {
-			CoreComponent.LogPanicf("failed to start worker: %s", err)
-		}
-		for !isTokenBasicFinished {
-			select {
-			case <-ctx.Done():
-				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
-				return
-			default:
-				outputsMap, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient)
-				if err != nil {
-					// log error then continue
-					CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForBasicOutput failed:%s", err)
-					continue
-				}
-				if len(outputsMap) > 0 {
-					// log len(outputs)
-					CoreComponent.LogInfof("processInitializationForTokenForBasicOutput ... len(outputsMap):%d", len(outputsMap))
-					// loop outputs
-					for outputId, output := range outputsMap {
-						outputIdBytes, _ := iotago.DecodeHex(outputId)
-						err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
-						if err != nil {
-							// log error then continue
-							CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
-							continue
-						}
-					}
-				}
-				if !isHasMore {
-					err = deps.IMManager.MarkInitFinished(im.TokenBasicType, "")
+		/*
+			isTokenBasicFinished, err := deps.IMManager.IsInitFinished(im.TokenBasicType, "")
+			if err != nil {
+				CoreComponent.LogPanicf("failed to start worker: %s", err)
+			}
+			for !isTokenBasicFinished {
+				select {
+				case <-ctx.Done():
+					CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
+					return
+				default:
+					outputsMap, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient)
 					if err != nil {
 						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+						CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForBasicOutput failed:%s", err)
 						continue
 					}
-					isTokenBasicFinished = true
-				}
-			}
-		}
-		isTokenNFTFinished, err := deps.IMManager.IsInitFinished(im.TokenNFTType, "")
-		if err != nil {
-			CoreComponent.LogPanicf("failed to start worker: %s", err)
-		}
-		for !isTokenNFTFinished {
-			select {
-			case <-ctx.Done():
-				// log ctx cancel then exit
-				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
-				return
-			default:
-				outputsMap, isHasMore, err := processInitializationForTokenForNftOutput(ctx, nodeHTTPAPIClient, indexerClient)
-				if err != nil {
-					// log error then continue
-					CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForNftOutput failed:%s", err)
-					continue
-				}
-				if len(outputsMap) > 0 {
-					// loop outputs
-					for outputId, output := range outputsMap {
-						outputIdBytes, _ := iotago.DecodeHex(outputId)
-						err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
-						if err != nil {
-							// log error then continue
-							CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
-							continue
+					if len(outputsMap) > 0 {
+						// log len(outputs)
+						CoreComponent.LogInfof("processInitializationForTokenForBasicOutput ... len(outputsMap):%d", len(outputsMap))
+						// loop outputs
+						for outputId, output := range outputsMap {
+							outputIdBytes, _ := iotago.DecodeHex(outputId)
+							err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
+							if err != nil {
+								// log error then continue
+								CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
+								continue
+							}
 						}
 					}
-				}
-				if !isHasMore {
-					err = deps.IMManager.MarkInitFinished(im.TokenNFTType, "")
-					if err != nil {
-						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
-						continue
+					if !isHasMore {
+						err = deps.IMManager.MarkInitFinished(im.TokenBasicType, "")
+						if err != nil {
+							// log error then continue
+							CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+							continue
+						}
+						isTokenBasicFinished = true
 					}
-					isTokenNFTFinished = true
 				}
 			}
-		}
-
+			isTokenNFTFinished, err := deps.IMManager.IsInitFinished(im.TokenNFTType, "")
+			if err != nil {
+				CoreComponent.LogPanicf("failed to start worker: %s", err)
+			}
+			for !isTokenNFTFinished {
+				select {
+				case <-ctx.Done():
+					// log ctx cancel then exit
+					CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
+					return
+				default:
+					outputsMap, isHasMore, err := processInitializationForTokenForNftOutput(ctx, nodeHTTPAPIClient, indexerClient)
+					if err != nil {
+						// log error then continue
+						CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForNftOutput failed:%s", err)
+						continue
+					}
+					if len(outputsMap) > 0 {
+						// loop outputs
+						for outputId, output := range outputsMap {
+							outputIdBytes, _ := iotago.DecodeHex(outputId)
+							err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
+							if err != nil {
+								// log error then continue
+								CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
+								continue
+							}
+						}
+					}
+					if !isHasMore {
+						err = deps.IMManager.MarkInitFinished(im.TokenNFTType, "")
+						if err != nil {
+							// log error then continue
+							CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+							continue
+						}
+						isTokenNFTFinished = true
+					}
+				}
+			}
+		*/
 		//TODO handle total smr
 		CoreComponent.LogInfo("Finishing LedgerInit ... done")
 
