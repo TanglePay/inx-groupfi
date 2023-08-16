@@ -73,6 +73,12 @@ func initCurrentOffsetKey(indexerItemType IndexerItemType, extra string) []byte 
 		return ConcatByteSlices(prefixBytes, Sha256Hash("nftInitOffset"), extraBytes)
 	case SharedType:
 		return ConcatByteSlices(prefixBytes, Sha256Hash("sharedInitOffset"), extraBytes)
+	case TokenBasicType:
+		return ConcatByteSlices(prefixBytes, Sha256Hash("tokenBasicInitOffset"), extraBytes)
+	case TokenNFTType:
+		return ConcatByteSlices(prefixBytes, Sha256Hash("tokenNFTInitOffset"), extraBytes)
+	case WhaleEligibility:
+		return ConcatByteSlices(prefixBytes, Sha256Hash("whaleEligibilityInitOffset"), extraBytes)
 	}
 
 	return nil
