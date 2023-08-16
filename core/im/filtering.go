@@ -312,15 +312,6 @@ func fetchNextNFTs(ctx context.Context, client *nodeclient.Client, indexerClient
 	return nfts, offset, nil
 }
 
-func fetchNextOutputsForBasicType(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) ([]string, *string, error) {
-	outputHexIds, offset, err := deps.IMManager.QueryBasicOutputIds(ctx, indexerClient, offset, log)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return outputHexIds, offset, nil
-}
-
 // struct for outputId and output pair
 type OutputIdOutputPair struct {
 	OutputId string
