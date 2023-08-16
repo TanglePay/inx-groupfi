@@ -192,33 +192,36 @@ func processInitializationForTokenForBasicOutput(ctx context.Context, client *no
 }
 
 // processInitializationForTokenForNftOutput
-func processInitializationForTokenForNftOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) (map[string]iotago.Output, bool, error) {
+func processInitializationForTokenForNftOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, drainer *OutputIdDrainer) (int, bool, error) {
 	// get init offset
 	itemType := im.TokenNFTType
 	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, "")
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
-		return nil, false, err
+		return 0, false, err
 	}
-	// get outputs and meta data
-	outputsMap, nextOffset, err := fetchNextOutputsForNFTType(ctx, client, indexerClient, initOffset, CoreComponent.Logger())
+	// get outputhexids
+	outputHexIds, nextOffset, err := deps.IMManager.QueryNFTOutputIds(ctx, indexerClient, initOffset, CoreComponent.Logger())
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... fetchNextTokenForNftOutput failed:%s", err)
-		return nil, false, err
+		return 0, false, err
 	}
+	//drain
+	drainer.Drain(outputHexIds)
+
 	// update init offset
 	if nextOffset != nil {
 		err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType, "")
 		if err != nil {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
-			return nil, false, err
+			return 0, false, err
 		}
 	}
 	isHasMore := nextOffset != nil
-	return outputsMap, isHasMore, nil
+	return len(outputHexIds), isHasMore, nil
 }
 
 // processInitializationForNFT
@@ -421,9 +424,7 @@ func run() error {
 		if err != nil {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
-		TokenBasicDrainer := NewOutputIdDrainer(ctx, func(outputId string) {
-			// log outputId
-			CoreComponent.LogInfof("LedgerInit ... TokenBasicDrainer outputId:%s", outputId)
+		OutputIdDrainer := NewOutputIdDrainer(ctx, func(outputId string) {
 			output, err := deps.IMManager.OutputIdToOutput(ctx, nodeHTTPAPIClient, outputId)
 			if err != nil {
 				// log error
@@ -439,14 +440,14 @@ func run() error {
 			}
 		}, 1000, 100, 2000)
 		totalBasicOutputProcessed := big.NewInt(0)
-		startTime := time.Now()
+		startTimeBasic := time.Now()
 		for !isTokenBasicFinished {
 			select {
 			case <-ctx.Done():
 				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
 				return
 			default:
-				ct, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient, TokenBasicDrainer)
+				ct, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient, OutputIdDrainer)
 				if err != nil {
 					// log error then continue
 					CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForBasicOutput failed:%s", err)
@@ -454,7 +455,7 @@ func run() error {
 				}
 				// totalBasicOutputProcessed = totalBasicOutputProcessed + ct
 				totalBasicOutputProcessed.Add(totalBasicOutputProcessed, big.NewInt(int64(ct)))
-				timeElapsed := time.Since(startTime)
+				timeElapsed := time.Since(startTimeBasic)
 				averageProcessedPerSecond := big.NewInt(0)
 				averageProcessedPerSecond.Div(totalBasicOutputProcessed, big.NewInt(int64(timeElapsed.Seconds())+1))
 				// log totalBasicOutputProcessed and timeElapsed and averageProcessedPerSecond
@@ -470,51 +471,45 @@ func run() error {
 				}
 			}
 		}
+		totalNFTOutputProcessed := big.NewInt(0)
+		startTimeNFT := time.Now()
+		isTokenNFTFinished, err := deps.IMManager.IsInitFinished(im.TokenNFTType, "")
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
+		}
+		for !isTokenNFTFinished {
+			select {
+			case <-ctx.Done():
+				// log ctx cancel then exit
+				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
+				return
+			default:
+				ct, isHasMore, err := processInitializationForTokenForNftOutput(ctx, nodeHTTPAPIClient, indexerClient, OutputIdDrainer)
+				if err != nil {
+					// log error then continue
+					CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForNftOutput failed:%s", err)
+					continue
+				}
+				totalNFTOutputProcessed.Add(totalNFTOutputProcessed, big.NewInt(int64(ct)))
+				timeElapsed := time.Since(startTimeNFT)
+				averageProcessedPerSecond := big.NewInt(0)
+				averageProcessedPerSecond.Div(totalNFTOutputProcessed, big.NewInt(int64(timeElapsed.Seconds())+1))
+				// log totalBasicOutputProcessed and timeElapsed and averageProcessedPerSecond
+				CoreComponent.LogInfof("LedgerInit ... totalBasicOutputProcessed:%d,timeElapsed:%s,averageProcessedPerSecond:%d", totalNFTOutputProcessed, timeElapsed, averageProcessedPerSecond)
 
-		/*
-			isTokenNFTFinished, err := deps.IMManager.IsInitFinished(im.TokenNFTType, "")
-			if err != nil {
-				CoreComponent.LogPanicf("failed to start worker: %s", err)
-			}
-			for !isTokenNFTFinished {
-				select {
-				case <-ctx.Done():
-					// log ctx cancel then exit
-					CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
-					return
-				default:
-					outputsMap, isHasMore, err := processInitializationForTokenForNftOutput(ctx, nodeHTTPAPIClient, indexerClient)
+				if !isHasMore {
+					err = deps.IMManager.MarkInitFinished(im.TokenNFTType, "")
 					if err != nil {
 						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForNftOutput failed:%s", err)
+						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
 						continue
 					}
-					if len(outputsMap) > 0 {
-						// loop outputs
-						for outputId, output := range outputsMap {
-							outputIdBytes, _ := iotago.DecodeHex(outputId)
-							err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
-							if err != nil {
-								// log error then continue
-								CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
-								continue
-							}
-						}
-					}
-					if !isHasMore {
-						err = deps.IMManager.MarkInitFinished(im.TokenNFTType, "")
-						if err != nil {
-							// log error then continue
-							CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
-							continue
-						}
-						isTokenNFTFinished = true
-					}
+					isTokenNFTFinished = true
 				}
 			}
-		*/
-		//TODO handle total smr
-		CoreComponent.LogInfo("Finishing LedgerInit ... done")
+		}
+
+		//handle total smr
 
 		smrTotalAddress := deps.IMManager.GetTotalAddressFromType(im.ImTokenTypeSMR)
 
@@ -526,20 +521,31 @@ func run() error {
 		smrTotal := GetSmrTokenTotal()
 		smrTotal.Add(smrTotalValue)
 
-		smrTokenPrefix := deps.IMManager.TokenKeyPrefixFromTokenType(im.ImTokenTypeSMR)
-
-		// hash set for address
-		addressSet := make(map[string]struct{})
-		deps.IMManager.GetImStore().Iterate(smrTokenPrefix, func(key kvstore.Key, value kvstore.Value) bool {
-			_, address := deps.IMManager.AmountAndAddressFromTokenValuePayload(value)
-			addressSet[address] = struct{}{}
-			return true
-		})
-		// loop addressSet
-		for address := range addressSet {
-			handleTokenWhaleEligibilityFromAddressGivenTotalAmount(im.ImTokenTypeSMR, address, smrTotal.Get(), deps.IMManager, CoreComponent.Logger())
+		//handle whale eligibility
+		isWhaleEligibilityFinished, err := deps.IMManager.IsInitFinished(im.WhaleEligibility, "")
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
-		//
+		if !isWhaleEligibilityFinished {
+			smrTokenPrefix := deps.IMManager.TokenKeyPrefixFromTokenType(im.ImTokenTypeSMR)
+
+			// hash set for address
+			addressSet := make(map[string]struct{})
+			deps.IMManager.GetImStore().Iterate(smrTokenPrefix, func(key kvstore.Key, value kvstore.Value) bool {
+				_, address := deps.IMManager.AmountAndAddressFromTokenValuePayload(value)
+				addressSet[address] = struct{}{}
+				return true
+			})
+			// loop addressSet
+			for address := range addressSet {
+				handleTokenWhaleEligibilityFromAddressGivenTotalAmount(im.ImTokenTypeSMR, address, smrTotal.Get(), deps.IMManager, CoreComponent.Logger())
+			}
+			err = deps.IMManager.MarkInitFinished(im.WhaleEligibility, "")
+			if err != nil {
+				CoreComponent.LogPanicf("LedgerInit ... MarkInitFinished failed:%s", err)
+			}
+		}
+		CoreComponent.LogInfo("Finishing LedgerInit ... done")
 		startListeningToLedgerUpdate()
 	}, daemon.PriorityStopIM); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)

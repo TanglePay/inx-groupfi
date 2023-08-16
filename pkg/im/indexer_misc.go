@@ -18,6 +18,7 @@ const (
 	SharedType
 	TokenBasicType
 	TokenNFTType
+	WhaleEligibility
 )
 
 func initFinishedStoreKeyFromType(indexerItemType IndexerItemType, extra string) []byte {
@@ -30,6 +31,12 @@ func initFinishedStoreKeyFromType(indexerItemType IndexerItemType, extra string)
 		return ConcatByteSlices(prefixBytes, Sha256Hash("nftInitFinished"), extraBytes)
 	case SharedType:
 		return ConcatByteSlices(prefixBytes, Sha256Hash("sharedInitFinished"), extraBytes)
+	case TokenBasicType:
+		return ConcatByteSlices(prefixBytes, Sha256Hash("tokenBasicInitFinished"), extraBytes)
+	case TokenNFTType:
+		return ConcatByteSlices(prefixBytes, Sha256Hash("tokenNFTInitFinished"), extraBytes)
+	case WhaleEligibility:
+		return ConcatByteSlices(prefixBytes, Sha256Hash("whaleEligibilityInitFinished"), extraBytes)
 	}
 
 	return nil
