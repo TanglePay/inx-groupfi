@@ -125,10 +125,16 @@ func handleTokenFromINXLedgerOutput(output *inx.LedgerOutput, outputStatus int) 
 func handleTokenFromINXOutput(iotaOutput iotago.Output, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
 	if iotaOutput.Type() == iotago.OutputBasic {
 		basicOutput := iotaOutput.(*iotago.BasicOutput)
-		handleTokenFromBasicOutput(basicOutput, outputId, outputStatus, isUpdateGlobalAmount)
+		err := handleTokenFromBasicOutput(basicOutput, outputId, outputStatus, isUpdateGlobalAmount)
+		if err != nil {
+			return err
+		}
 	} else if iotaOutput.Type() == iotago.OutputNFT {
 		nftOutput := iotaOutput.(*iotago.NFTOutput)
-		handleTokenFromNFTOutput(nftOutput, outputId, outputStatus, isUpdateGlobalAmount)
+		err := handleTokenFromNFTOutput(nftOutput, outputId, outputStatus, isUpdateGlobalAmount)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

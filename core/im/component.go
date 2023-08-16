@@ -422,6 +422,8 @@ func run() error {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
 		TokenBasicDrainer := NewOutputIdDrainer(ctx, func(outputId string) {
+			// log outputId
+			CoreComponent.LogInfof("LedgerInit ... TokenBasicDrainer outputId:%s", outputId)
 			output, err := deps.IMManager.OutputIdToOutput(ctx, nodeHTTPAPIClient, outputId)
 			if err != nil {
 				// log error
