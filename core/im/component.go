@@ -454,9 +454,7 @@ func run() error {
 				totalBasicOutputProcessed.Add(totalBasicOutputProcessed, big.NewInt(int64(ct)))
 				timeElapsed := time.Since(startTime)
 				averageProcessedPerSecond := big.NewInt(0)
-				if timeElapsed.Seconds() > 0 {
-					averageProcessedPerSecond.Div(totalBasicOutputProcessed, big.NewInt(int64(timeElapsed.Seconds())))
-				}
+				averageProcessedPerSecond.Div(totalBasicOutputProcessed, big.NewInt(int64(timeElapsed.Seconds())+1))
 				// log totalBasicOutputProcessed and timeElapsed and averageProcessedPerSecond
 				CoreComponent.LogInfof("LedgerInit ... totalBasicOutputProcessed:%d,timeElapsed:%s,averageProcessedPerSecond:%d", totalBasicOutputProcessed, timeElapsed, averageProcessedPerSecond)
 				if !isHasMore {
