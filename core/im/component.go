@@ -2,6 +2,7 @@ package im
 
 import (
 	"context"
+	"math/big"
 	"net/http"
 	"time"
 
@@ -157,33 +158,37 @@ func processInitializationForShared(ctx context.Context, client *nodeclient.Clie
 }
 
 // processInitializationForToken
-func processInitializationForTokenForBasicOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) (map[string]iotago.Output, bool, error) {
+func processInitializationForTokenForBasicOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, drainer *OutputIdDrainer) (int, bool, error) {
 	// get init offset
 	itemType := im.TokenBasicType
 	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, "")
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... ReadInitOffset failed:%s", err)
-		return nil, false, err
+		return 0, false, err
 	}
-	// get outputs and meta data
-	outputsMap, nextOffset, err := fetchNextOutputsForBasicType(ctx, client, indexerClient, initOffset, CoreComponent.Logger())
+	// get outputhexids
+	outputHexIds, nextOffset, err := deps.IMManager.QueryBasicOutputIds(ctx, indexerClient, initOffset, CoreComponent.Logger(), drainer.fetchSize)
+
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... fetchNextTokenForBasicOutput failed:%s", err)
-		return nil, false, err
+		return 0, false, err
 	}
+	//drain
+	drainer.Drain(outputHexIds)
+
 	// update init offset
 	if nextOffset != nil {
 		err = deps.IMManager.StoreInitCurrentOffset(nextOffset, itemType, "")
 		if err != nil {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... StoreInitCurrentOffset failed:%s", err)
-			return nil, false, err
+			return 0, false, err
 		}
 	}
 	isHasMore := nextOffset != nil
-	return outputsMap, isHasMore, nil
+	return len(outputHexIds), isHasMore, nil
 }
 
 // processInitializationForTokenForNftOutput
@@ -411,48 +416,62 @@ func run() error {
 				}
 			}
 		}
-		/*
-			isTokenBasicFinished, err := deps.IMManager.IsInitFinished(im.TokenBasicType, "")
+
+		isTokenBasicFinished, err := deps.IMManager.IsInitFinished(im.TokenBasicType, "")
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
+		}
+		TokenBasicDrainer := NewOutputIdDrainer(ctx, func(outputId string) {
+			output, err := deps.IMManager.OutputIdToOutput(ctx, nodeHTTPAPIClient, outputId)
 			if err != nil {
-				CoreComponent.LogPanicf("failed to start worker: %s", err)
+				// log error
+				CoreComponent.LogWarnf("LedgerInit ... OutputIdToOutput failed:%s", err)
+				return
 			}
-			for !isTokenBasicFinished {
-				select {
-				case <-ctx.Done():
-					CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
-					return
-				default:
-					outputsMap, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient)
+			outputIdBytes, _ := iotago.DecodeHex(outputId)
+			err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
+			if err != nil {
+				// log error then continue
+				CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
+
+			}
+		}, 1000, 100, 2000)
+		totalBasicOutputProcessed := big.NewInt(0)
+		startTime := time.Now()
+		for !isTokenBasicFinished {
+			select {
+			case <-ctx.Done():
+				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
+				return
+			default:
+				ct, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient, TokenBasicDrainer)
+				if err != nil {
+					// log error then continue
+					CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForBasicOutput failed:%s", err)
+					continue
+				}
+				// totalBasicOutputProcessed = totalBasicOutputProcessed + ct
+				totalBasicOutputProcessed.Add(totalBasicOutputProcessed, big.NewInt(int64(ct)))
+				timeElapsed := time.Since(startTime)
+				averageProcessedPerSecond := big.NewInt(0)
+				if timeElapsed.Seconds() > 0 {
+					averageProcessedPerSecond.Div(totalBasicOutputProcessed, big.NewInt(int64(timeElapsed.Seconds())))
+				}
+				// log totalBasicOutputProcessed and timeElapsed and averageProcessedPerSecond
+				CoreComponent.LogInfof("LedgerInit ... totalBasicOutputProcessed:%d,timeElapsed:%s,averageProcessedPerSecond:%d", totalBasicOutputProcessed, timeElapsed, averageProcessedPerSecond)
+				if !isHasMore {
+					err = deps.IMManager.MarkInitFinished(im.TokenBasicType, "")
 					if err != nil {
 						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForBasicOutput failed:%s", err)
+						CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
 						continue
 					}
-					if len(outputsMap) > 0 {
-						// log len(outputs)
-						CoreComponent.LogInfof("processInitializationForTokenForBasicOutput ... len(outputsMap):%d", len(outputsMap))
-						// loop outputs
-						for outputId, output := range outputsMap {
-							outputIdBytes, _ := iotago.DecodeHex(outputId)
-							err = handleTokenFromINXOutput(output, outputIdBytes, ImOutputTypeCreated, false)
-							if err != nil {
-								// log error then continue
-								CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
-								continue
-							}
-						}
-					}
-					if !isHasMore {
-						err = deps.IMManager.MarkInitFinished(im.TokenBasicType, "")
-						if err != nil {
-							// log error then continue
-							CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
-							continue
-						}
-						isTokenBasicFinished = true
-					}
+					isTokenBasicFinished = true
 				}
 			}
+		}
+
+		/*
 			isTokenNFTFinished, err := deps.IMManager.IsInitFinished(im.TokenNFTType, "")
 			if err != nil {
 				CoreComponent.LogPanicf("failed to start worker: %s", err)

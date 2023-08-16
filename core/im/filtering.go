@@ -312,16 +312,13 @@ func fetchNextNFTs(ctx context.Context, client *nodeclient.Client, indexerClient
 	return nfts, offset, nil
 }
 
-func fetchNextOutputsForBasicType(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) (map[string]iotago.Output, *string, error) {
+func fetchNextOutputsForBasicType(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) ([]string, *string, error) {
 	outputHexIds, offset, err := deps.IMManager.QueryBasicOutputIds(ctx, indexerClient, offset, log)
 	if err != nil {
 		return nil, nil, err
 	}
-	outputsMap, err := fetchNextOutputsForBasicTypeWithOutputHexIds(ctx, client, outputHexIds, log)
-	if err != nil {
-		return nil, nil, err
-	}
-	return outputsMap, offset, nil
+
+	return outputHexIds, offset, nil
 }
 
 // struct for outputId and output pair

@@ -110,6 +110,19 @@ func (im *Manager) OutputIdToOutputAndMilestoneInfo(ctx context.Context, client 
 	return output, milestoneIndex, milestoneTimestamp, nil
 }
 
+// outputId to output
+func (im *Manager) OutputIdToOutput(ctx context.Context, client *nodeclient.Client, outputIdHex string) (iotago.Output, error) {
+	outputId, err := iotago.OutputIDFromHex(outputIdHex)
+	if err != nil {
+		return nil, err
+	}
+	output, err := client.OutputByID(ctx, outputId)
+	if err != nil {
+		return nil, err
+	}
+	return output, nil
+}
+
 // query basic output based on tag, with offset, return outputIds and new offset
 func (im *Manager) QueryOutputIdsByTag(ctx context.Context, client nodeclient.IndexerClient, tag string, offset *string, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
 	query := &nodeclient.BasicOutputsQuery{
@@ -154,9 +167,9 @@ func executeQuery(ctx context.Context, client nodeclient.IndexerClient, query no
 }
 
 // query any outputs, with offset, return outputIds and new offset
-func (im *Manager) QueryBasicOutputIds(ctx context.Context, client nodeclient.IndexerClient, offset *string, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
+func (im *Manager) QueryBasicOutputIds(ctx context.Context, client nodeclient.IndexerClient, offset *string, logger *logger.Logger, pageSize int) (iotago.HexOutputIDs, *string, error) {
 	query := &nodeclient.BasicOutputsQuery{}
-	query.PageSize = 10
+	query.PageSize = pageSize
 	return executeQuery(ctx, client, query, offset, logger)
 }
 
