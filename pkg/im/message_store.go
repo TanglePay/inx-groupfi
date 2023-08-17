@@ -120,30 +120,36 @@ func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, 
 			return err
 		}
 		groupId := message.GroupId
-		nfts, err := im.ReadNFTsFromGroupId(groupId)
-		if err != nil {
-			return err
+		// value = one byte type + groupId + outputId
+		value := make([]byte, 1+GroupIdLen+OutputIdLen)
+		value[0] = ImInboxMessageTypeNewMessage
+		copy(value[1:], message.GroupId)
+		copy(value[1+GroupIdLen:], message.OutputId)
+		if isPush {
+			go im.pushInbox(groupId, value, logger)
 		}
-		for _, nft := range nfts {
-			//log nft
-			if isPush {
-				logger.Infof("message group recipient list: groupId:%s, address:%s, milestoneindex:%d, milestonetimestamp:%d", nft.GetGroupIdStr(), string(nft.OwnerAddress), nft.MileStoneIndex, nft.MileStoneTimestamp)
-			}
-			value, err := im.storeInbox(nft.OwnerAddress, message, logger)
+		message_ := message
+		go func() {
+
+			nfts, err := im.ReadNFTsFromGroupId(groupId)
 			if err != nil {
-				return err
+				logger.Errorf("ReadNFTsFromGroupId error %v", err)
 			}
-			if isPush {
-				go im.pushInbox(nft.OwnerAddress, value, logger)
+			for _, nft := range nfts {
+				//log nft
+				err := im.storeInbox(nft.OwnerAddress, message_, value, logger)
+				if err != nil {
+					logger.Errorf("storeInbox error %v", err)
+				}
 			}
-		}
+		}()
 
 	}
 	return nil
 }
 
 // handle inbox storage
-func (im *Manager) storeInbox(receiverAddress []byte, message *Message, logger *logger.Logger) ([]byte, error) {
+func (im *Manager) storeInbox(receiverAddress []byte, message *Message, value []byte, logger *logger.Logger) error {
 	key := make([]byte, 1+Sha256HashLen+4+4)
 	index := 0
 	key[index] = ImStoreKeyPrefixInbox
@@ -156,16 +162,9 @@ func (im *Manager) storeInbox(receiverAddress []byte, message *Message, logger *
 	incrementer := GetIncrementer()
 	counter := maxUint32 - incrementer.Increment(message.MileStoneIndex)
 	binary.BigEndian.PutUint32(key[index:], counter)
-	// value = one byte type + groupId + outputId
-	value := make([]byte, 1+GroupIdLen+OutputIdLen)
-	value[0] = ImInboxMessageTypeNewMessage
-	copy(value[1:], message.GroupId)
-	copy(value[1+GroupIdLen:], message.OutputId)
+
 	err := im.imStore.Set(key, value)
-	keyHex := iotago.EncodeHex(key)
-	valueHex := iotago.EncodeHex(value)
-	logger.Infof("store inbox with key %s, value %s", keyHex, valueHex)
-	return value, err
+	return err
 }
 
 // push message via mqtt
