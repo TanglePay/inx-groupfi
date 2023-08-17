@@ -20,6 +20,8 @@ const (
 	RouteIMNFTs = "/nfts"
 	// shared
 	RouteIMShared = "/shared"
+	// address group ids
+	RouteIMAddressGroupIds = "/addressgroupids"
 )
 
 func setupRoutes(e *echo.Echo) {
@@ -110,5 +112,12 @@ func setupRoutes(e *echo.Echo) {
 			TotalBalance: totalBalance.Text(10),
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+	e.GET(RouteIMAddressGroupIds, func(c echo.Context) error {
+		groupIds, err := getGroupIdsFromAddress(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, groupIds)
 	})
 }

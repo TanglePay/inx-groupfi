@@ -21,6 +21,8 @@ const (
 	// Holds token
 	ImStoreKeyPrefixToken byte = 15
 
+	ImStoreKeyPrefixAddressGroup = 16
+
 	// inbox messsage types
 	// plain text, new message
 	ImInboxMessageTypeNewMessage byte = 1

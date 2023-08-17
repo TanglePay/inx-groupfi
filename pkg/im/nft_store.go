@@ -49,9 +49,11 @@ func (im *Manager) storeSingleNFT(nft *NFT, logger *logger.Logger) error {
 	binary.BigEndian.PutUint32(valuePayload[4:], nft.MileStoneTimestamp)
 	copy(valuePayload[8:], nft.OwnerAddress)
 	err := im.imStore.Set(key, valuePayload)
-	keyHex := iotago.EncodeHex(key)
-	valueHex := iotago.EncodeHex(valuePayload)
-	logger.Infof("store nft with key %s, value %s", keyHex, valueHex)
+	if err != nil {
+		return err
+	}
+	addressGroup := NewAddressGroup(nft.OwnerAddress, nft.GroupId)
+	err = im.StoreAddressGroup(addressGroup)
 	return err
 }
 
@@ -60,7 +62,13 @@ func (im *Manager) DeleteNFT(nft *NFT) error {
 	key := im.NftKeyFromGroupIdAndNftId(
 		nft.GroupId,
 		nft.NFTId)
-	return im.imStore.Delete(key)
+	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	addressGroup := NewAddressGroup(nft.OwnerAddress, nft.GroupId)
+	err = im.DeleteAddressGroup(addressGroup)
+	return err
 }
 func (im *Manager) storeNewNFTs(nfts []*NFT, logger *logger.Logger) error {
 	// hash set store all groupId, groupId is []byte

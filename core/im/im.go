@@ -206,3 +206,23 @@ func deleteSharedFromGroupId(c echo.Context) error {
 	}
 	return nil
 }
+
+// get all groupIds from address
+func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get groupIds from address:%s", address)
+	addressSha256 := im.Sha256Hash(address)
+	groupIds, err := deps.IMManager.GetGroupIdsFromAddress(addressSha256)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get groupIds from address:%s,found groupIds:%d", address, len(groupIds))
+	groupIdStrArr := make([]string, len(groupIds))
+	for i, groupId := range groupIds {
+		groupIdStrArr[i] = iotago.EncodeHex(groupId)
+	}
+	return groupIdStrArr, nil
+}
