@@ -171,7 +171,7 @@ func (im *Manager) storeInbox(receiverAddress []byte, message *Message, value []
 func (im *Manager) pushInbox(receiverAddress []byte, token []byte, logger *logger.Logger) {
 	// payload = groupId + outputId
 
-	err := im.mqttServer.Publish("inbox/"+string(receiverAddress), token)
+	err := im.mqttServer.Publish("inbox/"+iotago.EncodeHex(receiverAddress), token)
 	//log topic only
 	logger.Infof("push message to inbox/%s", string(receiverAddress))
 
