@@ -2,10 +2,16 @@ package im
 
 import (
 	"context"
+	"io"
 
 	"github.com/TanglePay/inx-iotacat/pkg/im"
+	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/inx-app/pkg/nodebridge"
+	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/pkg/errors"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func NodeStatus(ctx context.Context) (confirmedIndex iotago.MilestoneIndex, pruningIndex iotago.MilestoneIndex) {
@@ -43,4 +49,44 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		}
 		return handler(index, createdMessage, createdNft, createdShared)
 	})
+}
+
+func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex, handler func(index iotago.MilestoneIndex, createdMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error) error {
+
+	stream, err := deps.NodeBridge.Client().ListenToBlocks(ctx, &inx.NoParams{})
+	if err != nil {
+		return err
+	}
+	var createdMessage []*im.Message
+	for {
+		payload, err := stream.Recv()
+		if errors.Is(err, io.EOF) || status.Code(err) == codes.Canceled {
+			break
+		}
+		if ctx.Err() != nil {
+			// context got canceled, so stop the updates
+			//nolint:nilerr // false positive
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+
+		block, err := payload.GetBlock().UnwrapBlock(serializer.DeSeriModeNoValidation, nil)
+		if err != nil {
+			continue
+		}
+		if block.Payload.PayloadType() != iotago.PayloadTransaction {
+			continue
+		}
+		transaction := block.Payload.(*iotago.Transaction)
+		for _, output := range transaction.Essence.Outputs {
+			o := messageFromINXOutput(output, nil, 0, 0)
+			if o != nil {
+				createdMessage = append(createdMessage, o)
+			}
+		}
+	}
+	return nil
+
 }

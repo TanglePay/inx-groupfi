@@ -283,7 +283,28 @@ func startListeningToLedgerUpdate() {
 	}, daemon.PriorityStopIM); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
+	// create another background worker that handles the im blocks
+	if err := CoreComponent.Daemon().BackgroundWorker("LedgerUpdateBlock", func(ctx context.Context) {
+		CoreComponent.LogInfo("Starting LedgerUpdateBlock ... done")
 
+		if err := LedgerUpdateBlock(ctx, 0, 0, func(index iotago.MilestoneIndex, createdMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error {
+			if err := deps.IMManager.ApplyNewLedgerUpdate(index, createdMessage, createdNft, createdShared, CoreComponent.Logger(), false); err != nil {
+				CoreComponent.LogErrorfAndExit("ApplyNewLedgerUpdate failed: %s", err)
+
+				return err
+			}
+			// CoreComponent.LogInfof("Applying milestone %d with %d new outputs took %s", index, len(created), time.Since(timeStart).Truncate(time.Millisecond))
+
+			return nil
+		}); err != nil {
+			CoreComponent.LogWarnf("Listening to LedgerUpdateBlock failed: %s", err)
+			deps.ShutdownHandler.SelfShutdown("disconnected from INX", false)
+		}
+
+		CoreComponent.LogInfo("Stopping LedgerUpdateBlock ... done")
+	}, daemon.PriorityStopIM); err != nil {
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
+	}
 }
 func run() error {
 
