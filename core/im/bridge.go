@@ -80,12 +80,15 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 		}
 		transaction := block.Payload.(*iotago.Transaction)
 		for _, output := range transaction.Essence.Outputs {
-			isMessage, groupId, meta := filterOutputForPush(output)
+			isMessage, sender, groupId, meta := filterOutputForPush(output)
 			if isMessage {
+				// log sender length
+				CoreComponent.LogInfof("LedgerUpdateBlock before push sender len:%d", len(sender))
 				go func() {
-					// prefix ImInboxMessageTypeNewMessageP2PV1 to meta
-					meta = append([]byte{im.ImInboxMessageTypeNewMessageP2PV1}, meta...)
-					deps.IMManager.PushInbox(groupId, meta, CoreComponent.Logger())
+					// prefix ImInboxMessageTypeNewMessageP2PV1 + sender + meta
+					pl := append([]byte{im.ImInboxMessageTypeNewMessageP2PV1}, sender...)
+					pl = append(pl, meta...)
+					deps.IMManager.PushInbox(groupId, pl, CoreComponent.Logger())
 				}()
 			}
 		}

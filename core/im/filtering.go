@@ -249,23 +249,26 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 }
 
 // filter output for push
-func filterOutputForPush(output iotago.Output) (isMessage bool, groupId []byte, metafeaturePayload []byte) {
+func filterOutputForPush(output iotago.Output) (isMessage bool, senderAddressHash []byte, groupId []byte, metafeaturePayload []byte) {
 	if output.Type() != iotago.OutputBasic {
-		return false, nil, nil
+		return false, nil, nil, nil
 	}
 	featureSet := output.FeatureSet()
 	tag := featureSet.TagFeature()
 	meta := featureSet.MetadataFeature()
 	if tag == nil || meta == nil || meta.Size() < im.GroupIdLen {
-		return false, nil, nil
+		return false, nil, nil, nil
 	}
 	tagPayload := tag.Tag
-	metaPayload := meta.Data
+
 	if !bytes.Equal(tagPayload, iotacatTag) && !bytes.Equal(tagPayload, iotacatsharedTag) {
-		return false, nil, nil
+		return false, nil, nil, nil
 	}
+	metaPayload := meta.Data
 	groupId_ := metaPayload[:im.GroupIdLen]
-	return true, groupId_, metaPayload
+	unlockSet := output.UnlockConditionSet()
+	senderAddress, _ := unlockSet.Address().Address.Serialize(serializer.DeSeriModeNoValidation, nil)
+	return true, senderAddress, groupId_, metaPayload
 }
 
 func fetchNextMessage(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) ([]*im.Message, *string, error) {
