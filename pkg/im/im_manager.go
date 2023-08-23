@@ -189,7 +189,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMess
 		msg := createdMessage[0]
 		logger.Infof("store new message: groupId:%s, outputId:%s, milestoneindex:%d, milestonetimestamp:%d", msg.GetGroupIdStr(), msg.GetOutputIdStr(), msg.MileStoneIndex, msg.MileStoneTimestamp)
 	}
-	if err := im.storeNewMessages(createdMessage, logger, !isSkipUpdate); err != nil {
+	if err := im.storeNewMessages(createdMessage, logger, false); err != nil {
 		return err
 	}
 	if err := im.storeNewNFTs(createdNft, logger); err != nil {

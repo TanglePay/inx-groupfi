@@ -25,5 +25,6 @@ const (
 
 	// inbox messsage types
 	// plain text, new message
-	ImInboxMessageTypeNewMessage byte = 1
+	ImInboxMessageTypeNewMessage      byte = 1
+	ImInboxMessageTypeNewMessageP2PV1 byte = 2
 )

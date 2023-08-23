@@ -248,6 +248,26 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 	return im.NewMessage(groupId, outputId, milestone, milestoneTimestamp)
 }
 
+// filter output for push
+func filterOutputForPush(output iotago.Output) (isMessage bool, groupId []byte, metafeaturePayload []byte) {
+	if output.Type() != iotago.OutputBasic {
+		return false, nil, nil
+	}
+	featureSet := output.FeatureSet()
+	tag := featureSet.TagFeature()
+	meta := featureSet.MetadataFeature()
+	if tag == nil || meta == nil || meta.Size() < im.GroupIdLen {
+		return false, nil, nil
+	}
+	tagPayload := tag.Tag
+	metaPayload := meta.Data
+	if !bytes.Equal(tagPayload, iotacatTag) && !bytes.Equal(tagPayload, iotacatsharedTag) {
+		return false, nil, nil
+	}
+	groupId_ := metaPayload[:im.GroupIdLen]
+	return true, groupId_, metaPayload
+}
+
 func fetchNextMessage(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) ([]*im.Message, *string, error) {
 	outputHexIds, offset, err := deps.IMManager.QueryOutputIdsByTag(ctx, indexerClient, iotacatTagHex, offset, log)
 	if err != nil {

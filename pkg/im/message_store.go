@@ -124,7 +124,7 @@ func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, 
 		copy(value[1:], message.GroupId)
 		copy(value[1+GroupIdLen:], message.OutputId)
 		if isPush {
-			go im.pushInbox(groupId, value, logger)
+			go im.PushInbox(groupId, value, logger)
 		}
 		if err := im.storeSingleMessage(message, logger); err != nil {
 			return err
@@ -169,7 +169,7 @@ func (im *Manager) storeInbox(receiverAddress []byte, message *Message, value []
 }
 
 // push message via mqtt
-func (im *Manager) pushInbox(receiverAddress []byte, token []byte, logger *logger.Logger) {
+func (im *Manager) PushInbox(receiverAddress []byte, token []byte, logger *logger.Logger) {
 	// payload = groupId + outputId
 
 	err := im.mqttServer.Publish("inbox/"+iotago.EncodeHex(receiverAddress), token)

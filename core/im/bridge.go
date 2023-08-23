@@ -57,7 +57,6 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 	if err != nil {
 		return err
 	}
-	var createdMessage []*im.Message
 	for {
 		payload, err := stream.Recv()
 		if errors.Is(err, io.EOF) || status.Code(err) == codes.Canceled {
@@ -81,9 +80,13 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 		}
 		transaction := block.Payload.(*iotago.Transaction)
 		for _, output := range transaction.Essence.Outputs {
-			o := messageFromINXOutput(output, nil, 0, 0)
-			if o != nil {
-				createdMessage = append(createdMessage, o)
+			isMessage, groupId, meta := filterOutputForPush(output)
+			if isMessage {
+				go func() {
+					// prefix ImInboxMessageTypeNewMessageP2PV1 to meta
+					meta = append([]byte{im.ImInboxMessageTypeNewMessageP2PV1}, meta...)
+					deps.IMManager.PushInbox(groupId, meta, CoreComponent.Logger())
+				}()
 			}
 		}
 	}
