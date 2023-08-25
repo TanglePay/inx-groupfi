@@ -77,12 +77,41 @@ func (im *Manager) MessageKeyFromGroupIdMileStone(groupId []byte, mileStoneIndex
 	return key
 }
 
-func (im *Manager) MessageKeyFromGroupId(groupId []byte) []byte {
+// message key from message
+func (im *Manager) MessageKeyFromMessage(message *Message, groupIdOverride []byte, prefix byte) []byte {
+	// key = prefix + (groupIdOverride != nil ? groupIdOverride : groupId) + mileStoneIndex + mileStoneTimestamp + metaSha256
 	index := 0
-	key := make([]byte, 1+GroupIdLen)
-	key[index] = ImStoreKeyPrefixMessage
+	key := make([]byte, 1+Sha256HashLen+4+4+Sha256HashLen) // 4 bytes for uint32
+	if prefix == 0 {
+		key[index] = ImStoreKeyPrefixMessage
+	} else {
+		key[index] = prefix
+	}
 	index++
+	groupId := message.GroupId
+	if groupIdOverride != nil {
+		groupId = groupIdOverride
+	}
 	copy(key[index:], groupId)
+	index += GroupIdLen
+	binary.BigEndian.PutUint32(key[index:], message.MileStoneIndex)
+	index += 4
+	binary.BigEndian.PutUint32(key[index:], message.MileStoneTimestamp)
+	index += 4
+	copy(key[index:], message.MetaSha256)
+	return key
+}
+func (im *Manager) MessageKeyFromGroupId(groupId []byte) []byte {
+	return im.KeyFromSha256hashAndPrefix(groupId, ImStoreKeyPrefixMessage)
+}
+
+// key  = prefix 1 byte + sha256hash 32 bytes
+func (im *Manager) KeyFromSha256hashAndPrefix(sha256hash []byte, prefix byte) []byte {
+	index := 0
+	key := make([]byte, 1+Sha256HashLen)
+	key[index] = prefix
+	index++
+	copy(key[index:], sha256hash)
 	return key
 }
 func messageKeyPrefixFromGroupIdAndMileStone(groupId []byte, mileStoneIndex uint32) []byte {
@@ -98,20 +127,55 @@ func messageKeyPrefixFromGroupIdAndMileStone(groupId []byte, mileStoneIndex uint
 }
 
 func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) error {
-	key := im.MessageKeyFromGroupIdMileStone(
-		message.GroupId,
-		message.MileStoneIndex)
+	key := im.MessageKeyFromMessage(message, nil, 0)
 	valuePayload := make([]byte, 4+OutputIdLen)
 	binary.BigEndian.PutUint32(valuePayload, message.MileStoneTimestamp)
 	copy(valuePayload[4:], message.OutputId)
 	err := im.imStore.Set(key, valuePayload)
 
-	keyHex := iotago.EncodeHex(key)
-	valueHex := iotago.EncodeHex(valuePayload)
-	logger.Infof("store message with key %s, value %s", keyHex, valueHex)
+	//TODO remove log
+	/*
+		keyHex := iotago.EncodeHex(key)
+		valueHex := iotago.EncodeHex(valuePayload)
+		logger.Infof("store message with key %s, value %s", keyHex, valueHex)
+	*/
+	go func() {
+
+		nfts, err := im.ReadNFTsFromGroupId(message.GroupId)
+		if err != nil {
+			logger.Errorf("ReadNFTsFromGroupId error %v", err)
+		}
+		for _, nft := range nfts {
+			//log nft
+			err := im.storeInbox(nft.OwnerAddress, message, valuePayload, logger)
+			if err != nil {
+				logger.Errorf("storeInbox error %v", err)
+			}
+		}
+	}()
 	return err
 }
 
+// delete single message
+func (im *Manager) deleteSingleMessage(message *Message, logger *logger.Logger) error {
+	go func() {
+
+		nfts, err := im.ReadNFTsFromGroupId(message.GroupId)
+		if err != nil {
+			return
+		}
+		for _, nft := range nfts {
+			//log nft
+			err := im.DeleteInbox(nft.OwnerAddress, message, logger)
+			if err != nil {
+				logger.Errorf("storeInbox error %v", err)
+			}
+		}
+	}()
+	key := im.MessageKeyFromMessage(message, nil, 0)
+	err := im.imStore.Delete(key)
+	return err
+}
 func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, isPush bool) error {
 	// log is push
 	logger.Infof("storeNewMessages : isPush %v", isPush)
@@ -126,45 +190,64 @@ func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, 
 		if isPush {
 			go im.PushInbox(groupId, value, logger)
 		}
-		if err := im.storeSingleMessage(message, logger); err != nil {
+		err := im.storeSingleMessage(message, logger)
+		if err != nil {
 			return err
 		}
-		message_ := message
-		go func() {
-
-			nfts, err := im.ReadNFTsFromGroupId(groupId)
-			if err != nil {
-				logger.Errorf("ReadNFTsFromGroupId error %v", err)
-			}
-			for _, nft := range nfts {
-				//log nft
-				err := im.storeInbox(nft.OwnerAddress, message_, value, logger)
-				if err != nil {
-					logger.Errorf("storeInbox error %v", err)
-				}
-			}
-		}()
 
 	}
 	return nil
 }
 
-// handle inbox storage
-func (im *Manager) storeInbox(receiverAddress []byte, message *Message, value []byte, logger *logger.Logger) error {
-	key := make([]byte, 1+Sha256HashLen+4+4)
-	index := 0
-	key[index] = ImStoreKeyPrefixInbox
-	index++
-	addressSha256Hash := Sha256HashBytes(receiverAddress)
-	copy(key[index:], addressSha256Hash)
-	index += Sha256HashLen
-	binary.BigEndian.PutUint32(key[index:], maxUint32-message.MileStoneTimestamp)
-	index += 4
-	incrementer := GetIncrementer()
-	counter := maxUint32 - incrementer.Increment(message.MileStoneIndex)
-	binary.BigEndian.PutUint32(key[index:], counter)
+// delete messages
+func (im *Manager) deleteConsumedMessages(messages []*Message, logger *logger.Logger) error {
+	for _, message := range messages {
+		err := im.deleteSingleMessage(message, logger)
+		if err != nil {
+			// log and continue
+			logger.Errorf("deleteSingleMessage error %v", err)
+		}
+	}
+	return nil
+}
 
-	err := im.imStore.Set(key, value)
+// handle inbox storage
+func (imm *Manager) storeInbox(receiverAddress []byte, message *Message, value []byte, logger *logger.Logger) error {
+	receiverAddressSha256 := Sha256HashBytes(receiverAddress)
+	key := imm.MessageKeyFromMessage(message, receiverAddressSha256, ImStoreKeyPrefixInbox)
+	err := imm.imStore.Set(key, value)
+	return err
+}
+
+// read inbox, all message with milestonetimestamp < given milestonetimestamp
+func (im *Manager) ReadInboxForConsolidation(ownerAddress string, thresMileStoneTimestamp uint32, logger *logger.Logger) ([]string, error) {
+	ownerAddressSha256 := Sha256Hash(ownerAddress)
+	keyPrefix := im.MessageKeyFromGroupId(ownerAddressSha256)
+	var outputIds []string
+	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
+		// parse message value payload
+		message, err := im.ParseMessageValuePayload(value)
+		if err != nil {
+			// log and continue
+			logger.Errorf("ParseMessageValuePayload error %v", err)
+			return true
+		}
+		if message.MileStoneTimestamp < thresMileStoneTimestamp {
+			outputIds = append(outputIds, iotago.EncodeHex(message.OutputId))
+		}
+		return true
+	})
+	if err != nil {
+		return nil, err
+	}
+	return outputIds, nil
+}
+
+// handle inbox delete
+func (im *Manager) DeleteInbox(receiverAddress []byte, message *Message, logger *logger.Logger) error {
+	receiverAddressSha256 := Sha256HashBytes(receiverAddress)
+	key := im.MessageKeyFromMessage(message, receiverAddressSha256, ImStoreKeyPrefixInbox)
+	err := im.imStore.Delete(key)
 	return err
 }
 
@@ -220,6 +303,17 @@ func (im *Manager) ReadMessageFromPrefix(keyPrefix []byte, size int, coninueatio
 	return res, nil
 }
 
+// parse message value paylod
+func (im *Manager) ParseMessageValuePayload(value []byte) (*Message, error) {
+	if len(value) != 4+OutputIdLen {
+		return nil, errors.New("invalid value length")
+	}
+	m := &Message{
+		MileStoneTimestamp: binary.BigEndian.Uint32(value[:4]),
+		OutputId:           value[4:],
+	}
+	return m, nil
+}
 func (im *Manager) ReadMessageUntilPrefix(keyPrefix []byte, size int, coninueationToken []byte) ([]*Message, error) {
 	ct := 0
 	var res []*Message

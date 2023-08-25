@@ -20,7 +20,7 @@ func NodeStatus(ctx context.Context) (confirmedIndex iotago.MilestoneIndex, prun
 	return status.GetConfirmedMilestone().GetMilestoneInfo().GetMilestoneIndex(), status.GetTanglePruningIndex()
 }
 
-func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex, handler func(index iotago.MilestoneIndex, createdMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error) error {
+func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex, handler func(index iotago.MilestoneIndex, createdMessage []*im.Message, consumedMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error) error {
 	return deps.NodeBridge.ListenToLedgerUpdates(ctx, startIndex, endIndex, func(update *nodebridge.LedgerUpdate) error {
 		index := update.MilestoneIndex
 		// log
@@ -28,6 +28,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		var createdMessage []*im.Message
 		var createdNft []*im.NFT
 		var createdShared []*im.Message
+		var consumedMessage []*im.Message
 		for _, output := range update.Created {
 			o := messageFromINXLedgerOutput(output)
 			if o != nil {
@@ -45,13 +46,19 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		}
 		for _, spent := range update.Consumed {
 			output := spent.GetOutput()
+			o := messageFromINXLedgerOutput(output)
+			if o != nil {
+				// found consumed message
+				CoreComponent.LogInfof("LedgerUpdate just found consumed message:%s", o.GetOutputIdStr())
+				consumedMessage = append(consumedMessage, o)
+			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeConsumed)
 		}
-		return handler(index, createdMessage, createdNft, createdShared)
+		return handler(index, createdMessage, consumedMessage, createdNft, createdShared)
 	})
 }
 
-func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex, handler func(index iotago.MilestoneIndex, createdMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error) error {
+func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex) error {
 
 	stream, err := deps.NodeBridge.Client().ListenToBlocks(ctx, &inx.NoParams{})
 	if err != nil {

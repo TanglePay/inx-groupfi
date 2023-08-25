@@ -175,7 +175,7 @@ func (im *Manager) LedgerIndex() iotago.MilestoneIndex {
 func (im *Manager) GetImStore() kvstore.KVStore {
 	return im.imStore
 }
-func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMessage []*Message, createdNft []*NFT, createdShared []*Message, logger *logger.Logger, isSkipUpdate bool) error {
+func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMessage []*Message, consumedMessage []*Message, createdNft []*NFT, createdShared []*Message, logger *logger.Logger, isSkipUpdate bool) error {
 	// Lock the state to avoid anyone reading partial results while we apply the state
 	im.Lock()
 	defer im.Unlock()
@@ -202,7 +202,11 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMess
 	if err := im.storeNewShareds(createdShared, logger); err != nil {
 		return err
 	}
+	if err := im.deleteConsumedMessages(consumedMessage, logger); err != nil {
+		return err
+	}
 	return nil
+
 }
 
 // make mqtt server

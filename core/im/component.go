@@ -265,8 +265,8 @@ func startListeningToLedgerUpdate() {
 			startIndex++
 		}
 
-		if err := LedgerUpdates(ctx, startIndex, 0, func(index iotago.MilestoneIndex, createdMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error {
-			if err := deps.IMManager.ApplyNewLedgerUpdate(index, createdMessage, createdNft, createdShared, CoreComponent.Logger(), false); err != nil {
+		if err := LedgerUpdates(ctx, startIndex, 0, func(index iotago.MilestoneIndex, createdMessage []*im.Message, consumedMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error {
+			if err := deps.IMManager.ApplyNewLedgerUpdate(index, createdMessage, consumedMessage, createdNft, createdShared, CoreComponent.Logger(), false); err != nil {
 				CoreComponent.LogErrorfAndExit("ApplyNewLedgerUpdate failed: %s", err)
 
 				return err
@@ -287,16 +287,7 @@ func startListeningToLedgerUpdate() {
 	if err := CoreComponent.Daemon().BackgroundWorker("LedgerUpdateBlock", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting LedgerUpdateBlock ... done")
 
-		if err := LedgerUpdateBlock(ctx, 0, 0, func(index iotago.MilestoneIndex, createdMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error {
-			if err := deps.IMManager.ApplyNewLedgerUpdate(index, createdMessage, createdNft, createdShared, CoreComponent.Logger(), false); err != nil {
-				CoreComponent.LogErrorfAndExit("ApplyNewLedgerUpdate failed: %s", err)
-
-				return err
-			}
-			// CoreComponent.LogInfof("Applying milestone %d with %d new outputs took %s", index, len(created), time.Since(timeStart).Truncate(time.Millisecond))
-
-			return nil
-		}); err != nil {
+		if err := LedgerUpdateBlock(ctx, 0, 0); err != nil {
 			CoreComponent.LogWarnf("Listening to LedgerUpdateBlock failed: %s", err)
 			deps.ShutdownHandler.SelfShutdown("disconnected from INX", false)
 		}
@@ -343,7 +334,7 @@ func run() error {
 						continue
 					}
 					if len(messages) > 0 {
-						err = deps.IMManager.ApplyNewLedgerUpdate(0, messages, nil, nil, CoreComponent.Logger(), true)
+						err = deps.IMManager.ApplyNewLedgerUpdate(0, messages, nil, nil, nil, CoreComponent.Logger(), true)
 						if err != nil {
 							// log error then continue
 							CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
@@ -368,7 +359,7 @@ func run() error {
 						continue
 					}
 					if len(messages) > 0 {
-						err = deps.IMManager.ApplyNewLedgerUpdate(0, nil, nil, messages, CoreComponent.Logger(), true)
+						err = deps.IMManager.ApplyNewLedgerUpdate(0, nil, nil, nil, messages, CoreComponent.Logger(), true)
 						if err != nil {
 							// log error then continue
 							CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
@@ -420,7 +411,7 @@ func run() error {
 							continue
 						}
 						if len(nfts) > 0 {
-							err = deps.IMManager.ApplyNewLedgerUpdate(0, nil, nfts, nil, CoreComponent.Logger(), true)
+							err = deps.IMManager.ApplyNewLedgerUpdate(0, nil, nil, nfts, nil, CoreComponent.Logger(), true)
 							if err != nil {
 								// log error then continue
 								CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)

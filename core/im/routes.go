@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	APIRoute     = "iotacatim/v1"
-	MQTTAPIRoute = "iotacatmqtt/v1"
+	APIRoute     = "groupfi/v1"
+	MQTTAPIRoute = "groupfi/mqtt/v1"
 	// RouteIMMessages is the route to get a slice of messages belong to the given groupID, get first size of messages, start from token
 	RouteIMMessages      = "/messages"
 	RouteIMMessagesUntil = "/messages/until"
@@ -22,6 +22,11 @@ const (
 	RouteIMShared = "/shared"
 	// address group ids
 	RouteIMAddressGroupIds = "/addressgroupids"
+
+	// consolidation for message
+	RouteImConsolidationForMessage = "/consolidation/message"
+	// consolidation for shared
+	RouteImConsolidationForShared = "/consolidation/shared"
 )
 
 func setupRoutes(e *echo.Echo) {
@@ -119,5 +124,23 @@ func setupRoutes(e *echo.Echo) {
 			return err
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, groupIds)
+	})
+
+	// consolidation for message
+	e.GET(RouteImConsolidationForMessage, func(c echo.Context) error {
+		outputIds, err := getMessageOutputIdsForConsolidation(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, outputIds)
+	})
+
+	// consolidation for shared
+	e.GET(RouteImConsolidationForShared, func(c echo.Context) error {
+		outputIds, err := getSharedOutputIdsForConsolidation(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, outputIds)
 	})
 }

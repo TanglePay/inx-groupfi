@@ -8,6 +8,10 @@ type Message struct {
 	// OutputId of the Output that store message body payload
 	OutputId []byte
 
+	SenderAddressSha256 []byte
+
+	MetaSha256 []byte
+
 	Token []byte
 
 	MileStoneIndex uint32
@@ -15,12 +19,14 @@ type Message struct {
 	MileStoneTimestamp uint32
 }
 
-func NewMessage(groupId []byte, outputId []byte, mileStoneIndex uint32, mileStoneTimestamp uint32) *Message {
+func NewMessage(groupId []byte, outputId []byte, mileStoneIndex uint32, mileStoneTimestamp uint32, senderAddressSha256 []byte, metaSha256 []byte) *Message {
 	return &Message{
-		GroupId:            groupId,
-		OutputId:           outputId,
-		MileStoneIndex:     mileStoneIndex,
-		MileStoneTimestamp: mileStoneTimestamp,
+		GroupId:             groupId,
+		OutputId:            outputId,
+		MileStoneIndex:      mileStoneIndex,
+		MileStoneTimestamp:  mileStoneTimestamp,
+		SenderAddressSha256: senderAddressSha256,
+		MetaSha256:          metaSha256,
 	}
 }
 

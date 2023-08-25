@@ -13,10 +13,10 @@ import (
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
-var iotacatTagStr = "IOTACATV2"
+var iotacatTagStr = "IOTACATV1"
 var iotacatTag = []byte(iotacatTagStr)
 var iotacatTagHex = iotago.EncodeHex(iotacatTag)
-var iotacatsharedTagStr = "IOTACATSHAREDV2"
+var iotacatsharedTagStr = "IOTACATSHAREDV1"
 var iotacatsharedTag = []byte(iotacatsharedTagStr)
 var iotacatsharedTagHex = iotago.EncodeHex(iotacatsharedTag)
 
@@ -104,15 +104,20 @@ func sharedOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte, milest
 	}
 	// groupid is first xxx bytes of meta feature
 	groupId := metaPayload[:im.GroupIdLen]
-	CoreComponent.LogInfof("Found IOTACATSHARED output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d",
+	metapayloadSha256 := im.Sha256HashBytes(metaPayload)
+	unlockConditionSet := iotaOutput.UnlockConditionSet()
+	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
+	senderAddressSha256 := im.Sha256Hash(senderAddressStr)
+	CoreComponent.LogInfof("Found IOTACATSHARED output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d，senderAddress:%s",
 		len(metaPayload),
 		len(groupId),
 		iotago.EncodeHex(groupId),
 		iotago.EncodeHex(outputId),
 		milestone,
 		milestoneTimestamp,
+		senderAddressStr,
 	)
-	return im.NewMessage(groupId, outputId, milestone, milestoneTimestamp)
+	return im.NewMessage(groupId, outputId, milestone, milestoneTimestamp, senderAddressSha256, metapayloadSha256)
 }
 
 func handleTokenFromINXLedgerOutput(output *inx.LedgerOutput, outputStatus int) error {
@@ -237,15 +242,20 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 	}
 	// groupid is first xxx bytes of meta feature
 	groupId := metaPayload[:im.GroupIdLen]
-	CoreComponent.LogInfof("Found IOTACAT output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d",
+	metapayloadSha256 := im.Sha256HashBytes(metaPayload)
+	unlockConditionSet := iotaOutput.UnlockConditionSet()
+	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
+	senderAddressSha256 := im.Sha256Hash(senderAddressStr)
+	CoreComponent.LogInfof("Found IOTACAT output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d，senderAddress:%s",
 		len(metaPayload),
 		len(groupId),
 		iotago.EncodeHex(groupId),
 		iotago.EncodeHex(outputId),
 		milestone,
 		milestoneTimestamp,
+		senderAddressStr,
 	)
-	return im.NewMessage(groupId, outputId, milestone, milestoneTimestamp)
+	return im.NewMessage(groupId, outputId, milestone, milestoneTimestamp, senderAddressSha256, metapayloadSha256)
 }
 
 // filter output for push

@@ -2,6 +2,7 @@ package im
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/TanglePay/inx-iotacat/pkg/im"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -225,4 +226,40 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 		groupIdStrArr[i] = iotago.EncodeHex(groupId)
 	}
 	return groupIdStrArr, nil
+}
+
+const DaysElapsedForConsolidation = 3
+
+// get outputids for consolidation,
+func getMessageOutputIdsForConsolidation(c echo.Context) ([]string, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get outputids for consolidation from address:%s", address)
+	// calculate timestamp DaysElapsedForConsolidation from now
+	thresMileStoneTimestamp := uint32(time.Now().AddDate(0, 0, -DaysElapsedForConsolidation).Unix())
+	outputIds, err := deps.IMManager.ReadInboxForConsolidation(address, thresMileStoneTimestamp, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get outputids for consolidation from address:%s,found outputIds:%d", address, len(outputIds))
+	return outputIds, nil
+}
+
+// get outputids for consolidation, for shared
+func getSharedOutputIdsForConsolidation(c echo.Context) ([]string, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get outputids for consolidation from address:%s", address)
+	// calculate timestamp DaysElapsedForConsolidation from now
+	thresMileStoneTimestamp := uint32(time.Now().AddDate(0, 0, -2*DaysElapsedForConsolidation).Unix())
+	outputIds, err := deps.IMManager.ReadSharedForConsolidation(address, thresMileStoneTimestamp, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get outputids for consolidation from address:%s,found outputIds:%d", address, len(outputIds))
+	return outputIds, nil
 }
