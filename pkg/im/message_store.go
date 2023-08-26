@@ -105,7 +105,6 @@ func (im *Manager) MessageKeyFromGroupId(groupId []byte) []byte {
 	return im.KeyFromSha256hashAndPrefix(groupId, ImStoreKeyPrefixMessage)
 }
 
-// key  = prefix 1 byte + sha256hash 32 bytes
 func (im *Manager) KeyFromSha256hashAndPrefix(sha256hash []byte, prefix byte) []byte {
 	index := 0
 	key := make([]byte, 1+Sha256HashLen)
@@ -222,7 +221,7 @@ func (imm *Manager) storeInbox(receiverAddress []byte, message *Message, value [
 // read inbox, all message with milestonetimestamp < given milestonetimestamp
 func (im *Manager) ReadInboxForConsolidation(ownerAddress string, thresMileStoneTimestamp uint32, logger *logger.Logger) ([]string, error) {
 	ownerAddressSha256 := Sha256Hash(ownerAddress)
-	keyPrefix := im.MessageKeyFromGroupId(ownerAddressSha256)
+	keyPrefix := im.KeyFromSha256hashAndPrefix(ownerAddressSha256, ImStoreKeyPrefixInbox)
 	var outputIds []string
 	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		// parse message value payload
