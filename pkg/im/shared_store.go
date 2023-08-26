@@ -39,6 +39,11 @@ func (im *Manager) storeSingleShared(shared *Message, logger *logger.Logger) err
 	*/
 }
 
+// delete single shared
+func (im *Manager) DeleteSingleShared(shared *Message, logger *logger.Logger) error {
+	return im.DeleteSharedForConsolidation(shared, logger)
+}
+
 // store shared for consolidation
 func (im *Manager) StoreSharedForConsolidation(shared *Message, logger *logger.Logger) error {
 	// key = ImStoreKeyPrefixSharedForConsolidation + senderAddressSha256 + mileStoneIndex + mileStoneTimestamp + metaSha256
@@ -51,29 +56,12 @@ func (im *Manager) StoreSharedForConsolidation(shared *Message, logger *logger.L
 
 }
 
-/*
-func (im *Manager) ReadInboxForConsolidation(ownerAddress string, thresMileStoneTimestamp uint32, logger *logger.Logger) ([]string, error) {
-	ownerAddressSha256 := Sha256Hash(ownerAddress)
-	keyPrefix := im.MessageKeyFromGroupId(ownerAddressSha256)
-	var outputIds []string
-	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
-		// parse message value payload
-		message, err := im.ParseMessageValuePayload(value)
-		if err != nil {
-			// log and continue
-			logger.Errorf("ParseMessageValuePayload error %v", err)
-			return true
-		}
-		if message.MileStoneTimestamp < thresMileStoneTimestamp {
-			outputIds = append(outputIds, iotago.EncodeHex(message.OutputId))
-		}
-		return true
-	})
-	if err != nil {
-		return nil, err
-	}
-	return outputIds, nil
-}*/
+// delete shared for consolidation
+func (im *Manager) DeleteSharedForConsolidation(shared *Message, logger *logger.Logger) error {
+	// key = ImStoreKeyPrefixSharedForConsolidation + senderAddressSha256 + mileStoneIndex + mileStoneTimestamp + metaSha256
+	key := im.MessageKeyFromMessage(shared, shared.SenderAddressSha256, ImStoreKeyPrefixSharedForConsolidation)
+	return im.imStore.Delete(key)
+}
 
 func (im *Manager) ReadSharedForConsolidation(ownerAddress string, thresMileStoneTimestamp uint32, logger *logger.Logger) ([]string, error) {
 	ownerAddressSha256 := Sha256Hash(ownerAddress)
@@ -107,6 +95,15 @@ func (im *Manager) storeNewShareds(shareds []*Message, logger *logger.Logger) er
 	return nil
 }
 
+// delete Shareds
+func (im *Manager) DeleteShareds(shareds []*Message, logger *logger.Logger) error {
+	for _, shared := range shareds {
+		if err := im.DeleteSingleShared(shared, logger); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 func (im *Manager) ReadSharedFromGroupId(groupId []byte) (*Message, error) {
 	keyPrefix := im.SharedKeyFromGroupId(groupId)
 	res, err := im.imStore.Get(keyPrefix)

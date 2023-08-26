@@ -228,6 +228,8 @@ func (imm *Manager) storeInbox(receiverAddress []byte, message *Message, value [
 func (im *Manager) StoreMessageForConsolidation(message *Message, logger *logger.Logger) error {
 	// key = prefix + addressSha256 + milestone + milestonetimestamp + metaSha256
 	key := im.MessageKeyFromMessage(message, message.SenderAddressSha256, ImStoreKeyPrefixMessageForConsolidation)
+	// log outputid SenderAddressSha256 key
+	logger.Infof("StoreMessageForConsolidation : outputid %s, SenderAddressSha256 %s, key %s", iotago.EncodeHex(message.OutputId), iotago.EncodeHex(message.SenderAddressSha256), iotago.EncodeHex(key))
 	valuePayload := make([]byte, 4+OutputIdLen)
 	binary.BigEndian.PutUint32(valuePayload, message.MileStoneTimestamp)
 	copy(valuePayload[4:], message.OutputId)
