@@ -202,7 +202,7 @@ func processInitializationForTokenForNftOutput(ctx context.Context, client *node
 		return 0, false, err
 	}
 	// get outputhexids
-	outputHexIds, nextOffset, err := deps.IMManager.QueryNFTOutputIds(ctx, indexerClient, initOffset, CoreComponent.Logger())
+	outputHexIds, nextOffset, err := deps.IMManager.QueryNFTOutputIds(ctx, indexerClient, initOffset, drainer.fetchSize, CoreComponent.Logger())
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... fetchNextTokenForNftOutput failed:%s", err)
