@@ -132,12 +132,6 @@ func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) e
 	copy(valuePayload[4:], message.OutputId)
 	err := im.imStore.Set(key, valuePayload)
 
-	//TODO remove log
-	/*
-		keyHex := iotago.EncodeHex(key)
-		valueHex := iotago.EncodeHex(valuePayload)
-		logger.Infof("store message with key %s, value %s", keyHex, valueHex)
-	*/
 	go func() {
 
 		nfts, err := im.ReadNFTsFromGroupId(message.GroupId)
@@ -173,6 +167,10 @@ func (im *Manager) deleteSingleMessage(message *Message, logger *logger.Logger) 
 	}()
 	key := im.MessageKeyFromMessage(message, nil, 0)
 	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	err = im.DeleteMessageForConsolidation(message, logger)
 	return err
 }
 func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, isPush bool) error {
@@ -180,20 +178,26 @@ func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, 
 	logger.Infof("storeNewMessages : isPush %v", isPush)
 	for _, message := range messages {
 
-		groupId := message.GroupId
-		// value = one byte type + groupId + outputId
-		value := make([]byte, 1+GroupIdLen+OutputIdLen)
-		value[0] = ImInboxMessageTypeNewMessage
-		copy(value[1:], message.GroupId)
-		copy(value[1+GroupIdLen:], message.OutputId)
-		if isPush {
-			go im.PushInbox(groupId, value, logger)
-		}
+		/*
+			if isPush {
+				groupId := message.GroupId
+				// value = one byte type + groupId + outputId
+				value := make([]byte, 1+GroupIdLen+OutputIdLen)
+				value[0] = ImInboxMessageTypeNewMessage
+				copy(value[1:], message.GroupId)
+				copy(value[1+GroupIdLen:], message.OutputId)
+
+				go im.PushInbox(groupId, value, logger)
+			}
+		*/
 		err := im.storeSingleMessage(message, logger)
 		if err != nil {
 			return err
 		}
-
+		err = im.StoreMessageForConsolidation(message, logger)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -218,10 +222,30 @@ func (imm *Manager) storeInbox(receiverAddress []byte, message *Message, value [
 	return err
 }
 
+// message for consolidation
+// key = prefix + addressSha256 + milestone + milestonetimestamp + metaSha256
+// StoreMessageForConsolidation stores a message for consolidation.
+func (im *Manager) StoreMessageForConsolidation(message *Message, logger *logger.Logger) error {
+	// key = prefix + addressSha256 + milestone + milestonetimestamp + metaSha256
+	key := im.MessageKeyFromMessage(message, message.SenderAddressSha256, ImStoreKeyPrefixMessageForConsolidation)
+	valuePayload := make([]byte, 4+OutputIdLen)
+	binary.BigEndian.PutUint32(valuePayload, message.MileStoneTimestamp)
+	copy(valuePayload[4:], message.OutputId)
+	err := im.imStore.Set(key, valuePayload)
+	return err
+}
+
+// DeleteMessageForConsolidation deletes a message for consolidation.
+func (im *Manager) DeleteMessageForConsolidation(message *Message, logger *logger.Logger) error {
+	key := im.MessageKeyFromMessage(message, message.SenderAddressSha256, ImStoreKeyPrefixMessageForConsolidation)
+	err := im.imStore.Delete(key)
+	return err
+}
+
 // read inbox, all message with milestonetimestamp < given milestonetimestamp
-func (im *Manager) ReadInboxForConsolidation(ownerAddress string, thresMileStoneTimestamp uint32, logger *logger.Logger) ([]string, error) {
+func (im *Manager) ReadMessageForConsolidation(ownerAddress string, thresMileStoneTimestamp uint32, logger *logger.Logger) ([]string, error) {
 	ownerAddressSha256 := Sha256Hash(ownerAddress)
-	keyPrefix := im.KeyFromSha256hashAndPrefix(ownerAddressSha256, ImStoreKeyPrefixInbox)
+	keyPrefix := im.KeyFromSha256hashAndPrefix(ownerAddressSha256, ImStoreKeyPrefixMessageForConsolidation)
 	var outputIds []string
 	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		// parse message value payload

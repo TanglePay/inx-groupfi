@@ -239,7 +239,7 @@ func getMessageOutputIdsForConsolidation(c echo.Context) ([]string, error) {
 	CoreComponent.LogInfof("get outputids for consolidation from address:%s", address)
 	// calculate timestamp DaysElapsedForConsolidation from now
 	thresMileStoneTimestamp := uint32(time.Now().AddDate(0, 0, -DaysElapsedForConsolidation).Unix())
-	outputIds, err := deps.IMManager.ReadInboxForConsolidation(address, thresMileStoneTimestamp, CoreComponent.Logger())
+	outputIds, err := deps.IMManager.ReadMessageForConsolidation(address, thresMileStoneTimestamp, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
