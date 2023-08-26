@@ -172,10 +172,10 @@ func executeQuery(ctx context.Context, client nodeclient.IndexerClient, query no
 	}
 	// log ledgerIndex
 	ledgerIndex := resp.LedgerIndex
-	logger.Infof("QueryOutputIds ... got result set,ledgerIndex:%d", ledgerIndex)
+
 	nextOffset := resultSet.Response.Cursor
 	outputIds := resultSet.Response.Items
-
+	logger.Infof("QueryOutputIds ... got result set,ledgerIndex:%d, nextOffset:%s, num of outputIds:%d", ledgerIndex, nextOffset, len(outputIds))
 	return outputIds, nextOffset, nil
 }
 
