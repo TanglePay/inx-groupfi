@@ -148,7 +148,8 @@ func executeQuery(ctx context.Context, client nodeclient.IndexerClient, query no
 	if offset != nil {
 		offsetStr = *offset
 	}
-	logger.Infof("QueryOutputIds ... offset:%s", offsetStr)
+	urlPara, _ := query.URLParas()
+	logger.Infof("QueryOutputIds ... offset:%s, urlPara:%s", offsetStr, urlPara)
 	if offset != nil {
 		query.SetOffset(offset)
 	}
@@ -175,7 +176,7 @@ func executeQuery(ctx context.Context, client nodeclient.IndexerClient, query no
 
 	nextOffset := resultSet.Response.Cursor
 	outputIds := resultSet.Response.Items
-	logger.Infof("QueryOutputIds ... got result set,ledgerIndex:%d, nextOffset:%s, num of outputIds:%d", ledgerIndex, nextOffset, len(outputIds))
+	logger.Infof("QueryOutputIds ... got result set,ledgerIndex:%d, num of outputIds:%d", ledgerIndex, len(outputIds))
 	return outputIds, nextOffset, nil
 }
 
