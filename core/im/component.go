@@ -265,8 +265,8 @@ func startListeningToLedgerUpdate() {
 			startIndex++
 		}
 
-		if err := LedgerUpdates(ctx, startIndex, 0, func(index iotago.MilestoneIndex, createdMessage []*im.Message, consumedMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error {
-			if err := deps.IMManager.ApplyNewLedgerUpdate(index, createdMessage, consumedMessage, createdNft, createdShared, CoreComponent.Logger(), false); err != nil {
+		if err := LedgerUpdates(ctx, startIndex, 0, func(index iotago.MilestoneIndex, dataFromListenning *im.DataFromListenning) error {
+			if err := deps.IMManager.ApplyNewLedgerUpdate(index, dataFromListenning, CoreComponent.Logger(), false); err != nil {
 				CoreComponent.LogErrorfAndExit("ApplyNewLedgerUpdate failed: %s", err)
 
 				return err
@@ -334,7 +334,10 @@ func run() error {
 						continue
 					}
 					if len(messages) > 0 {
-						err = deps.IMManager.ApplyNewLedgerUpdate(0, messages, nil, nil, nil, CoreComponent.Logger(), true)
+						DataFromListenning := &im.DataFromListenning{
+							CreatedMessage: messages,
+						}
+						err = deps.IMManager.ApplyNewLedgerUpdate(0, DataFromListenning, CoreComponent.Logger(), true)
 						if err != nil {
 							// log error then continue
 							CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
@@ -359,7 +362,10 @@ func run() error {
 						continue
 					}
 					if len(messages) > 0 {
-						err = deps.IMManager.ApplyNewLedgerUpdate(0, nil, nil, nil, messages, CoreComponent.Logger(), true)
+						DataFromListenning := &im.DataFromListenning{
+							CreatedShared: messages,
+						}
+						err = deps.IMManager.ApplyNewLedgerUpdate(0, DataFromListenning, CoreComponent.Logger(), true)
 						if err != nil {
 							// log error then continue
 							CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
@@ -411,7 +417,10 @@ func run() error {
 							continue
 						}
 						if len(nfts) > 0 {
-							err = deps.IMManager.ApplyNewLedgerUpdate(0, nil, nil, nfts, nil, CoreComponent.Logger(), true)
+							DataFromListenning := &im.DataFromListenning{
+								CreatedNft: nfts,
+							}
+							err = deps.IMManager.ApplyNewLedgerUpdate(0, DataFromListenning, CoreComponent.Logger(), true)
 							if err != nil {
 								// log error then continue
 								CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)

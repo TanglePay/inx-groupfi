@@ -25,7 +25,7 @@ var (
 
 type ProtocolParametersProvider func() *iotago.ProtocolParameters
 type NodeStatusProvider func(ctx context.Context) (confirmedIndex iotago.MilestoneIndex, pruningIndex iotago.MilestoneIndex)
-type LedgerUpdatesProvider func(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex, handler func(index iotago.MilestoneIndex, createdMessage []*Message, consumedMessage []*Message, createdNft []*NFT, createdShared []*Message) error) error
+type LedgerUpdatesProvider func(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex, handler func(index iotago.MilestoneIndex, dataFromListenning *DataFromListenning) error) error
 
 // Manager is used to track the outcome of participation in the tangle.
 type Manager struct {
@@ -175,7 +175,7 @@ func (im *Manager) LedgerIndex() iotago.MilestoneIndex {
 func (im *Manager) GetImStore() kvstore.KVStore {
 	return im.imStore
 }
-func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMessage []*Message, consumedMessage []*Message, createdNft []*NFT, createdShared []*Message, logger *logger.Logger, isSkipUpdate bool) error {
+func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromListenning *DataFromListenning, logger *logger.Logger, isSkipUpdate bool) error {
 	// Lock the state to avoid anyone reading partial results while we apply the state
 	im.Lock()
 	defer im.Unlock()
@@ -185,6 +185,13 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMess
 			return err
 		}
 	}
+	// unwrap dataFromListenning
+	createdMessage := dataFromListenning.CreatedMessage
+	createdNft := dataFromListenning.CreatedNft
+	createdShared := dataFromListenning.CreatedShared
+	consumedMessage := dataFromListenning.ConsumedMessage
+	consumedShared := dataFromListenning.ConsumedShared
+
 	if len(createdMessage) > 0 {
 		msg := createdMessage[0]
 		logger.Infof("store new message: groupId:%s, outputId:%s, milestoneindex:%d, milestonetimestamp:%d", msg.GetGroupIdStr(), msg.GetOutputIdStr(), msg.MileStoneIndex, msg.MileStoneTimestamp)
@@ -200,6 +207,9 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, createdMess
 		logger.Infof("store new shared: groupId:%s, outputId:%s, milestoneindex:%d, milestonetimestamp:%d", shared.GetGroupIdStr(), shared.GetOutputIdStr(), shared.MileStoneIndex, shared.MileStoneTimestamp)
 	}
 	if err := im.storeNewShareds(createdShared, logger); err != nil {
+		return err
+	}
+	if err := im.DeleteConsumedShareds(consumedShared, logger); err != nil {
 		return err
 	}
 	if err := im.deleteConsumedMessages(consumedMessage, logger); err != nil {
@@ -222,4 +232,12 @@ func (im *Manager) MakeMqttServer(websocketBindAddress string) (*MQTTServer, err
 	}
 	im.mqttServer = server
 	return server, nil
+}
+
+type DataFromListenning struct {
+	CreatedMessage  []*Message
+	ConsumedMessage []*Message
+	CreatedNft      []*NFT
+	CreatedShared   []*Message
+	ConsumedShared  []*Message
 }

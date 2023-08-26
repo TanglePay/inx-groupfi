@@ -96,7 +96,7 @@ func (im *Manager) storeNewShareds(shareds []*Message, logger *logger.Logger) er
 }
 
 // delete Shareds
-func (im *Manager) DeleteShareds(shareds []*Message, logger *logger.Logger) error {
+func (im *Manager) DeleteConsumedShareds(shareds []*Message, logger *logger.Logger) error {
 	for _, shared := range shareds {
 		if err := im.DeleteSingleShared(shared, logger); err != nil {
 			return err

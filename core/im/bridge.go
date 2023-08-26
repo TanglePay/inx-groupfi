@@ -20,7 +20,7 @@ func NodeStatus(ctx context.Context) (confirmedIndex iotago.MilestoneIndex, prun
 	return status.GetConfirmedMilestone().GetMilestoneInfo().GetMilestoneIndex(), status.GetTanglePruningIndex()
 }
 
-func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex, handler func(index iotago.MilestoneIndex, createdMessage []*im.Message, consumedMessage []*im.Message, createdNft []*im.NFT, createdShared []*im.Message) error) error {
+func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex, handler func(index iotago.MilestoneIndex, dataFromListenning *im.DataFromListenning) error) error {
 	return deps.NodeBridge.ListenToLedgerUpdates(ctx, startIndex, endIndex, func(update *nodebridge.LedgerUpdate) error {
 		index := update.MilestoneIndex
 		// log
@@ -29,6 +29,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		var createdNft []*im.NFT
 		var createdShared []*im.Message
 		var consumedMessage []*im.Message
+		var consumedShared []*im.Message
 		for _, output := range update.Created {
 			o := messageFromINXLedgerOutput(output)
 			if o != nil {
@@ -52,9 +53,20 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 				CoreComponent.LogInfof("LedgerUpdate just found consumed message:%s", o.GetOutputIdStr())
 				consumedMessage = append(consumedMessage, o)
 			}
+			shared := sharedOutputFromINXLedgerOutput(output)
+			if shared != nil {
+				consumedShared = append(consumedShared, shared)
+			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeConsumed)
 		}
-		return handler(index, createdMessage, consumedMessage, createdNft, createdShared)
+		dataFromListenning := &im.DataFromListenning{
+			CreatedMessage:  createdMessage,
+			CreatedNft:      createdNft,
+			CreatedShared:   createdShared,
+			ConsumedMessage: consumedMessage,
+			ConsumedShared:  consumedShared,
+		}
+		return handler(index, dataFromListenning)
 	})
 }
 

@@ -94,9 +94,9 @@ func (im *Manager) MessageKeyFromMessage(message *Message, groupIdOverride []byt
 	}
 	copy(key[index:], groupId)
 	index += GroupIdLen
-	binary.BigEndian.PutUint32(key[index:], message.MileStoneIndex)
+	binary.BigEndian.PutUint32(key[index:], maxUint32-message.MileStoneIndex)
 	index += 4
-	binary.BigEndian.PutUint32(key[index:], message.MileStoneTimestamp)
+	binary.BigEndian.PutUint32(key[index:], maxUint32-message.MileStoneTimestamp)
 	index += 4
 	copy(key[index:], message.MetaSha256)
 	return key
@@ -257,9 +257,9 @@ func (im *Manager) ReadMessageForConsolidation(ownerAddress string, thresMileSto
 			logger.Errorf("ParseMessageValuePayload error %v", err)
 			return true
 		}
-		//if message.MileStoneTimestamp < thresMileStoneTimestamp {
-		outputIds = append(outputIds, iotago.EncodeHex(message.OutputId))
-		//}
+		if message.MileStoneTimestamp < thresMileStoneTimestamp {
+			outputIds = append(outputIds, iotago.EncodeHex(message.OutputId))
+		}
 		return true
 	})
 	if err != nil {
