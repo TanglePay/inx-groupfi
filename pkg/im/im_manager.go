@@ -25,7 +25,7 @@ var (
 
 type ProtocolParametersProvider func() *iotago.ProtocolParameters
 type NodeStatusProvider func(ctx context.Context) (confirmedIndex iotago.MilestoneIndex, pruningIndex iotago.MilestoneIndex)
-type LedgerUpdatesProvider func(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex, handler func(index iotago.MilestoneIndex, createdMessage []*Message, createdNft []*NFT, createdShared []*Message) error) error
+type LedgerUpdatesProvider func(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex, handler func(index iotago.MilestoneIndex, createdMessage []*Message, consumedMessage []*Message, createdNft []*NFT, createdShared []*Message) error) error
 
 // Manager is used to track the outcome of participation in the tangle.
 type Manager struct {
