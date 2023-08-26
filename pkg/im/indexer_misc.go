@@ -183,7 +183,7 @@ func executeQuery(ctx context.Context, client nodeclient.IndexerClient, query no
 // query any outputs, with offset, return outputIds and new offset
 func (im *Manager) QueryBasicOutputIds(ctx context.Context, client nodeclient.IndexerClient, offset *string, logger *logger.Logger, pageSize int) (iotago.HexOutputIDs, *string, error) {
 	query := &nodeclient.BasicOutputsQuery{}
-	query.PageSize = pageSize
+	query.IndexerCursorParas.PageSize = pageSize
 	return executeQuery(ctx, client, query, offset, logger)
 }
 
