@@ -23,6 +23,9 @@ const (
 
 	ImStoreKeyPrefixAddressGroup = 16
 
+	// Holds the Shared for consolidation
+	ImStoreKeyPrefixSharedForConsolidation byte = 17
+
 	// inbox messsage types
 	// plain text, new message
 	ImInboxMessageTypeNewMessage      byte = 1
