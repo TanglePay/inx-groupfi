@@ -231,9 +231,9 @@ func (im *Manager) ReadInboxForConsolidation(ownerAddress string, thresMileStone
 			logger.Errorf("ParseMessageValuePayload error %v", err)
 			return true
 		}
-		if message.MileStoneTimestamp < thresMileStoneTimestamp {
-			outputIds = append(outputIds, iotago.EncodeHex(message.OutputId))
-		}
+		//if message.MileStoneTimestamp < thresMileStoneTimestamp {
+		outputIds = append(outputIds, iotago.EncodeHex(message.OutputId))
+		//}
 		return true
 	})
 	if err != nil {
