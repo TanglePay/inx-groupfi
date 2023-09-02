@@ -158,7 +158,7 @@ func processInitializationForShared(ctx context.Context, client *nodeclient.Clie
 }
 
 // processInitializationForToken
-func processInitializationForTokenForBasicOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, drainer *OutputIdDrainer) (int, bool, error) {
+func processInitializationForTokenForBasicOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, drainer *ItemDrainer) (int, bool, error) {
 	// get init offset
 	itemType := im.TokenBasicType
 	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, "")
@@ -176,7 +176,12 @@ func processInitializationForTokenForBasicOutput(ctx context.Context, client *no
 		return 0, false, err
 	}
 	//drain
-	drainer.Drain(outputHexIds)
+	// wrap outputHexIds to interface
+	outputHexIdsInterface := make([]interface{}, len(outputHexIds))
+	for i, v := range outputHexIds {
+		outputHexIdsInterface[i] = v
+	}
+	drainer.Drain(outputHexIdsInterface)
 
 	// update init offset
 	if nextOffset != nil {
@@ -192,7 +197,7 @@ func processInitializationForTokenForBasicOutput(ctx context.Context, client *no
 }
 
 // processInitializationForTokenForNftOutput
-func processInitializationForTokenForNftOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, drainer *OutputIdDrainer) (int, bool, error) {
+func processInitializationForTokenForNftOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, drainer *ItemDrainer) (int, bool, error) {
 	// get init offset
 	itemType := im.TokenNFTType
 	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, "")
@@ -209,7 +214,11 @@ func processInitializationForTokenForNftOutput(ctx context.Context, client *node
 		return 0, false, err
 	}
 	//drain
-	drainer.Drain(outputHexIds)
+	outputHexIdsInterface := make([]interface{}, len(outputHexIds))
+	for i, v := range outputHexIds {
+		outputHexIdsInterface[i] = v
+	}
+	drainer.Drain(outputHexIdsInterface)
 
 	// update init offset
 	if nextOffset != nil {
@@ -297,93 +306,112 @@ func startListeningToLedgerUpdate() {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 }
-func run() error {
+func handleMessageInit(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) {
+	// handle messsages init
+	isMessageInitializationFinished, err := deps.IMManager.IsInitFinished(im.MessageType, "")
+	if err != nil {
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
+	}
+	// loop until isMessageInitializationFinished is true
+	for !isMessageInitializationFinished {
+		select {
+		case <-ctx.Done():
+			CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
+			return
+		default:
+			messages, isHasMore, err := processInitializationForMessage(ctx, client, indexerClient)
+			if err != nil {
+				// log error then continue
+				CoreComponent.LogWarnf("LedgerInit ... processInitializationForMessage failed:%s", err)
+				continue
+			}
+			if len(messages) > 0 {
+				DataFromListenning := &im.DataFromListenning{
+					CreatedMessage: messages,
+				}
+				err = deps.IMManager.ApplyNewLedgerUpdate(0, DataFromListenning, CoreComponent.Logger(), true)
+				if err != nil {
+					// log error then continue
+					CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
+					continue
+				}
+			}
+			if !isHasMore {
+				err = deps.IMManager.MarkInitFinished(im.MessageType, "")
+				if err != nil {
+					// log error then continue
+					CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+					continue
+				}
+				isMessageInitializationFinished = true
+			}
+		}
+	}
+}
+func handleSharedInit(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) {
+	// handle shared init
+	isSharedInitializationFinished, err := deps.IMManager.IsInitFinished(im.SharedType, "")
+	if err != nil {
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
+	}
+	// loop until isSharedInitializationFinished is true
+	for !isSharedInitializationFinished {
+		select {
+		case <-ctx.Done():
+			CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
+			return
+		default:
+			messages, isHasMore, err := processInitializationForShared(ctx, client, indexerClient)
+			if err != nil {
+				// log error then continue
+				CoreComponent.LogWarnf("LedgerInit ... processInitializationForShared failed:%s", err)
+				continue
+			}
+			if len(messages) > 0 {
+				DataFromListenning := &im.DataFromListenning{
+					CreatedShared: messages,
+				}
+				err = deps.IMManager.ApplyNewLedgerUpdate(0, DataFromListenning, CoreComponent.Logger(), true)
+				if err != nil {
+					// log error then continue
+					CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
+					continue
+				}
+			}
+			if !isHasMore {
+				err = deps.IMManager.MarkInitFinished(im.SharedType, "")
+				if err != nil {
+					// log error then continue
+					CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
+					continue
+				}
+				isSharedInitializationFinished = true
+			}
+		}
+	}
+}
 
+func run() error {
+	im.InitIpfsShell()
+	nodeHTTPAPIClient := nodeclient.New("https://api.shimmer.network")
 	// create a background worker that handles the init situation
 	if err := CoreComponent.Daemon().BackgroundWorker("LedgerInit", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting LedgerInit ... done")
 
-		// handle messsages init
-		isMessageInitializationFinished, err := deps.IMManager.IsInitFinished(im.MessageType, "")
-		if err != nil {
-			CoreComponent.LogPanicf("failed to start worker: %s", err)
-		}
-
-		// shared init
-		isSharedInitializationFinished, err := deps.IMManager.IsInitFinished(im.SharedType, "")
-		if err != nil {
-			CoreComponent.LogPanicf("failed to start worker: %s", err)
-		}
-		nodeHTTPAPIClient := nodeclient.New("https://api.shimmer.network")
 		indexerClient, err := nodeHTTPAPIClient.Indexer(ctx)
 		if err != nil {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
-		// loop until isMessageInitializationFinished is true
-		for !isMessageInitializationFinished || !isSharedInitializationFinished {
-			select {
-			case <-ctx.Done():
-				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
-				return
-			default:
-				if !isMessageInitializationFinished {
-					messages, isHasMore, err := processInitializationForMessage(ctx, nodeHTTPAPIClient, indexerClient)
-					if err != nil {
-						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... processInitializationForMessage failed:%s", err)
-						continue
-					}
-					if len(messages) > 0 {
-						DataFromListenning := &im.DataFromListenning{
-							CreatedMessage: messages,
-						}
-						err = deps.IMManager.ApplyNewLedgerUpdate(0, DataFromListenning, CoreComponent.Logger(), true)
-						if err != nil {
-							// log error then continue
-							CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
-							continue
-						}
-					}
-					if !isHasMore {
-						err = deps.IMManager.MarkInitFinished(im.MessageType, "")
-						if err != nil {
-							// log error then continue
-							CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
-							continue
-						}
-						isMessageInitializationFinished = true
-					}
-				}
-				if !isSharedInitializationFinished {
-					messages, isHasMore, err := processInitializationForShared(ctx, nodeHTTPAPIClient, indexerClient)
-					if err != nil {
-						// log error then continue
-						CoreComponent.LogWarnf("LedgerInit ... processInitializationForShared failed:%s", err)
-						continue
-					}
-					if len(messages) > 0 {
-						DataFromListenning := &im.DataFromListenning{
-							CreatedShared: messages,
-						}
-						err = deps.IMManager.ApplyNewLedgerUpdate(0, DataFromListenning, CoreComponent.Logger(), true)
-						if err != nil {
-							// log error then continue
-							CoreComponent.LogWarnf("LedgerInit ... ApplyNewLedgerUpdate failed:%s", err)
-							continue
-						}
-					}
-					if !isHasMore {
-						err = deps.IMManager.MarkInitFinished(im.SharedType, "")
-						if err != nil {
-							// log error then continue
-							CoreComponent.LogWarnf("LedgerInit ... MarkInitFinished failed:%s", err)
-							continue
-						}
-						isSharedInitializationFinished = true
-					}
-				}
-			}
-		}
+
+		// handle group config init
+		handleGroupConfigInit(ctx, nodeHTTPAPIClient, indexerClient)
+
+		// handle messsages init
+		handleMessageInit(ctx, nodeHTTPAPIClient, indexerClient)
+
+		// shared init
+		handleSharedInit(ctx, nodeHTTPAPIClient, indexerClient)
+
 		issuerBech32AddressList := []string{
 			"smr1zqry6r4wlwr2jn4nymlkx0pzehm5fhkv492thya32u45f8fjftn3wkng2mp",
 			"smr1zpz3430fdn4zmheenyjvughsu44ykjzu5st6hg2rp609eevz6czlye60pe7",
@@ -441,11 +469,8 @@ func run() error {
 			}
 		}
 
-		isTokenBasicFinished, err := deps.IMManager.IsInitFinished(im.TokenBasicType, "")
-		if err != nil {
-			CoreComponent.LogPanicf("failed to start worker: %s", err)
-		}
-		OutputIdDrainer := NewOutputIdDrainer(ctx, func(outputId string) {
+		ItemDrainer := NewItemDrainer(ctx, func(outputIdUnwrapped interface{}) {
+			outputId := outputIdUnwrapped.(string)
 			output, err := deps.IMManager.OutputIdToOutput(ctx, nodeHTTPAPIClient, outputId)
 			if err != nil {
 				// log error
@@ -459,7 +484,13 @@ func run() error {
 				CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
 
 			}
+			// handle group config
 		}, 1000, 100, 2000)
+		isTokenBasicFinished, err := deps.IMManager.IsInitFinished(im.TokenBasicType, "")
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
+		}
+
 		totalBasicOutputProcessed := big.NewInt(0)
 		startTimeBasic := time.Now()
 		for !isTokenBasicFinished {
@@ -468,7 +499,7 @@ func run() error {
 				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
 				return
 			default:
-				ct, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient, OutputIdDrainer)
+				ct, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, nodeHTTPAPIClient, indexerClient, ItemDrainer)
 				if err != nil {
 					// log error then continue
 					CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForBasicOutput failed:%s", err)
@@ -505,7 +536,7 @@ func run() error {
 				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
 				return
 			default:
-				ct, isHasMore, err := processInitializationForTokenForNftOutput(ctx, nodeHTTPAPIClient, indexerClient, OutputIdDrainer)
+				ct, isHasMore, err := processInitializationForTokenForNftOutput(ctx, nodeHTTPAPIClient, indexerClient, ItemDrainer)
 				if err != nil {
 					// log error then continue
 					CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForNftOutput failed:%s", err)
@@ -579,7 +610,7 @@ func run() error {
 
 		e := httpserver.NewEcho(CoreComponent.Logger(), nil, ParamsRestAPI.DebugRequestLoggerEnabled)
 
-		setupRoutes(e)
+		setupRoutes(e, ctx, nodeHTTPAPIClient)
 		go func() {
 			CoreComponent.LogInfof("You can now access the API using: http://%s", ParamsRestAPI.BindAddress)
 			if err := e.Start(ParamsRestAPI.BindAddress); err != nil && !errors.Is(err, http.ErrServerClosed) {

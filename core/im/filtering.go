@@ -76,6 +76,50 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	)
 	return im.NewNFT(groupId, ownerAddress, nftId, milestone, milestoneTimestamp)
 }
+
+// filter nft INXLedgerOutput based on a set of issuer address
+func filterNFTINXLedgerOutputViaIssuerAddress(output *inx.LedgerOutput, issuerBech32AddressMap map[string]bool) (isNFT bool, issuerAddress string, nft *iotago.NFTOutput) {
+	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return false, "", nil
+	}
+	return filterNFTOutputViaIssuerAddress(iotaOutput, issuerBech32AddressMap)
+}
+
+// filter nft output based on a set of issuer address
+func filterNFTOutputViaIssuerAddress(output iotago.Output, issuerBech32AddressMap map[string]bool) (isNFT bool, issuerAddress string, nft *iotago.NFTOutput) {
+	// call filterNFTOutput
+	isNFT, nftOutput := filterNFTOutput(output)
+	if !isNFT {
+		return false, "", nil
+	}
+	featureSet, err := nftOutput.ImmutableFeatures.Set()
+	if err != nil {
+		return false, "", nil
+	}
+	issuer := featureSet.IssuerFeature()
+	if issuer == nil {
+		return false, "", nil
+	}
+	issuerAddress = issuer.Address.Bech32(iotago.PrefixShimmer)
+	_, ok := issuerBech32AddressMap[issuerAddress]
+	if !ok {
+		return false, "", nil
+	}
+	return true, issuerAddress, nftOutput
+}
+
+// filterNFTOutput
+func filterNFTOutput(output iotago.Output) (isNFT bool, nft *iotago.NFTOutput) {
+	if output.Type() != iotago.OutputNFT {
+		return false, nil
+	}
+	nftOutput, is := output.(*iotago.NFTOutput)
+	if !is {
+		return false, nil
+	}
+	return true, nftOutput
+}
 func sharedOutputFromINXLedgerOutput(output *inx.LedgerOutput) *im.Message {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
@@ -329,7 +373,7 @@ func fetchNextShared(ctx context.Context, client *nodeclient.Client, indexerClie
 
 // fetchNextNFTs fetches next NFTs from indexer
 func fetchNextNFTs(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, issuerBech32Address string, log *logger.Logger) ([]*im.NFT, *string, error) {
-	outputHexIds, offset, err := deps.IMManager.QueryNFTIdsByIssuer(ctx, indexerClient, issuerBech32Address, offset, log)
+	outputHexIds, offset, err := deps.IMManager.QueryNFTIdsByIssuer(ctx, indexerClient, issuerBech32Address, offset, 100, log)
 	if err != nil {
 		return nil, nil, err
 	}

@@ -29,6 +29,12 @@ const (
 	// Holds the Message for consolidation
 	ImStoreKeyPrefixMessageForConsolidation byte = 18
 
+	// holds the group config
+	ImStoreKeyPrefixGroupConfig byte = 19
+
+	// holds address public key
+	ImStoreKeyPrefixAddressPublicKey byte = 20
+
 	// inbox messsage types
 	// plain text, new message
 	ImInboxMessageTypeNewMessage      byte = 1

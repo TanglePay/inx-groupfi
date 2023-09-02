@@ -1,6 +1,7 @@
 package im
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/TanglePay/inx-iotacat/pkg/im"
@@ -8,6 +9,11 @@ import (
 
 	"github.com/iotaledger/inx-app/pkg/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/iotaledger/iota.go/v3/nodeclient"
+)
+
+var (
+	publicKeyDrainer *ItemDrainer
 )
 
 const (
@@ -18,6 +24,9 @@ const (
 	RouteIMMessagesUntil = "/messages/until"
 	// nft
 	RouteIMNFTs = "/nfts"
+	// nfts that each with public key
+	RouteIMNFTsWithPublicKey = "/nftswithpublickey"
+
 	// shared
 	RouteIMShared = "/shared"
 	// address group ids
@@ -27,10 +36,34 @@ const (
 	RouteImConsolidationForMessage = "/consolidation/message"
 	// consolidation for shared
 	RouteImConsolidationForShared = "/consolidation/shared"
+
+	// group configs for renter
+	RouteGroupConfigs = "/groupconfigs"
 )
 
-func setupRoutes(e *echo.Echo) {
+func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
+	publicKeyDrainer = NewItemDrainer(ctx, func(item interface{}) {
+		// unwrap to *NFTWithRespChan
+		nftWithRespChan := item.(*NFTWithRespChan)
+		// get address from nft
+		address := string(nftWithRespChan.NFT.OwnerAddress)
+		// get public key from address
+		publicKeyBytes, err := deps.IMManager.GetAddressPublicKey(ctx, client, address)
+		if err != nil {
+			// log error
+			CoreComponent.LogWarnf("LedgerInit ... GetAddressPublicKey failed:%s", err)
+			return
+		}
+		publicKey := iotago.EncodeHex(publicKeyBytes)
 
+		// make *NFTResponse
+		nftResponse := &NFTResponse{
+			OwnerAddress: address,
+			PublicKey:    publicKey,
+		}
+		// send to respChan
+		nftWithRespChan.RespChan <- nftResponse
+	}, 2000, 1000, 1000)
 	e.GET(RouteIMMessages, func(c echo.Context) error {
 		resp, err := getMesssagesFrom(c)
 		if err != nil {
@@ -55,7 +88,14 @@ func setupRoutes(e *echo.Echo) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
-
+	// nfts with public key
+	e.GET(RouteIMNFTsWithPublicKey, func(c echo.Context) error {
+		resp, err := getNFTsWithPublicKeyFromGroupId(c, publicKeyDrainer)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 	//shared
 	e.GET(RouteIMShared, func(c echo.Context) error {
 		resp, err := getSharedFromGroupId(c)
@@ -142,5 +182,14 @@ func setupRoutes(e *echo.Echo) {
 			return err
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, outputIds)
+	})
+
+	// group configs for renter
+	e.GET(RouteGroupConfigs, func(c echo.Context) error {
+		resp, err := getGroupConfigsForRenter(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 }

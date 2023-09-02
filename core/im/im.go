@@ -47,6 +47,16 @@ func parseGroupIdQueryParam(c echo.Context) ([]byte, error) {
 	return groupId, nil
 }
 
+// parse given attrName from query param
+func parseAttrNameQueryParam(c echo.Context, attrName string) (string, error) {
+	attrParams := c.QueryParams()[attrName]
+	if len(attrParams) == 0 {
+		return "", echo.ErrBadRequest
+	}
+	attr := attrParams[0]
+	return attr, nil
+}
+
 // parse groupName from query param
 func parseGroupNameQueryParam(c echo.Context) (string, error) {
 	groupNameParams := c.QueryParams()["groupName"]
@@ -148,8 +158,8 @@ func makeMessageResponse(messages []*im.Message) *MessagesResponse {
 	}
 }
 
-// get nfts
-func getNFTsFromGroupId(c echo.Context) ([]*NFTResponse, error) {
+// get raw nfts from groupId
+func getRawNFTsFromGroupId(c echo.Context) ([]*im.NFT, error) {
 	groupId, err := parseGroupIdQueryParam(c)
 	if err != nil {
 		return nil, err
@@ -162,6 +172,15 @@ func getNFTsFromGroupId(c echo.Context) ([]*NFTResponse, error) {
 		return nil, err
 	}
 	CoreComponent.LogInfof("get nfts from groupId:%s,found nfts:%d", iotago.EncodeHex(groupId), len(nfts))
+	return nfts, nil
+}
+
+// get nfts
+func getNFTsFromGroupId(c echo.Context) ([]*NFTResponse, error) {
+	nfts, err := getRawNFTsFromGroupId(c)
+	if err != nil {
+		return nil, err
+	}
 	nftResponseArr := make([]*NFTResponse, len(nfts))
 	for i, nft := range nfts {
 		// nft.OwnerAddress is []bytes{OwnerAddress}
@@ -171,6 +190,45 @@ func getNFTsFromGroupId(c echo.Context) ([]*NFTResponse, error) {
 		}
 	}
 	return nftResponseArr, nil
+}
+
+// NFTWithRespChan
+type NFTWithRespChan struct {
+	NFT      *im.NFT
+	RespChan chan interface{}
+}
+
+// getNFTsWithPublicKeyFromGroupId
+func getNFTsWithPublicKeyFromGroupId(c echo.Context, drainer *ItemDrainer) ([]*NFTResponse, error) {
+	nfts, err := getRawNFTsFromGroupId(c)
+	if err != nil {
+		return nil, err
+	}
+	// make respChan as chan[NFTResponse]
+	respChan := make(chan interface{})
+	// wrap nfts to {nft *im.NFT, respChan chan interface{}} and drain
+	nftsInterface := make([]interface{}, len(nfts))
+	for i, nft := range nfts {
+		nftsInterface[i] = &NFTWithRespChan{
+			NFT:      nft,
+			RespChan: respChan,
+		}
+	}
+	drainer.Drain(nftsInterface)
+	// make nftResponseArr, start empty, then fill it with respChan, plus timeout, then return
+	nftResponseArr := make([]*NFTResponse, 0)
+	timeout := time.After(10 * time.Second)
+	for {
+		select {
+		case resp := <-respChan:
+			nftResponseArr = append(nftResponseArr, resp.(*NFTResponse))
+			if len(nftResponseArr) == len(nfts) {
+				return nftResponseArr, nil
+			}
+		case <-timeout:
+			return nil, errors.Errorf("timeout")
+		}
+	}
 }
 
 // get shared from groupId
@@ -262,4 +320,19 @@ func getSharedOutputIdsForConsolidation(c echo.Context) ([]string, error) {
 	}
 	CoreComponent.LogInfof("get outputids for consolidation from address:%s,found outputIds:%d", address, len(outputIds))
 	return outputIds, nil
+}
+
+// get all groups under renter
+func getGroupConfigsForRenter(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
+	renderName, err := parseAttrNameQueryParam(c, "renderName")
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get groups under renter:%s", renderName)
+	groupConfigs, err := deps.IMManager.ReadAllGroupConfigForRenter(renderName)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get groups under renter:%s,found groupConfigs:%d", renderName, len(groupConfigs))
+	return groupConfigs, nil
 }

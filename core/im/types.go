@@ -11,6 +11,7 @@ type MessageResponse struct {
 	Timestamp uint32 `json:"timestamp"`
 }
 type NFTResponse struct {
+	PublicKey    string `json:"publicKey"`
 	OwnerAddress string `json:"ownerAddress"`
 	NFTId        string `json:"nftId"`
 }

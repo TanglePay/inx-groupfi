@@ -1,7 +1,12 @@
 package im
 
 import (
+	"context"
 	"crypto/sha256"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/url"
 	"sync"
 )
 
@@ -59,4 +64,44 @@ func ConcatByteSlices(slices ...[]byte) []byte {
 		offset += len(s)
 	}
 	return result
+}
+
+func PerformGetRequest(ctx context.Context, targetURL string, params map[string]string, result interface{}) error {
+	// Parse the base URL
+	u, err := url.Parse(targetURL)
+	if err != nil {
+		return err
+	}
+
+	// Add the query parameters
+	q := u.Query()
+	for k, v := range params {
+		q.Add(k, v)
+	}
+	u.RawQuery = q.Encode()
+
+	// Create a new request
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u.String(), nil)
+	if err != nil {
+		return err
+	}
+
+	// Make the HTTP request
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	// Read the response body
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	// Parse the JSON response body
+	if err := json.Unmarshal(body, result); err != nil {
+		return err
+	}
+	return nil
 }

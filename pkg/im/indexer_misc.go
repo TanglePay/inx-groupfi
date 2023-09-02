@@ -201,9 +201,12 @@ func (im *Manager) QueryNFTOutputIds(ctx context.Context, client nodeclient.Inde
 }
 
 // query nfts based on issuer address, with offset, return outputIds and new offset
-func (im *Manager) QueryNFTIdsByIssuer(ctx context.Context, client nodeclient.IndexerClient, issuerBech32Address string, offset *string, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
+func (im *Manager) QueryNFTIdsByIssuer(ctx context.Context, client nodeclient.IndexerClient, issuerBech32Address string, offset *string, pageSize int, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
 	query := &nodeclient.NFTsQuery{
 		IssuerBech32: issuerBech32Address,
+		IndexerCursorParas: nodeclient.IndexerCursorParas{
+			PageSize: pageSize,
+		},
 	}
 	return executeQuery(ctx, client, query, offset, logger)
 }
