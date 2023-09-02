@@ -226,7 +226,9 @@ func getNFTsWithPublicKeyFromGroupId(c echo.Context, drainer *ItemDrainer) ([]*N
 				return nftResponseArr, nil
 			}
 		case <-timeout:
-			return nil, errors.Errorf("timeout")
+			// log
+			CoreComponent.LogWarnf("getNFTsWithPublicKeyFromGroupId timeout")
+			return nftResponseArr, nil
 		}
 	}
 }
