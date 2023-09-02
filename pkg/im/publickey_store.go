@@ -113,10 +113,9 @@ func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.C
 	// first get from store
 	addressPublicKeyWrapped, err := im.ReadOnePublicKey(address)
 	if err != nil {
-		if err == kvstore.ErrKeyNotFound {
-			err = nil
+		if err != kvstore.ErrKeyNotFound {
+			return nil, err
 		}
-		return nil, err
 	}
 	if addressPublicKeyWrapped != nil {
 		return addressPublicKeyWrapped, nil
