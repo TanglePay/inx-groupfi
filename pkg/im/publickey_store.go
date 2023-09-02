@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/iotaledger/hive.go/core/kvstore"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
@@ -112,6 +113,9 @@ func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.C
 	// first get from store
 	addressPublicKeyWrapped, err := im.ReadOnePublicKey(address)
 	if err != nil {
+		if err == kvstore.ErrKeyNotFound {
+			err = nil
+		}
 		return nil, err
 	}
 	if addressPublicKeyWrapped != nil {

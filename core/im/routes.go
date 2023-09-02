@@ -54,7 +54,12 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			CoreComponent.LogWarnf("LedgerInit ... GetAddressPublicKey failed:%s", err)
 			return
 		}
-		publicKey := iotago.EncodeHex(publicKeyBytes)
+		var publicKey string
+		if publicKeyBytes != nil {
+			publicKey = iotago.EncodeHex(publicKeyBytes)
+		} else {
+			publicKey = ""
+		}
 
 		// make *NFTResponse
 		nftResponse := &NFTResponse{
