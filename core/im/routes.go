@@ -43,16 +43,21 @@ const (
 
 func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	publicKeyDrainer = NewItemDrainer(ctx, func(item interface{}) {
+
 		// unwrap to *NFTWithRespChan
 		nftWithRespChan := item.(*NFTWithRespChan)
 		// get address from nft
 		address := string(nftWithRespChan.NFT.OwnerAddress)
+
+		nftResponse := &NFTResponse{
+			OwnerAddress: address,
+			PublicKey:    "",
+		}
 		// get public key from address
 		publicKeyBytes, err := deps.IMManager.GetAddressPublicKey(ctx, client, address)
 		if err != nil {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... GetAddressPublicKey failed:%s", err)
-			return
 		}
 		var publicKey string
 		if publicKeyBytes != nil {
@@ -62,10 +67,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 
 		// make *NFTResponse
-		nftResponse := &NFTResponse{
-			OwnerAddress: address,
-			PublicKey:    publicKey,
-		}
+		nftResponse.PublicKey = publicKey
 		// send to respChan
 		nftWithRespChan.RespChan <- nftResponse
 	}, 2000, 1000, 1000)
