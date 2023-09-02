@@ -13,10 +13,10 @@ import (
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
-var iotacatTagStr = "IOTACATV2"
+var iotacatTagStr = "GROUPFIV1"
 var iotacatTag = []byte(iotacatTagStr)
 var iotacatTagHex = iotago.EncodeHex(iotacatTag)
-var iotacatsharedTagStr = "IOTACATSHAREDV2"
+var iotacatsharedTagStr = "GROUPFISHAREDV1"
 var iotacatsharedTag = []byte(iotacatsharedTagStr)
 var iotacatsharedTagHex = iotago.EncodeHex(iotacatsharedTag)
 
@@ -146,8 +146,8 @@ func sharedOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte, milest
 	if !bytes.Equal(tagPayload, iotacatsharedTag) {
 		return nil
 	}
-	// groupid is first xxx bytes of meta feature
-	groupId := metaPayload[:im.GroupIdLen]
+	// groupid is GroupIdLen bytes of second byte of meta feature
+	groupId := metaPayload[1 : im.GroupIdLen+1]
 	metapayloadSha256 := im.Sha256HashBytes(metaPayload)
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
@@ -284,8 +284,8 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 	if !bytes.Equal(tagPayload, iotacatTag) {
 		return nil
 	}
-	// groupid is first xxx bytes of meta feature
-	groupId := metaPayload[:im.GroupIdLen]
+	// groupid is GroupIdLen bytes from second byte of meta feature
+	groupId := metaPayload[1 : im.GroupIdLen+1]
 	metapayloadSha256 := im.Sha256HashBytes(metaPayload)
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
