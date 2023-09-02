@@ -98,10 +98,17 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// nfts with public key
 	e.GET(RouteIMNFTsWithPublicKey, func(c echo.Context) error {
 		resp, err := getNFTsWithPublicKeyFromGroupId(c, publicKeyDrainer)
+		// filter out nfts with empty public key
+		filteredNFTs := make([]*NFTResponse, 0)
+		for _, nft := range resp {
+			if nft.PublicKey != "" {
+				filteredNFTs = append(filteredNFTs, nft)
+			}
+		}
 		if err != nil {
 			return err
 		}
-		return httpserver.JSONResponse(c, http.StatusOK, resp)
+		return httpserver.JSONResponse(c, http.StatusOK, filteredNFTs)
 	})
 	//shared
 	e.GET(RouteIMShared, func(c echo.Context) error {
