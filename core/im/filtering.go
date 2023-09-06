@@ -271,16 +271,23 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 	if iotaOutput.Type() != iotago.OutputBasic {
 		return nil
 	}
+
 	// tag should have iotacat and groupId can be retrieved as well
 	featureSet := iotaOutput.FeatureSet()
 	tag := featureSet.TagFeature()
 	meta := featureSet.MetadataFeature()
-	if tag == nil || meta == nil || meta.Size() < im.GroupIdLen {
+	if tag == nil || meta == nil {
 		return nil
 	}
 	tagPayload := tag.Tag
 
 	metaPayload := meta.Data
+	// log found output, with tag
+	CoreComponent.LogInfof("Found output,payload len:%d,tag len:%d,tag:%s",
+		len(metaPayload),
+		len(tagPayload),
+		string(tagPayload),
+	)
 	if !bytes.Equal(tagPayload, iotacatTag) {
 		return nil
 	}
