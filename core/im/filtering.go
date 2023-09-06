@@ -326,7 +326,8 @@ func filterOutputForPush(output iotago.Output) (isMessage bool, senderAddressHas
 		return false, nil, nil, nil
 	}
 	metaPayload := meta.Data
-	groupId_ := metaPayload[:im.GroupIdLen]
+	// group id is GroupIdLen bytes of second byte of meta feature
+	groupId_ := metaPayload[1 : im.GroupIdLen+1]
 	unlockSet := output.UnlockConditionSet()
 	senderAddress, _ := unlockSet.Address().Address.Serialize(serializer.DeSeriModeNoValidation, nil)
 	return true, senderAddress, groupId_, metaPayload
