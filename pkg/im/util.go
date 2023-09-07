@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/url"
@@ -104,4 +105,56 @@ func PerformGetRequest(ctx context.Context, targetURL string, params map[string]
 		return err
 	}
 	return nil
+}
+
+func AppendBytesWithUint16Len(bytes *[]byte, idx *int, slice []byte, appendLength bool) {
+	length := len(slice)
+
+	if appendLength {
+		// Ensure there's enough space in bytes slice for length + actual data
+		newSize := *idx + 2 + length
+		if cap(*bytes) < newSize {
+			*bytes = append(*bytes, make([]byte, 2+length)...)
+		} else {
+			*bytes = (*bytes)[:newSize]
+		}
+
+		// Encode length as uint16 and put in slice
+		(*bytes)[*idx] = byte(length >> 8)
+		(*bytes)[*idx+1] = byte(length & 0xFF)
+
+		// Copy the slice data
+		copy((*bytes)[*idx+2:], slice)
+
+		// Update index
+		*idx = newSize
+	} else {
+		// If not appending the length, just append the slice itself
+		*bytes = append(*bytes, slice...)
+		*idx += length
+	}
+}
+
+func ReadBytesWithUint16Len(bytes []byte, idx *int, providedLength ...int) ([]byte, error) {
+	var length int
+	if len(providedLength) > 0 {
+		// If a length is provided, use it
+		length = providedLength[0]
+	} else {
+		// If no length provided, read length from bytes using the current index
+		if *idx+2 > len(bytes) {
+			return nil, fmt.Errorf("insufficient bytes for length reading")
+		}
+		length = int(bytes[*idx])<<8 | int(bytes[*idx+1])
+		*idx += 2
+	}
+
+	if *idx+length > len(bytes) {
+		return nil, fmt.Errorf("insufficient bytes for data reading")
+	}
+
+	data := bytes[*idx : *idx+length]
+	*idx += length
+
+	return data, nil
 }

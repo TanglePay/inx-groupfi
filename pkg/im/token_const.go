@@ -10,3 +10,15 @@ const (
 	ImTokenStatusConsumed byte    = 2
 	ImSMRWhaleThreshold   float64 = 0.01
 )
+
+// token type to token name
+func GetTokenNameFromType(tokenType uint16) string {
+	switch tokenType {
+	case ImTokenTypeSMR:
+		return "SMR"
+	case ImTokenTypeSOON:
+		return "SOON"
+	default:
+		return ""
+	}
+}

@@ -13,10 +13,10 @@ import (
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
-var iotacatTagStr = "GROUPFIV1"
+var iotacatTagStr = "GROUPFIV2"
 var iotacatTag = []byte(iotacatTagStr)
 var iotacatTagHex = iotago.EncodeHex(iotacatTag)
-var iotacatsharedTagStr = "GROUPFISHAREDV1"
+var iotacatsharedTagStr = "GROUPFISHAREDV2"
 var iotacatsharedTag = []byte(iotacatsharedTagStr)
 var iotacatsharedTagHex = iotago.EncodeHex(iotacatsharedTag)
 
