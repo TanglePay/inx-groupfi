@@ -63,7 +63,7 @@ func (im *Manager) GetAddressGroupValue(addressGroup *AddressGroup) []byte {
 		AppendBytesWithUint16Len(&bytes, &idx, []byte(addressGroup.NftLink), true)
 	} else if addressGroup.GroupQualifyType == GroupQualifyTypeToken {
 		tmp := make([]byte, 2)
-		binary.BigEndian.PutUint16(tmp[idx:], addressGroup.TokenType)
+		binary.BigEndian.PutUint16(tmp, addressGroup.TokenType)
 		AppendBytesWithUint16Len(&bytes, &idx, tmp, false)
 		AppendBytesWithUint16Len(&bytes, &idx, []byte(addressGroup.TokenThres), true)
 	}
@@ -98,11 +98,11 @@ func (im *Manager) ParseAddressGroupValue(bytes []byte) (*AddressGroup, error) {
 			return nil, err
 		}
 		tokenType := binary.BigEndian.Uint16(TokenTypeBytes)
+		addressGroup.TokenType = tokenType
 		tokenThres, err := ReadBytesWithUint16Len(bytes, &idx)
 		if err != nil {
 			return nil, err
 		}
-		addressGroup.TokenType = tokenType
 		addressGroup.TokenThres = string(tokenThres)
 	}
 	return addressGroup, nil
