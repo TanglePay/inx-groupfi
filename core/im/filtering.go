@@ -21,14 +21,14 @@ var iotacatsharedTagStr = "GROUPFISHAREDV2"
 var iotacatsharedTag = []byte(iotacatsharedTagStr)
 var iotacatsharedTagHex = iotago.EncodeHex(iotacatsharedTag)
 
-func nftFromINXLedgerOutput(output *inx.LedgerOutput) *im.NFT {
+func nftFromINXLedgerOutput(output *inx.LedgerOutput, log *logger.Logger) *im.NFT {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil
 	}
-	return nftFromINXOutput(iotaOutput, output.OutputId.Id, output.MilestoneIndexBooked, output.MilestoneTimestampBooked)
+	return nftFromINXOutput(iotaOutput, output.OutputId.Id, output.MilestoneIndexBooked, output.MilestoneTimestampBooked, log)
 }
-func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint32, milestoneTimestamp uint32) *im.NFT {
+func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint32, milestoneTimestamp uint32, log *logger.Logger) *im.NFT {
 
 	if iotaOutput.Type() != iotago.OutputNFT {
 		return nil
@@ -40,6 +40,8 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	}
 	featureSet, err := nftOutput.ImmutableFeatures.Set()
 	if err != nil {
+		// log error
+		log.Errorf("nftFromINXOutput failed:%s", err)
 		return nil
 	}
 	issuer := featureSet.IssuerFeature()
@@ -56,6 +58,7 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	metaMap := make(map[string]string)
 	err = json.Unmarshal(meta.Data, &metaMap)
 	if err != nil {
+		log.Errorf("nftFromINXOutput failed:%s", err)
 		return nil
 	}
 	ipfsLink := metaMap["uri"]
@@ -392,6 +395,8 @@ func fetchNextShared(ctx context.Context, client *nodeclient.Client, indexerClie
 // fetchNextNFTs fetches next NFTs from indexer
 func fetchNextNFTs(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, issuerBech32Address string, log *logger.Logger) ([]*im.NFT, *string, error) {
 	outputHexIds, offset, err := deps.IMManager.QueryNFTIdsByIssuer(ctx, indexerClient, issuerBech32Address, offset, 100, log)
+	// log len(outputHexIds)
+	log.Infof("fetchNextNFTs: Found %d NFT outputHexIds", len(outputHexIds))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -405,7 +410,7 @@ func fetchNextNFTs(ctx context.Context, client *nodeclient.Client, indexerClient
 		if err != nil {
 			return nil, nil, err
 		}
-		nft := nftFromINXOutput(output, outputId, milestoneIndex, milestoneTimestamp)
+		nft := nftFromINXOutput(output, outputId, milestoneIndex, milestoneTimestamp, log)
 		if nft != nil {
 			nfts = append(nfts, nft)
 		}

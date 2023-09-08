@@ -441,6 +441,8 @@ func run() error {
 						return
 					default:
 						nfts, isHasMore, err := processInitializationForNFT(ctx, nodeHTTPAPIClient, indexerClient, issuerBech32Address)
+						// log found len(nfts)
+						CoreComponent.LogInfof("LedgerInit ... found len(nfts):%d", len(nfts))
 						if err != nil {
 							// log error then continue
 							CoreComponent.LogWarnf("LedgerInit ... processInitializationForNFT failed:%s", err)
