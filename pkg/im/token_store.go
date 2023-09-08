@@ -197,13 +197,24 @@ func (im *Manager) GetGroupNameFromTokenType(tokenType uint16) string {
 	return ""
 }
 
+// token type to threshold in string format
+func (im *Manager) GetThresholdFromTokenType(tokenType uint16) string {
+	//TODO fix hardcoding
+	if tokenType == ImTokenTypeSMR {
+		return "0.01"
+	}
+	return ""
+}
+
 var NftIdPadding = Sha256Hash("nftIdPadding")
 
 // SetWhaleEligibility(tokenType, address, isEligible)
 func (im *Manager) SetWhaleEligibility(tokenType uint16, address string, isEligible bool, logger *logger.Logger) error {
 	groupName := im.GetGroupNameFromTokenType(tokenType)
 	groupId := im.GroupNameToGroupId(groupName)
-	nft := NewNFT(groupId, address, NftIdPadding, 0, 0)
+	tokenThreshold := im.GetThresholdFromTokenType(tokenType)
+	//TODO TODAY
+	nft := NewNFTForToken(groupId, address, NftIdPadding, groupName, tokenType, tokenThreshold)
 	if isEligible {
 		return im.storeSingleNFT(nft, logger)
 	} else {

@@ -158,6 +158,18 @@ func makeMessageResponse(messages []*im.Message) *MessagesResponse {
 	}
 }
 
+// make address group details response from address group
+func makeAddressGroupDetailsResponse(addressGroup *im.AddressGroup) *AddressGroupDetailsResponse {
+	return &AddressGroupDetailsResponse{
+		GroupId:          iotago.EncodeHex(addressGroup.GroupId),
+		GroupName:        addressGroup.GroupName,
+		GroupQualifyType: addressGroup.GroupQualifyType,
+		IpfsLink:         addressGroup.NftLink,
+		TokenName:        im.GetTokenNameFromType(addressGroup.TokenType),
+		TokenThres:       addressGroup.TokenThres,
+	}
+}
+
 // get raw nfts from groupId
 func getRawNFTsFromGroupId(c echo.Context) ([]*im.NFT, error) {
 	groupId, err := parseGroupIdQueryParam(c)
@@ -286,6 +298,26 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 		groupIdStrArr[i] = iotago.EncodeHex(groupId)
 	}
 	return groupIdStrArr, nil
+}
+
+// getAddressGroupDetails
+func getAddressGroupDetails(c echo.Context) ([]*AddressGroupDetailsResponse, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address group details from address:%s", address)
+	addressSha256 := im.Sha256Hash(address)
+	groupDetails, err := deps.IMManager.GetAddressGroupFromAddress(addressSha256)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address group details from address:%s,found groupIds:%d", address, len(groupDetails))
+	var AddressGroupDetailsResponseArr []*AddressGroupDetailsResponse
+	for _, groupDetail := range groupDetails {
+		AddressGroupDetailsResponseArr = append(AddressGroupDetailsResponseArr, makeAddressGroupDetailsResponse(groupDetail))
+	}
+	return AddressGroupDetailsResponseArr, nil
 }
 
 const DaysElapsedForConsolidation = 3

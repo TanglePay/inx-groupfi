@@ -31,7 +31,8 @@ const (
 	RouteIMShared = "/shared"
 	// address group ids
 	RouteIMAddressGroupIds = "/addressgroupids"
-
+	// address group details
+	RouteIMAddressGroupDetails = "/addressgroupdetails"
 	// consolidation for message
 	RouteImConsolidationForMessage = "/consolidation/message"
 	// consolidation for shared
@@ -180,6 +181,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, groupIds)
 	})
 
+	//RouteIMAddressGroupDetails
+	e.GET(RouteIMAddressGroupDetails, func(c echo.Context) error {
+		resp, err := getAddressGroupDetails(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 	// consolidation for message
 	e.GET(RouteImConsolidationForMessage, func(c echo.Context) error {
 		outputIds, err := getMessageOutputIdsForConsolidation(c)

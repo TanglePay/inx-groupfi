@@ -15,6 +15,17 @@ type NFTResponse struct {
 	OwnerAddress string `json:"ownerAddress"`
 	NFTId        string `json:"nftId"`
 }
+
+// AddressGroupDetailsResponse
+type AddressGroupDetailsResponse struct {
+	GroupId          string `json:"groupId"`
+	GroupName        string `json:"groupName"`
+	GroupQualifyType int    `json:"groupQualifyType"`
+	IpfsLink         string `json:"ipfsLink"`
+	TokenName        string `json:"tokenName"`
+	TokenThres       string `json:"tokenThres"`
+}
+
 type SharedResponse struct {
 	OutputId string `json:"outputId"`
 }

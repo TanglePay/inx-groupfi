@@ -3,6 +3,7 @@ package im
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"math/big"
 
 	"github.com/TanglePay/inx-iotacat/pkg/im"
@@ -51,6 +52,14 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	}
 	//nftId := nftOutput.NFTID
 	nftId := im.Sha256HashBytes(meta.Data)
+	// unmarshal meta to map, since meta data is json
+	metaMap := make(map[string]string)
+	err = json.Unmarshal(meta.Data, &metaMap)
+	if err != nil {
+		return nil
+	}
+	ipfsLink := metaMap["uri"]
+
 	issuerAddress := issuer.Address.Bech32(iotago.PrefixShimmer)
 	// log
 	CoreComponent.LogInfof("Found NFT output,issuer:%s，milestoneIndex:%d,milestoneTimestamp:%d",
@@ -59,8 +68,8 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 		milestoneTimestamp,
 	)
 
-	groupId := im.IssuerBech32AddressToGroupId(issuerAddress)
-	if groupId == nil {
+	groupId, groupName := im.IssuerBech32AddressToGroupIdAndGroupName(issuerAddress)
+	if groupId == nil || groupName == "" {
 		return nil
 	}
 	unlockConditionSet := nftOutput.UnlockConditionSet()
@@ -74,7 +83,8 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 		milestoneTimestamp,
 		iotago.EncodeHex(outputId),
 	)
-	return im.NewNFT(groupId, ownerAddress, nftId, milestone, milestoneTimestamp)
+
+	return im.NewNFT(groupId, ownerAddress, nftId, groupName, ipfsLink, milestone, milestoneTimestamp)
 }
 
 // filter nft INXLedgerOutput based on a set of issuer address

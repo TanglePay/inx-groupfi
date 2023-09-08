@@ -6,6 +6,7 @@ import (
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/pkg/errors"
 )
 
 func (im *Manager) NftKeyFromGroupIdAndNftId(groupId []byte, nftId []byte) []byte {
@@ -52,7 +53,14 @@ func (im *Manager) storeSingleNFT(nft *NFT, logger *logger.Logger) error {
 	if err != nil {
 		return err
 	}
-	addressGroup := NewAddressGroup(nft.OwnerAddress, nft.GroupId)
+	var addressGroup *AddressGroup
+	if addressGroup.GroupQualifyType == GroupQualifyTypeNft {
+		addressGroup = NewAddressGroupNft(nft.OwnerAddress, nft.GroupId, nft.IpfsLink, nft.GroupName)
+	} else if addressGroup.GroupQualifyType == GroupQualifyTypeToken {
+		addressGroup = NewAddressGroupToken(nft.OwnerAddress, nft.GroupId, nft.TokenType, nft.TokenThres)
+	} else {
+		return errors.New("invalid group qualify type")
+	}
 	err = im.StoreAddressGroup(addressGroup)
 	return err
 }

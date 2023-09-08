@@ -13,7 +13,7 @@ import (
 const IcebergGroup = "iceberg"
 const IcebergCollectionConfigIssuerAddress = "smr1zqry6r4wlwr2jn4nymlkx0pzehm5fhkv492thya32u45f8fjftn3wkng2mp"
 
-func IssuerBech32AddressToGroupId(address string) []byte {
+func IssuerBech32AddressToGroupIdAndGroupName(address string) ([]byte, string) {
 	iceberg := map[string]string{
 		"smr1zqry6r4wlwr2jn4nymlkx0pzehm5fhkv492thya32u45f8fjftn3wkng2mp": "iceberg-collection-1",
 		"smr1zpz3430fdn4zmheenyjvughsu44ykjzu5st6hg2rp609eevz6czlye60pe7": "iceberg-collection-2",
@@ -27,7 +27,7 @@ func IssuerBech32AddressToGroupId(address string) []byte {
 	groupName := iceberg[address]
 	groupId := GroupNameToGroupId(groupName)
 
-	return groupId
+	return groupId, groupName
 }
 
 func GroupNameToGroupMeta(group string) map[string]string {
