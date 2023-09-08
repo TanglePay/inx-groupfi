@@ -3,7 +3,6 @@ package im
 import (
 	"bytes"
 	"context"
-	"encoding/json"
 	"math/big"
 
 	"github.com/TanglePay/inx-iotacat/pkg/im"
@@ -55,14 +54,15 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	//nftId := nftOutput.NFTID
 	nftId := im.Sha256HashBytes(meta.Data)
 	// unmarshal meta to map, since meta data is json
-	metaMap := make(map[string]string)
-	err = json.Unmarshal(meta.Data, &metaMap)
-	if err != nil {
-		log.Errorf("nftFromINXOutput failed:%s", err)
-		return nil
-	}
-	ipfsLink := metaMap["uri"]
-
+	/*
+		metaMap := make(map[string]string)
+		err = json.Unmarshal(meta.Data, &metaMap)
+		if err != nil {
+			log.Errorf("nftFromINXOutput failed:%s", err)
+			return nil
+		}
+		ipfsLink := metaMap["uri"]
+	*/
 	issuerAddress := issuer.Address.Bech32(iotago.PrefixShimmer)
 	// log
 	CoreComponent.LogInfof("Found NFT output,issuer:%s，milestoneIndex:%d,milestoneTimestamp:%d",
@@ -87,7 +87,7 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 		iotago.EncodeHex(outputId),
 	)
 
-	return im.NewNFT(groupId, ownerAddress, nftId, groupName, ipfsLink, milestone, milestoneTimestamp)
+	return im.NewNFT(groupId, ownerAddress, nftId, groupName, "ipfsLink", milestone, milestoneTimestamp)
 }
 
 // filter nft INXLedgerOutput based on a set of issuer address
