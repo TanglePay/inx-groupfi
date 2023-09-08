@@ -35,7 +35,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if o != nil {
 				createdMessage = append(createdMessage, o)
 			}
-			nft := nftFromINXLedgerOutput(output)
+			nft := nftFromINXLedgerOutput(output, CoreComponent.Logger())
 			if nft != nil {
 				createdNft = append(createdNft, nft)
 			}
