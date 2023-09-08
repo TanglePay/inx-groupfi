@@ -423,6 +423,8 @@ func run() error {
 			"smr1zpvjkgxkzrhyvxy5nh20j6wm0l7grkf5s6l7r2mrhyspvx9khcaysmam589",
 		}
 		for _, issuerBech32Address := range issuerBech32AddressList {
+			// log start process nft for issuerBech32Address
+			CoreComponent.LogInfof("LedgerInit ... start process nft for issuerBech32Address:%s", issuerBech32Address)
 			select {
 			case <-ctx.Done():
 				CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
@@ -463,6 +465,8 @@ func run() error {
 								continue
 							}
 							isNFTInitializationFinished = true
+							// log finish process nft for issuerBech32Address
+							CoreComponent.LogInfof("LedgerInit ... finish process nft for issuerBech32Address:%s", issuerBech32Address)
 						}
 					}
 				}
