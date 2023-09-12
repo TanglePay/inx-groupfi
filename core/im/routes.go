@@ -12,10 +12,6 @@ import (
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
-var (
-	PublicKeyDrainer *ItemDrainer
-)
-
 const (
 	APIRoute     = "groupfi/v1"
 	MQTTAPIRoute = "groupfi/mqtt/v1"
@@ -43,14 +39,14 @@ const (
 )
 
 func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
-	PublicKeyDrainer = NewItemDrainer(ctx, func(item interface{}) {
+	im.PublicKeyDrainer = im.NewItemDrainer(ctx, func(item interface{}) {
 
 		// unwrap to *NFTWithRespChan
-		nftWithRespChan := item.(*NFTWithRespChan)
+		nftWithRespChan := item.(*im.NFTWithRespChan)
 		// get address from nft
 		address := string(nftWithRespChan.NFT.OwnerAddress)
 
-		nftResponse := &NFTResponse{
+		nftResponse := &im.NFTResponse{
 			OwnerAddress: address,
 			PublicKey:    "",
 		}
@@ -98,9 +94,9 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	})
 	// nfts with public key
 	e.GET(RouteIMNFTsWithPublicKey, func(c echo.Context) error {
-		resp, err := getNFTsWithPublicKeyFromGroupId(c, PublicKeyDrainer)
+		resp, err := getNFTsWithPublicKeyFromGroupId(c, im.PublicKeyDrainer)
 		// filter out nfts with empty public key
-		filteredNFTs := make([]*NFTResponse, 0)
+		filteredNFTs := make([]*im.NFTResponse, 0)
 		for _, nft := range resp {
 			if nft.PublicKey != "" {
 				filteredNFTs = append(filteredNFTs, nft)

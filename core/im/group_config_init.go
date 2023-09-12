@@ -40,7 +40,7 @@ func handleGroupConfigInit(ctx context.Context, client *nodeclient.Client, index
 }
 
 // processInitializationForGroupConfigNft
-func processInitializationForNftWithIssuer(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, issuerBech32Address string, drainer *ItemDrainer) (int, bool, error) {
+func processInitializationForNftWithIssuer(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, issuerBech32Address string, drainer *im.ItemDrainer) (int, bool, error) {
 	// get init offset
 	itemType := im.NFTType
 	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, issuerBech32Address)
@@ -50,7 +50,7 @@ func processInitializationForNftWithIssuer(ctx context.Context, client *nodeclie
 		return 0, false, err
 	}
 	// get outputs and meta data
-	outputHexIds, nextOffset, err := deps.IMManager.QueryNFTIdsByIssuer(ctx, indexerClient, issuerBech32Address, initOffset, drainer.fetchSize, CoreComponent.Logger())
+	outputHexIds, nextOffset, err := deps.IMManager.QueryNFTIdsByIssuer(ctx, indexerClient, issuerBech32Address, initOffset, drainer.FetchSize, CoreComponent.Logger())
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... fetchNextGroupConfigNFTs failed:%s", err)
@@ -76,8 +76,8 @@ func processInitializationForNftWithIssuer(ctx context.Context, client *nodeclie
 }
 
 // make drainer for group config nft
-func makeDrainerForGroupConfigNft(ctx context.Context, nodeHTTPAPIClient *nodeclient.Client, indexerClient nodeclient.IndexerClient) *ItemDrainer {
-	return NewItemDrainer(ctx, func(outputIdUnwrapped interface{}) {
+func makeDrainerForGroupConfigNft(ctx context.Context, nodeHTTPAPIClient *nodeclient.Client, indexerClient nodeclient.IndexerClient) *im.ItemDrainer {
+	return im.NewItemDrainer(ctx, func(outputIdUnwrapped interface{}) {
 		outputId := outputIdUnwrapped.(string)
 		output, err := deps.IMManager.OutputIdToOutput(ctx, nodeHTTPAPIClient, outputId)
 		if err != nil {

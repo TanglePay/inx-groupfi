@@ -158,7 +158,7 @@ func processInitializationForShared(ctx context.Context, client *nodeclient.Clie
 }
 
 // processInitializationForToken
-func processInitializationForTokenForBasicOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, drainer *ItemDrainer) (int, bool, error) {
+func processInitializationForTokenForBasicOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, drainer *im.ItemDrainer) (int, bool, error) {
 	// get init offset
 	itemType := im.TokenBasicType
 	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, "")
@@ -168,7 +168,7 @@ func processInitializationForTokenForBasicOutput(ctx context.Context, client *no
 		return 0, false, err
 	}
 	// get outputhexids
-	outputHexIds, nextOffset, err := deps.IMManager.QueryBasicOutputIds(ctx, indexerClient, initOffset, CoreComponent.Logger(), drainer.fetchSize)
+	outputHexIds, nextOffset, err := deps.IMManager.QueryBasicOutputIds(ctx, indexerClient, initOffset, CoreComponent.Logger(), drainer.FetchSize)
 
 	if err != nil {
 		// log error
@@ -197,7 +197,7 @@ func processInitializationForTokenForBasicOutput(ctx context.Context, client *no
 }
 
 // processInitializationForTokenForNftOutput
-func processInitializationForTokenForNftOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, drainer *ItemDrainer) (int, bool, error) {
+func processInitializationForTokenForNftOutput(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, drainer *im.ItemDrainer) (int, bool, error) {
 	// get init offset
 	itemType := im.TokenNFTType
 	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, "")
@@ -207,7 +207,7 @@ func processInitializationForTokenForNftOutput(ctx context.Context, client *node
 		return 0, false, err
 	}
 	// get outputhexids
-	outputHexIds, nextOffset, err := deps.IMManager.QueryNFTOutputIds(ctx, indexerClient, initOffset, drainer.fetchSize, CoreComponent.Logger())
+	outputHexIds, nextOffset, err := deps.IMManager.QueryNFTOutputIds(ctx, indexerClient, initOffset, drainer.FetchSize, CoreComponent.Logger())
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("LedgerInit ... fetchNextTokenForNftOutput failed:%s", err)
@@ -475,7 +475,7 @@ func run() error {
 			}
 		}
 
-		ItemDrainer := NewItemDrainer(ctx, func(outputIdUnwrapped interface{}) {
+		ItemDrainer := im.NewItemDrainer(ctx, func(outputIdUnwrapped interface{}) {
 			outputId := outputIdUnwrapped.(string)
 			output, err := deps.IMManager.OutputIdToOutput(ctx, nodeHTTPAPIClient, outputId)
 			if err != nil {

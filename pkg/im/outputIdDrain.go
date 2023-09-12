@@ -5,14 +5,14 @@ import "context"
 type ItemDrainer struct {
 	itemInput chan interface{}
 	consume   func(item interface{})
-	fetchSize int
+	FetchSize int
 }
 
 func NewItemDrainer(ctx context.Context, consume func(item interface{}), concurrency int, chanSpace int, fetchSize int) *ItemDrainer {
 	res := &ItemDrainer{
 		itemInput: make(chan interface{}, chanSpace),
 		consume:   consume,
-		fetchSize: fetchSize,
+		FetchSize: fetchSize,
 	}
 	for i := 0; i < concurrency; i++ {
 		go func() {

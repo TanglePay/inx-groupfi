@@ -10,11 +10,6 @@ type MessageResponse struct {
 	OutputId  string `json:"outputId"`
 	Timestamp uint32 `json:"timestamp"`
 }
-type NFTResponse struct {
-	PublicKey    string `json:"publicKey"`
-	OwnerAddress string `json:"ownerAddress"`
-	NFTId        string `json:"nftId"`
-}
 
 // AddressGroupDetailsResponse
 type AddressGroupDetailsResponse struct {

@@ -176,29 +176,19 @@ func getRawNFTsFromGroupId(c echo.Context) ([]*im.NFT, error) {
 	if err != nil {
 		return nil, err
 	}
-	return GetRawNFTsFromGroupIdImpl(groupId)
-}
-func GetRawNFTsFromGroupIdImpl(groupId []byte) ([]*im.NFT, error) {
-	keyPrefix := deps.IMManager.NftKeyPrefixFromGroupId(groupId)
-	CoreComponent.LogInfof("get nfts from groupid:%s, with prefix:%s", iotago.EncodeHex(groupId), iotago.EncodeHex(keyPrefix))
-	nfts, err := deps.IMManager.ReadNFTFromPrefix(keyPrefix)
-	if err != nil {
-		return nil, err
-	}
-	CoreComponent.LogInfof("get nfts from groupId:%s,found nfts:%d", iotago.EncodeHex(groupId), len(nfts))
-	return nfts, nil
+	return deps.IMManager.GetRawNFTsFromGroupIdImpl(groupId, CoreComponent.Logger())
 }
 
 // get nfts
-func getNFTsFromGroupId(c echo.Context) ([]*NFTResponse, error) {
+func getNFTsFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
 	nfts, err := getRawNFTsFromGroupId(c)
 	if err != nil {
 		return nil, err
 	}
-	nftResponseArr := make([]*NFTResponse, len(nfts))
+	nftResponseArr := make([]*im.NFTResponse, len(nfts))
 	for i, nft := range nfts {
 		// nft.OwnerAddress is []bytes{OwnerAddress}
-		nftResponseArr[i] = &NFTResponse{
+		nftResponseArr[i] = &im.NFTResponse{
 			NFTId:        iotago.EncodeHex(nft.NFTId),
 			OwnerAddress: string(nft.OwnerAddress),
 		}
@@ -206,48 +196,13 @@ func getNFTsFromGroupId(c echo.Context) ([]*NFTResponse, error) {
 	return nftResponseArr, nil
 }
 
-// NFTWithRespChan
-type NFTWithRespChan struct {
-	NFT      *im.NFT
-	RespChan chan interface{}
-}
-
 // getNFTsWithPublicKeyFromGroupId
-func getNFTsWithPublicKeyFromGroupId(c echo.Context, drainer *ItemDrainer) ([]*NFTResponse, error) {
+func getNFTsWithPublicKeyFromGroupId(c echo.Context, drainer *im.ItemDrainer) ([]*im.NFTResponse, error) {
 	nfts, err := getRawNFTsFromGroupId(c)
 	if err != nil {
 		return nil, err
 	}
-	return GetNFTsWithPublicKeyFromGroupIdImpl(nfts, drainer)
-}
-func GetNFTsWithPublicKeyFromGroupIdImpl(nfts []*im.NFT, drainer *ItemDrainer) ([]*NFTResponse, error) {
-	// make respChan as chan[NFTResponse]
-	respChan := make(chan interface{})
-	// wrap nfts to {nft *im.NFT, respChan chan interface{}} and drain
-	nftsInterface := make([]interface{}, len(nfts))
-	for i, nft := range nfts {
-		nftsInterface[i] = &NFTWithRespChan{
-			NFT:      nft,
-			RespChan: respChan,
-		}
-	}
-	drainer.Drain(nftsInterface)
-	// make nftResponseArr, start empty, then fill it with respChan, plus timeout, then return
-	nftResponseArr := make([]*NFTResponse, 0)
-	timeout := time.After(10 * time.Second)
-	for {
-		select {
-		case resp := <-respChan:
-			nftResponseArr = append(nftResponseArr, resp.(*NFTResponse))
-			if len(nftResponseArr) == len(nfts) {
-				return nftResponseArr, nil
-			}
-		case <-timeout:
-			// log
-			CoreComponent.LogWarnf("getNFTsWithPublicKeyFromGroupId timeout")
-			return nftResponseArr, nil
-		}
-	}
+	return deps.IMManager.GetNFTsWithPublicKeyFromGroupIdImpl(nfts, drainer, CoreComponent.Logger())
 }
 
 // get shared from groupId
