@@ -78,7 +78,7 @@ func (im *Manager) DeleteNFT(nft *NFT) error {
 	err = im.DeleteAddressGroup(addressGroup)
 	return err
 }
-func (im *Manager) storeNewNFTs(nfts []*NFT, logger *logger.Logger) error {
+func (im *Manager) storeNewNFTsDeleteConsumedNfts(createdNfts []*NFT, consumedNfts []*NFT, logger *logger.Logger) error {
 	// hash set store all groupId, groupId is []byte
 	groupIdSet := make(map[string]bool)
 	defer func() {
@@ -89,10 +89,17 @@ func (im *Manager) storeNewNFTs(nfts []*NFT, logger *logger.Logger) error {
 				continue
 			}
 			im.DeleteSharedFromGroupId(groupIdBytes)
+			//TODO add recalculate number of group members with public key
 		}
 	}()
-	for _, nft := range nfts {
+	for _, nft := range createdNfts {
 		if err := im.storeSingleNFT(nft, logger); err != nil {
+			return err
+		}
+		groupIdSet[iotago.EncodeHex(nft.GroupId)] = true
+	}
+	for _, nft := range consumedNfts {
+		if err := im.DeleteNFT(nft); err != nil {
 			return err
 		}
 		groupIdSet[iotago.EncodeHex(nft.GroupId)] = true

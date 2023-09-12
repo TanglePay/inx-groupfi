@@ -13,7 +13,7 @@ import (
 )
 
 var (
-	publicKeyDrainer *ItemDrainer
+	PublicKeyDrainer *ItemDrainer
 )
 
 const (
@@ -43,7 +43,7 @@ const (
 )
 
 func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
-	publicKeyDrainer = NewItemDrainer(ctx, func(item interface{}) {
+	PublicKeyDrainer = NewItemDrainer(ctx, func(item interface{}) {
 
 		// unwrap to *NFTWithRespChan
 		nftWithRespChan := item.(*NFTWithRespChan)
@@ -98,7 +98,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	})
 	// nfts with public key
 	e.GET(RouteIMNFTsWithPublicKey, func(c echo.Context) error {
-		resp, err := getNFTsWithPublicKeyFromGroupId(c, publicKeyDrainer)
+		resp, err := getNFTsWithPublicKeyFromGroupId(c, PublicKeyDrainer)
 		// filter out nfts with empty public key
 		filteredNFTs := make([]*NFTResponse, 0)
 		for _, nft := range resp {

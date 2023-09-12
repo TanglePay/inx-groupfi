@@ -35,6 +35,8 @@ const (
 	// holds address public key
 	ImStoreKeyPrefixAddressPublicKey byte = 20
 
+	ImStoreKeyPrefixGroupPublicKeyCount byte = 21
+
 	// inbox messsage types
 	// plain text, new message
 	ImInboxMessageTypeNewMessage      byte = 1

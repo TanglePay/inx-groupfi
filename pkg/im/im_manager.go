@@ -191,6 +191,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	createdShared := dataFromListenning.CreatedShared
 	consumedMessage := dataFromListenning.ConsumedMessage
 	consumedShared := dataFromListenning.ConsumedShared
+	consumedNft := dataFromListenning.ConsumedNft
 
 	if len(createdMessage) > 0 {
 		msg := createdMessage[0]
@@ -199,7 +200,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	if err := im.storeNewMessages(createdMessage, logger, false); err != nil {
 		return err
 	}
-	if err := im.storeNewNFTs(createdNft, logger); err != nil {
+	if err := im.storeNewNFTsDeleteConsumedNfts(createdNft, consumedNft, logger); err != nil {
 		return err
 	}
 	if len(createdShared) > 0 {
@@ -240,4 +241,5 @@ type DataFromListenning struct {
 	CreatedNft      []*NFT
 	CreatedShared   []*Message
 	ConsumedShared  []*Message
+	ConsumedNft     []*NFT
 }

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"sort"
 
+	"github.com/TanglePay/inx-iotacat/core/im"
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -246,5 +247,55 @@ func (im *Manager) ReadAllGroupConfigForRenter(renterName string) ([]*MessageGro
 // handle group config nft consumed
 func (im *Manager) HandleGroupNFTOutputConsumed(nftOutput *iotago.NFTOutput, logger *logger.Logger) error {
 
+	return nil
+}
+
+// get key for group publickey count, prefix + groupId
+func GroupPublicKeyCountKeyFromGroupId(groupId []byte) []byte {
+	return ConcatByteSlices([]byte{ImStoreKeyPrefixGroupPublicKeyCount}, groupId)
+}
+
+// store group publickey count
+func (im *Manager) StoreGroupPublicKeyCount(groupId []byte, count int) error {
+	key := GroupPublicKeyCountKeyFromGroupId(groupId)
+	// cast to uint16 then to bytes
+	value := Uint16ToBytes(uint16(count))
+	return im.imStore.Set(key, value)
+}
+
+// get group publickey count
+func (im *Manager) GetGroupPublicKeyCount(groupId []byte) (int, error) {
+	key := GroupPublicKeyCountKeyFromGroupId(groupId)
+	value, err := im.imStore.Get(key)
+	if err != nil {
+		return 0, err
+	}
+	// cast bytes to uint16
+	count := BytesToUint16(value)
+	return int(count), nil
+}
+
+// calculate number of group members with public key then store
+func (imm *Manager) CalculateNumberOfGroupMembersWithPublicKey(groupId []byte, logger *logger.Logger) error {
+	nfts, err := im.GetRawNFTsFromGroupIdImpl(groupId)
+	if err != nil {
+		return err
+	}
+	resp, err := im.GetNFTsWithPublicKeyFromGroupIdImpl(nfts, im.PublicKeyDrainer)
+	if err != nil {
+		return err
+	}
+	ct := 0
+	for _, nft := range resp {
+		if nft.PublicKey != "" {
+			ct++
+		}
+	}
+	// log
+	logger.Infof("CalculateNumberOfGroupMembersWithPublicKey ... groupId:%s, count:%d", iotago.EncodeHex(groupId), ct)
+	err = imm.StoreGroupPublicKeyCount(groupId, ct)
+	if err != nil {
+		return err
+	}
 	return nil
 }

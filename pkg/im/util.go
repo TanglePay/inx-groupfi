@@ -3,6 +3,7 @@ package im
 import (
 	"context"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -157,4 +158,16 @@ func ReadBytesWithUint16Len(bytes []byte, idx *int, providedLength ...int) ([]by
 	*idx += length
 
 	return data, nil
+}
+
+// uint16 to bytes
+func Uint16ToBytes(num uint16) []byte {
+	tmp := make([]byte, 2)
+	binary.BigEndian.PutUint16(tmp, num)
+	return tmp
+}
+
+// bytes to uint16
+func BytesToUint16(bytes []byte) uint16 {
+	return binary.BigEndian.Uint16(bytes)
 }

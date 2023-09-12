@@ -176,7 +176,9 @@ func getRawNFTsFromGroupId(c echo.Context) ([]*im.NFT, error) {
 	if err != nil {
 		return nil, err
 	}
-
+	return GetRawNFTsFromGroupIdImpl(groupId)
+}
+func GetRawNFTsFromGroupIdImpl(groupId []byte) ([]*im.NFT, error) {
 	keyPrefix := deps.IMManager.NftKeyPrefixFromGroupId(groupId)
 	CoreComponent.LogInfof("get nfts from groupid:%s, with prefix:%s", iotago.EncodeHex(groupId), iotago.EncodeHex(keyPrefix))
 	nfts, err := deps.IMManager.ReadNFTFromPrefix(keyPrefix)
@@ -216,6 +218,9 @@ func getNFTsWithPublicKeyFromGroupId(c echo.Context, drainer *ItemDrainer) ([]*N
 	if err != nil {
 		return nil, err
 	}
+	return GetNFTsWithPublicKeyFromGroupIdImpl(nfts, drainer)
+}
+func GetNFTsWithPublicKeyFromGroupIdImpl(nfts []*im.NFT, drainer *ItemDrainer) ([]*NFTResponse, error) {
 	// make respChan as chan[NFTResponse]
 	respChan := make(chan interface{})
 	// wrap nfts to {nft *im.NFT, respChan chan interface{}} and drain
@@ -252,6 +257,14 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 		return nil, err
 	}
 	CoreComponent.LogInfof("get shared from group:%s", groupId)
+	ct, err := deps.IMManager.GetGroupPublicKeyCount(groupId)
+	if err != nil {
+		return nil, err
+	}
+	if ct > 100 {
+		// throw http error with code 901
+		return nil, echo.NewHTTPError(901, "too many public keys")
+	}
 	shared, err := deps.IMManager.ReadSharedFromGroupId(groupId)
 	if err != nil {
 		return nil, err
