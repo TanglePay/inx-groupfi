@@ -90,6 +90,7 @@ func (im *Manager) storeNewNFTsDeleteConsumedNfts(createdNfts []*NFT, consumedNf
 			}
 			im.DeleteSharedFromGroupId(groupIdBytes)
 			//TODO add recalculate number of group members with public key
+			im.CalculateNumberOfGroupMembersWithPublicKey(groupIdBytes, logger)
 		}
 	}()
 	for _, nft := range createdNfts {
