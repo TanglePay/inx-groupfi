@@ -30,6 +30,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		var createdShared []*im.Message
 		var consumedMessage []*im.Message
 		var consumedShared []*im.Message
+		var consumedNft []*im.NFT
 		for _, output := range update.Created {
 			o := messageFromINXLedgerOutput(output)
 			if o != nil {
@@ -57,6 +58,8 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if shared != nil {
 				consumedShared = append(consumedShared, shared)
 			}
+			nft := nftFromINXLedgerOutput(output, CoreComponent.Logger())
+
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeConsumed)
 		}
 		dataFromListenning := &im.DataFromListenning{
