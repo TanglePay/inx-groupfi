@@ -2,14 +2,15 @@ package im
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/TanglePay/inx-iotacat/pkg/im"
-	"github.com/labstack/echo/v4"
-
 	"github.com/iotaledger/inx-app/pkg/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
+	"github.com/labstack/echo/v4"
 )
 
 const (
@@ -169,6 +170,43 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
+	// testmeta
+	e.GET("/testnftmeta", func(c echo.Context) error {
+		outputIdHex, err := parseAttrNameQueryParam(c, "outputId")
+		if err != nil {
+			return err
+		}
+		nodeHttpClient := nodeclient.New("https://api.shimmer.network")
+		outputId, err := iotago.OutputIDFromHex(outputIdHex)
+		if err != nil {
+			return err
+		}
+		output, err := nodeHttpClient.OutputByID(context.Background(), outputId)
+		if err != nil {
+			return err
+		}
+		nftOutput, is := output.(*iotago.NFTOutput)
+		if !is {
+			// create a new error
+			return errors.New("output is not nft")
+		}
+		featureSet, err := nftOutput.ImmutableFeatures.Set()
+		if err != nil {
+			return err
+		}
+		meta := featureSet.MetadataFeature()
+		if meta == nil {
+			return errors.New("meta is nil")
+		}
+		// meta is json string in bytes, parse it to map
+		metaMap := make(map[string]string)
+		err = json.Unmarshal(meta.Data, &metaMap)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, metaMap)
+	})
+
 	e.GET(RouteIMAddressGroupIds, func(c echo.Context) error {
 		groupIds, err := getGroupIdsFromAddress(c)
 		if err != nil {
