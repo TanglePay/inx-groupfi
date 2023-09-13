@@ -199,13 +199,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			return errors.New("meta is nil")
 		}
 		// meta is json string in bytes, parse it to map
-		metaMap := make(map[string]string)
+		metaMap := make(map[string]interface{})
 		CoreComponent.Logger().Infof("meta data:%s", string(meta.Data))
 		err = json.Unmarshal(meta.Data, &metaMap)
 		if err != nil {
 			return err
 		}
-		return httpserver.JSONResponse(c, http.StatusOK, metaMap)
+		uri := metaMap["uri"].(string)
+		return httpserver.JSONResponse(c, http.StatusOK, uri)
 	})
 
 	e.GET(RouteIMAddressGroupIds, func(c echo.Context) error {
