@@ -135,15 +135,15 @@ func (im *Manager) ParseGroupConfigNFT(nftOutput *iotago.NFTOutput) (string, str
 		return "", "", nil
 	}
 	// meta is json string in bytes, parse it to map
-	metaMap := make(map[string]string)
+	metaMap := make(map[string]interface{})
 	err = json.Unmarshal(meta.Data, &metaMap)
 	if err != nil {
 		return "", "", err
 	}
 	// name -> group name, uri -> ipfs link
-	renterName := metaMap["name"]
-	ipfsLink := metaMap["uri"]
-	return renterName, ipfsLink, nil
+
+	ipfsLink := metaMap["uri"].(string)
+	return "renterName", ipfsLink, nil
 }
 
 type MessageGroupMetaJSON struct {
