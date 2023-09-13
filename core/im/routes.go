@@ -200,6 +200,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		// meta is json string in bytes, parse it to map
 		metaMap := make(map[string]string)
+		CoreComponent.Logger().Infof("meta data:%s", string(meta.Data))
 		err = json.Unmarshal(meta.Data, &metaMap)
 		if err != nil {
 			return err
