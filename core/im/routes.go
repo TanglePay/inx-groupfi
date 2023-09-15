@@ -37,6 +37,9 @@ const (
 
 	// group configs for renter
 	RouteGroupConfigs = "/groupconfigs"
+
+	// inbox message
+	RouteInboxMessage = "/inboxmessage"
 )
 
 func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
@@ -246,6 +249,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// group configs for renter
 	e.GET(RouteGroupConfigs, func(c echo.Context) error {
 		resp, err := getGroupConfigsForRenter(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// inbox message
+	e.GET(RouteInboxMessage, func(c echo.Context) error {
+		resp, err := getInboxMessage(c)
 		if err != nil {
 			return err
 		}

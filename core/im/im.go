@@ -158,6 +158,23 @@ func makeMessageResponse(messages []*im.Message) *MessagesResponse {
 	}
 }
 
+// make inbox message response from inbox message
+func makeInboxMessageResponse(messages []*im.Message) *InboxMessagesResponse {
+	messageResponseArr := make([]*MessageResponse, len(messages))
+	var token string
+	for i, message := range messages {
+		messageResponseArr[i] = &MessageResponse{
+			OutputId:  iotago.EncodeHex(message.OutputId),
+			Timestamp: message.MileStoneTimestamp,
+		}
+		token = iotago.EncodeHex(message.Token)
+	}
+	return &InboxMessagesResponse{
+		Messages: messageResponseArr,
+		Token:    token,
+	}
+}
+
 // make address group details response from address group
 func makeAddressGroupDetailsResponse(addressGroup *im.AddressGroup) *AddressGroupDetailsResponse {
 	return &AddressGroupDetailsResponse{
@@ -337,4 +354,33 @@ func getGroupConfigsForRenter(c echo.Context) ([]*im.MessageGroupMetaJSON, error
 	}
 	CoreComponent.LogInfof("get groups under renter:%s,found groupConfigs:%d", renderName, len(groupConfigs))
 	return groupConfigs, nil
+}
+
+// get inbox message
+func getInboxMessage(c echo.Context) (*InboxMessagesResponse, error) {
+	// get address
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	// get continue token
+	token, err := parseTokenQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	// get size, default 10
+	size, err := parseSizeQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get inbox message from address:%s,token:%d", address, token)
+	// get inbox message
+	inboxMessage, err := deps.IMManager.ReadInboxMessage(im.Sha256Hash(address), token, size, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get inbox message from address:%s,token:%d,found inboxMessage:%d", address, token, len(inboxMessage))
+	// make inbox message response
+	inboxMessageResponse := makeInboxMessageResponse(inboxMessage)
+	return inboxMessageResponse, nil
 }

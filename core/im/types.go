@@ -6,6 +6,10 @@ type MessagesResponse struct {
 	HeadToken string             `json:"headToken"`
 	TailToken string             `json:"tailToken"`
 }
+type InboxMessagesResponse struct {
+	Messages []*MessageResponse `json:"messages"`
+	Token    string             `json:"token"`
+}
 type MessageResponse struct {
 	OutputId  string `json:"outputId"`
 	Timestamp uint32 `json:"timestamp"`
