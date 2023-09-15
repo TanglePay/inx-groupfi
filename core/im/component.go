@@ -406,12 +406,6 @@ func run() error {
 		// handle group config init
 		handleGroupConfigInit(ctx, nodeHTTPAPIClient, indexerClient)
 
-		// handle messsages init
-		handleMessageInit(ctx, nodeHTTPAPIClient, indexerClient)
-
-		// shared init
-		handleSharedInit(ctx, nodeHTTPAPIClient, indexerClient)
-
 		issuerBech32AddressList := []string{
 			"smr1zqry6r4wlwr2jn4nymlkx0pzehm5fhkv492thya32u45f8fjftn3wkng2mp",
 			"smr1zpz3430fdn4zmheenyjvughsu44ykjzu5st6hg2rp609eevz6czlye60pe7",
@@ -474,6 +468,12 @@ func run() error {
 				}
 			}
 		}
+
+		// handle messsages init
+		handleMessageInit(ctx, nodeHTTPAPIClient, indexerClient)
+
+		// shared init
+		handleSharedInit(ctx, nodeHTTPAPIClient, indexerClient)
 
 		ItemDrainer := im.NewItemDrainer(ctx, func(outputIdUnwrapped interface{}) {
 			outputId := outputIdUnwrapped.(string)
