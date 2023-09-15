@@ -260,6 +260,8 @@ func (im *Manager) ReadInboxMessage(receiverAddressSha256Hash []byte, coninueati
 	ct := 0
 	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		if skiping {
+			// log key startPoint
+			logger.Infof("ReadInboxMessage : key %s, startPoint %s", iotago.EncodeHex(key), iotago.EncodeHex(startPoint))
 			if bytes.Equal(key, startPoint) {
 				skiping = false
 			}
