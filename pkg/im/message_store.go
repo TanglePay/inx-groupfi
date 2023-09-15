@@ -256,10 +256,11 @@ func (im *Manager) ReadInboxMessage(receiverAddressSha256Hash []byte, coninueati
 	keyPrefix := im.InboxPrefixFromAddressHash(receiverAddressSha256Hash)
 	var res []*Message
 	skiping := len(coninueationToken) > 0
+	startPoint := ConcatByteSlices(keyPrefix, coninueationToken)
 	ct := 0
 	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		if skiping {
-			if bytes.Equal(key, coninueationToken) {
+			if bytes.Equal(key, startPoint) {
 				skiping = false
 			}
 			return true
