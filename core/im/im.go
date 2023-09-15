@@ -163,11 +163,13 @@ func makeInboxMessageResponse(messages []*im.Message) *InboxMessagesResponse {
 	messageResponseArr := make([]*MessageResponse, len(messages))
 	var token string
 	for i, message := range messages {
+		token = iotago.EncodeHex(message.Token)
 		messageResponseArr[i] = &MessageResponse{
 			OutputId:  iotago.EncodeHex(message.OutputId),
 			Timestamp: message.MileStoneTimestamp,
+			Token:     token,
 		}
-		token = iotago.EncodeHex(message.Token)
+
 	}
 	return &InboxMessagesResponse{
 		Messages: messageResponseArr,

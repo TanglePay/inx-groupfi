@@ -11,6 +11,7 @@ type InboxMessagesResponse struct {
 	Token    string             `json:"token"`
 }
 type MessageResponse struct {
+	Token     string `json:"token"`
 	OutputId  string `json:"outputId"`
 	Timestamp uint32 `json:"timestamp"`
 }
