@@ -346,8 +346,8 @@ func (im *Manager) PushInbox(receiverAddress []byte, token []byte, logger *logge
 	}
 }
 
-func (im *Manager) LogAllData(logger *logger.Logger) error {
-	err := im.imStore.Iterate(kvstore.EmptyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
+func (im *Manager) LogAllData(prefix []byte, logger *logger.Logger) error {
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
 		keyHex := iotago.EncodeHex(key)
 		valueHex := iotago.EncodeHex(value)
 		logger.Infof("key %s, value %s", keyHex, valueHex)

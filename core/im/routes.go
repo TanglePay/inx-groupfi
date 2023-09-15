@@ -129,9 +129,10 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, "ok")
 	})
 
-	e.GET("/testlist", func(c echo.Context) error {
-
-		err := deps.IMManager.LogAllData(CoreComponent.Logger())
+	e.GET("/testinboxlist", func(c echo.Context) error {
+		//prefix = []byte{im.ImStoreKeyPrefixInbox}
+		prefix := []byte{im.ImStoreKeyPrefixInbox}
+		err := deps.IMManager.LogAllData(prefix, CoreComponent.Logger())
 		if err != nil {
 			return err
 		}
