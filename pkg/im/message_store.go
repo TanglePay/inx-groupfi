@@ -245,6 +245,8 @@ func (im *Manager) deleteConsumedMessages(messages []*Message, logger *logger.Lo
 func (imm *Manager) storeInbox(receiverAddress []byte, message *Message, value []byte, logger *logger.Logger) error {
 	receiverAddressSha256 := Sha256HashBytes(receiverAddress)
 	key := imm.InboxKeyFromMessage(message, receiverAddressSha256)
+	// log receiverAddress receiverAddressSha256 key
+	logger.Infof("storeInbox : receiverAddress %s, receiverAddressSha256 %s, key %s", string(receiverAddress), iotago.EncodeHex(receiverAddressSha256), iotago.EncodeHex(key))
 	err := imm.imStore.Set(key, value)
 	return err
 }
