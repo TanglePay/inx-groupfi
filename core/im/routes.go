@@ -42,6 +42,12 @@ const (
 	RouteInboxMessage = "/inboxmessage"
 )
 
+func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		c.Response().Header().Set("Access-Control-Allow-Origin", "*")
+		return next(c)
+	}
+}
 func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	im.PublicKeyDrainer = im.NewItemDrainer(ctx, func(item interface{}) {
 
@@ -72,6 +78,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		// send to respChan
 		nftWithRespChan.RespChan <- nftResponse
 	}, 2000, 1000, 1000)
+	e.Use(AddCORS)
 	e.GET(RouteIMMessages, func(c echo.Context) error {
 		resp, err := getMesssagesFrom(c)
 		if err != nil {
