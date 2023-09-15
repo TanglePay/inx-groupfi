@@ -250,8 +250,8 @@ func (imm *Manager) storeInbox(receiverAddress []byte, message *Message, value [
 }
 
 // read inbox for address, from given token, limit by size
-func (im *Manager) ReadInboxMessage(receiverAddress []byte, coninueationToken []byte, size int, logger *logger.Logger) ([]*Message, error) {
-	keyPrefix := im.InboxPrefixFromAddressHash(Sha256HashBytes(receiverAddress))
+func (im *Manager) ReadInboxMessage(receiverAddressSha256Hash []byte, coninueationToken []byte, size int, logger *logger.Logger) ([]*Message, error) {
+	keyPrefix := im.InboxPrefixFromAddressHash(receiverAddressSha256Hash)
 	var res []*Message
 	skiping := len(coninueationToken) > 0
 	ct := 0
