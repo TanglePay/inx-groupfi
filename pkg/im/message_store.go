@@ -268,6 +268,9 @@ func (im *Manager) ReadInboxMessage(receiverAddressSha256Hash []byte, coninueati
 			return true
 		}
 		message, err := im.ParseMessageValuePayload(value)
+		// token is key remove prefix and groupId
+		token := key[(1 + GroupIdLen):]
+		message.Token = token
 		if err != nil {
 			// log and continue
 			logger.Errorf("ParseMessageValuePayload error %v", err)
@@ -395,12 +398,9 @@ func (im *Manager) ParseMessageValuePayload(value []byte) (*Message, error) {
 	if len(value) != 4+OutputIdLen {
 		return nil, errors.New("invalid value length")
 	}
-	// token is key remove prefix and groupId
-	token := value[(1 + GroupIdLen):]
 	m := &Message{
 		MileStoneTimestamp: binary.BigEndian.Uint32(value[:4]),
 		OutputId:           value[4:],
-		Token:              token,
 	}
 	return m, nil
 }
