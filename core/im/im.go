@@ -168,7 +168,6 @@ func makeInboxMessageResponse(messages []*im.Message) *InboxMessagesResponse {
 			OutputId:  iotago.EncodeHex(message.OutputId),
 			Timestamp: message.MileStoneTimestamp,
 			Token:     token,
-			GroupId:   iotago.EncodeHex(message.GroupId),
 		}
 
 	}
