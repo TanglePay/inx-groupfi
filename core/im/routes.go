@@ -78,7 +78,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		// send to respChan
 		nftWithRespChan.RespChan <- nftResponse
 	}, 2000, 1000, 1000)
-	e.Use(AddCORS)
+	//e.Use(AddCORS)
 	e.GET(RouteIMMessages, func(c echo.Context) error {
 		resp, err := getMesssagesFrom(c)
 		if err != nil {
