@@ -246,8 +246,9 @@ func (imm *Manager) storeInbox(receiverAddress []byte, message *Message, value [
 	receiverAddressSha256 := Sha256HashBytes(receiverAddress)
 	key := imm.InboxKeyFromMessage(message, receiverAddressSha256)
 	// log receiverAddress receiverAddressSha256 key
+	fulfilledValue := ConcatByteSlices(value, message.GroupId)
 	logger.Infof("storeInbox : receiverAddress %s, receiverAddressSha256 %s, key %s", string(receiverAddress), iotago.EncodeHex(receiverAddressSha256), iotago.EncodeHex(key))
-	err := imm.imStore.Set(key, value)
+	err := imm.imStore.Set(key, fulfilledValue)
 	return err
 }
 
@@ -267,7 +268,7 @@ func (im *Manager) ReadInboxMessage(receiverAddressSha256Hash []byte, coninueati
 			}
 			return true
 		}
-		message, err := im.ParseMessageValuePayload(value)
+		message, err := im.ParseInboxMessageValuePayload(value)
 		// token is key remove prefix and groupId
 		token := key[(1 + GroupIdLen):]
 		message.Token = token
@@ -404,6 +405,20 @@ func (im *Manager) ParseMessageValuePayload(value []byte) (*Message, error) {
 	}
 	return m, nil
 }
+
+// parse inbox message value paylod
+func (im *Manager) ParseInboxMessageValuePayload(value []byte) (*Message, error) {
+	if len(value) != 4+OutputIdLen+GroupIdLen {
+		return nil, errors.New("invalid value length")
+	}
+	m := &Message{
+		MileStoneTimestamp: binary.BigEndian.Uint32(value[:4]),
+		OutputId:           value[4 : 4+OutputIdLen],
+		GroupId:            value[4+OutputIdLen:],
+	}
+	return m, nil
+}
+
 func (im *Manager) ReadMessageUntilPrefix(keyPrefix []byte, size int, coninueationToken []byte) ([]*Message, error) {
 	ct := 0
 	var res []*Message
