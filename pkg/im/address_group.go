@@ -42,7 +42,7 @@ func NewAddressGroupNft(address []byte, groupId []byte, nftLink string, groupNam
 }
 
 // new address group from address in bytes not hashed yet and group id, plus fact that group qualify type is GroupQualifyTypeToken, and token type and token threshold is provided
-func NewAddressGroupToken(address []byte, groupId []byte, tokenType uint16, tokenThres string) *AddressGroup {
+func NewAddressGroupToken(address []byte, groupId []byte, tokenType uint16, tokenThres string, groupName string) *AddressGroup {
 	return &AddressGroup{
 		GroupId:          groupId,
 		AddressSha256:    Sha256HashBytes(address),

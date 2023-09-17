@@ -2,6 +2,7 @@ package im
 
 import (
 	"encoding/binary"
+	"fmt"
 	"math/big"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
@@ -199,9 +200,8 @@ func (im *Manager) GetGroupNameFromTokenType(tokenType uint16) string {
 
 // token type to threshold in string format
 func (im *Manager) GetThresholdFromTokenType(tokenType uint16) string {
-	//TODO fix hardcoding
 	if tokenType == ImTokenTypeSMR {
-		return "0.01"
+		return fmt.Sprintf("%f", ImSMRWhaleThreshold)
 	}
 	return ""
 }
@@ -213,7 +213,6 @@ func (im *Manager) SetWhaleEligibility(tokenType uint16, address string, isEligi
 	groupName := im.GetGroupNameFromTokenType(tokenType)
 	groupId := im.GroupNameToGroupId(groupName)
 	tokenThreshold := im.GetThresholdFromTokenType(tokenType)
-	//TODO TODAY
 	nft := NewNFTForToken(groupId, address, NftIdPadding, groupName, tokenType, tokenThreshold)
 	if isEligible {
 		return im.storeSingleNFT(nft, logger)
