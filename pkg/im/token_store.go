@@ -195,15 +195,15 @@ func (im *Manager) GetGroupNameFromTokenType(tokenType uint16) string {
 	if tokenType == ImTokenTypeSMR {
 		return "smr-whale"
 	}
-	return ""
+	return "??"
 }
 
 // token type to threshold in string format
 func (im *Manager) GetThresholdFromTokenType(tokenType uint16) string {
 	if tokenType == ImTokenTypeSMR {
-		return fmt.Sprintf("%f", ImSMRWhaleThreshold)
+		return fmt.Sprintf("%e", ImSMRWhaleThreshold)
 	}
-	return ""
+	return "??"
 }
 
 var NftIdPadding = Sha256Hash("nftIdPadding")

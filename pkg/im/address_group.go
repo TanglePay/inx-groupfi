@@ -45,6 +45,7 @@ func NewAddressGroupNft(address []byte, groupId []byte, nftLink string, groupNam
 func NewAddressGroupToken(address []byte, groupId []byte, tokenType uint16, tokenThres string, groupName string) *AddressGroup {
 	return &AddressGroup{
 		GroupId:          groupId,
+		GroupName:        groupName,
 		AddressSha256:    Sha256HashBytes(address),
 		GroupQualifyType: GroupQualifyTypeToken,
 		TokenType:        tokenType,
