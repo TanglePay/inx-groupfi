@@ -54,6 +54,8 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 
 			mark, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output)
 			if is {
+				// log found mark
+				CoreComponent.LogInfof("LedgerUpdate just found created mark:%s", output.OutputId.String())
 				createdMark = append(createdMark, mark)
 			}
 			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output)
