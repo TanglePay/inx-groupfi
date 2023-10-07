@@ -31,6 +31,12 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		var consumedMessage []*im.Message
 		var consumedShared []*im.Message
 		var consumedNft []*im.NFT
+		var createdMark []*iotago.BasicOutput
+		var consumedMark []*iotago.BasicOutput
+		var createdVote []*iotago.BasicOutput
+		var consumedVote []*iotago.BasicOutput
+		var createdMute []*iotago.BasicOutput
+		var consumedMute []*iotago.BasicOutput
 		for _, output := range update.Created {
 			o := messageFromINXLedgerOutput(output)
 			if o != nil {
@@ -45,6 +51,19 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 				createdShared = append(createdShared, shared)
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeCreated)
+
+			mark, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output)
+			if is {
+				createdMark = append(createdMark, mark)
+			}
+			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output)
+			if is {
+				createdMute = append(createdMute, mute)
+			}
+			vote, is := deps.IMManager.FilterVoteOutputFromLedgerOutput(output)
+			if is {
+				createdVote = append(createdVote, vote)
+			}
 		}
 		for _, spent := range update.Consumed {
 			output := spent.GetOutput()
@@ -63,6 +82,19 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 				consumedNft = append(consumedNft, nft)
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeConsumed)
+
+			mark, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output)
+			if is {
+				consumedMark = append(consumedMark, mark)
+			}
+			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output)
+			if is {
+				consumedMute = append(consumedMute, mute)
+			}
+			vote, is := deps.IMManager.FilterVoteOutputFromLedgerOutput(output)
+			if is {
+				consumedVote = append(consumedVote, vote)
+			}
 		}
 		dataFromListenning := &im.DataFromListenning{
 			CreatedMessage:  createdMessage,
@@ -71,6 +103,12 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			ConsumedMessage: consumedMessage,
 			ConsumedShared:  consumedShared,
 			ConsumedNft:     consumedNft,
+			CreatedMark:     createdMark,
+			ConsumedMark:    consumedMark,
+			CreatedVote:     createdVote,
+			ConsumedVote:    consumedVote,
+			CreatedMute:     createdMute,
+			ConsumedMute:    consumedMute,
 		}
 		return handler(index, dataFromListenning)
 	})

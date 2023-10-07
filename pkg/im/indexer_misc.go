@@ -19,6 +19,9 @@ const (
 	TokenBasicType
 	TokenNFTType
 	WhaleEligibility
+	MarkType
+	MuteType
+	VoteType
 )
 
 func initFinishedStoreKeyFromType(indexerItemType IndexerItemType, extra string) []byte {

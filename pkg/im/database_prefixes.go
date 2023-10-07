@@ -37,6 +37,16 @@ const (
 
 	ImStoreKeyPrefixGroupPublicKeyCount byte = 21
 
+	// holds mark group address
+	ImStoreKeyPrefixGroupMark byte = 22
+
+	// holds the group address muted by address
+	ImStoreKeyPrefixUserMuteGroupMember byte = 23
+
+	// holds the group blacklist
+	ImStoreKeyPrefixGroupBlacklist byte = 24
+
+	ImStoreKeyPrefixVote byte = 25
 	// inbox messsage types
 	// plain text, new message
 	ImInboxMessageTypeNewMessage      byte = 1

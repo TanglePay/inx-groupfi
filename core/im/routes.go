@@ -40,6 +40,15 @@ const (
 
 	// inbox message
 	RouteInboxMessage = "/inboxmessage"
+
+	// group qualified addresses
+	RouteGroupQualifiedAddresses = "/groupqualifiedaddresses"
+
+	// group marked addresses
+	RouteGroupMarkedAddresses = "/groupmarkedaddresses"
+
+	// group member addresses
+	RouteGroupMemberAddresses = "/groupmemberaddresses"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -266,6 +275,33 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// inbox message
 	e.GET(RouteInboxMessage, func(c echo.Context) error {
 		resp, err := getInboxMessage(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// group qualified addresses
+	e.GET(RouteGroupQualifiedAddresses, func(c echo.Context) error {
+		resp, err := getQualifiedAddressesForGroupId(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// group marked addresses
+	e.GET(RouteGroupMarkedAddresses, func(c echo.Context) error {
+		resp, err := getMarkedAddressesFromGroupId(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// group member addresses
+	e.GET(RouteGroupMemberAddresses, func(c echo.Context) error {
+		resp, err := getGroupMemberAddressesFromGroupId(c)
 		if err != nil {
 			return err
 		}

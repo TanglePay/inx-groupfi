@@ -267,6 +267,15 @@ func run() error {
 		// handle nft init
 		handleNFTInit(ctx, nodeHTTPAPIClient, indexerClient)
 
+		// handle mark init
+		handleMarkInit(ctx, nodeHTTPAPIClient, indexerClient)
+
+		// handle mute init
+		handleMuteInit(ctx, nodeHTTPAPIClient, indexerClient)
+
+		// handle vote init
+		handleVoteInit(ctx, nodeHTTPAPIClient, indexerClient)
+
 		// handle messsages init
 		handleMessageInit(ctx, nodeHTTPAPIClient, indexerClient)
 

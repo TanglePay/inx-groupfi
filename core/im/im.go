@@ -343,6 +343,65 @@ func getSharedOutputIdsForConsolidation(c echo.Context) ([]string, error) {
 	return outputIds, nil
 }
 
+// get qualified address for a groupid
+func getQualifiedAddressesForGroupId(c echo.Context) ([]string, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get qualified address for groupId:%s", iotago.EncodeHex(groupId))
+	nfts, err := deps.IMManager.ReadNFTsFromGroupId(groupId)
+	if err != nil {
+		return nil, err
+	}
+	// nfts to addresses
+	var addresses []string
+	for _, nft := range nfts {
+		addresses = append(addresses, string(nft.OwnerAddress))
+	}
+	CoreComponent.LogInfof("get qualified address for groupId:%s,found addresses:%d", iotago.EncodeHex(groupId), len(addresses))
+	return addresses, nil
+}
+
+// get all marked addresses from groupId
+func getMarkedAddressesFromGroupId(c echo.Context) ([]string, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get marks from groupId:%s", iotago.EncodeHex(groupId))
+	var groupId32 [32]byte
+	copy(groupId32[:], groupId)
+	marks, err := deps.IMManager.GetMarksFromGroupId(groupId32)
+	if err != nil {
+		return nil, err
+	}
+	// marks to addresses
+	var addresses []string
+	for _, mark := range marks {
+		addresses = append(addresses, mark.Address)
+	}
+	CoreComponent.LogInfof("get marks from groupId:%s,found addresses:%d", iotago.EncodeHex(groupId), len(addresses))
+	return addresses, nil
+}
+
+// get all group member addresses from groupId
+func getGroupMemberAddressesFromGroupId(c echo.Context) ([]string, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get group member addresses from groupId:%s", iotago.EncodeHex(groupId))
+	var groupId32 [32]byte
+	copy(groupId32[:], groupId)
+	addresses, err := deps.IMManager.GetGroupMemberAddressesFromGroupId(groupId32)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d", iotago.EncodeHex(groupId), len(addresses))
+	return addresses, nil
+}
+
 // get all groups under renter
 func getGroupConfigsForRenter(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 	renderName, err := parseAttrNameQueryParam(c, "renderName")

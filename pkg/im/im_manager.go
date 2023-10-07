@@ -192,6 +192,12 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	consumedMessage := dataFromListenning.ConsumedMessage
 	consumedShared := dataFromListenning.ConsumedShared
 	consumedNft := dataFromListenning.ConsumedNft
+	createdMark := dataFromListenning.CreatedMark
+	consumedMark := dataFromListenning.ConsumedMark
+	createdMute := dataFromListenning.CreatedMute
+	consumedMute := dataFromListenning.ConsumedMute
+	createdVote := dataFromListenning.CreatedVote
+	consumedVote := dataFromListenning.ConsumedVote
 
 	if len(createdMessage) > 0 {
 		msg := createdMessage[0]
@@ -216,6 +222,37 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	if err := im.deleteConsumedMessages(consumedMessage, logger); err != nil {
 		return err
 	}
+	if len(createdMark) > 0 {
+		for _, mark := range createdMark {
+			im.HandleGroupMarkBasicOutputCreated(mark)
+		}
+	}
+	if len(consumedMark) > 0 {
+		for _, mark := range consumedMark {
+			im.HandleGroupMarkBasicOutputConsumed(mark)
+		}
+	}
+	if len(createdMute) > 0 {
+		for _, mute := range createdMute {
+			im.HandleUserMuteGroupMemberBasicOutputCreated(mute)
+		}
+	}
+	if len(consumedMute) > 0 {
+		for _, mute := range consumedMute {
+			im.HandleUserMuteGroupMemberBasicOutputConsumed(mute)
+		}
+	}
+	if len(createdVote) > 0 {
+		for _, vote := range createdVote {
+			im.HandleUserVoteGroupBasicOutputCreated(vote)
+		}
+	}
+	if len(consumedVote) > 0 {
+		for _, vote := range consumedVote {
+			im.HandleUserVoteGroupBasicOutputConsumed(vote)
+		}
+	}
+
 	return nil
 
 }
@@ -242,4 +279,10 @@ type DataFromListenning struct {
 	CreatedShared   []*Message
 	ConsumedShared  []*Message
 	ConsumedNft     []*NFT
+	CreatedMark     []*iotago.BasicOutput
+	ConsumedMark    []*iotago.BasicOutput
+	CreatedMute     []*iotago.BasicOutput
+	ConsumedMute    []*iotago.BasicOutput
+	CreatedVote     []*iotago.BasicOutput
+	ConsumedVote    []*iotago.BasicOutput
 }
