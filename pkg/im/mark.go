@@ -149,14 +149,18 @@ func (im *Manager) GetMarksFromBasicOutput(output *iotago.BasicOutput) []*Mark {
 }
 
 // handle group mark basic output created
-func (im *Manager) HandleGroupMarkBasicOutputCreated(output *iotago.BasicOutput) {
+func (im *Manager) HandleGroupMarkBasicOutputCreated(output *iotago.BasicOutput, logger *logger.Logger) {
 	marks := im.GetMarksFromBasicOutput(output)
 	if len(marks) == 0 {
+		// log zero marks
+		logger.Infof("HandleGroupMarkBasicOutputCreated ... zero marks")
 		return
 	}
 	for _, mark := range marks {
 		err := im.StoreMark(mark)
 		if err != nil {
+			// log error
+			logger.Infof("HandleGroupMarkBasicOutputCreated ... err:%s", err.Error())
 			return
 		}
 	}

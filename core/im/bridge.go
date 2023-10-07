@@ -55,7 +55,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			mark, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output, CoreComponent.Logger())
 			if is {
 				// log found mark
-				CoreComponent.LogInfof("LedgerUpdate just found created mark:%s", output.OutputId.String())
+				CoreComponent.LogInfof("LedgerUpdate just found created mark:%s", iotago.EncodeHex(output.OutputId.Id))
 				createdMark = append(createdMark, mark)
 			}
 			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output, CoreComponent.Logger())
@@ -87,6 +87,8 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 
 			mark, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output, CoreComponent.Logger())
 			if is {
+				// log found mark
+				CoreComponent.LogInfof("LedgerUpdate just found consumed mark:%s", iotago.EncodeHex(output.OutputId.Id))
 				consumedMark = append(consumedMark, mark)
 			}
 			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output, CoreComponent.Logger())
