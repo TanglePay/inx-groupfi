@@ -7,7 +7,7 @@ import (
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
-// // handle mute init
+// handle mute init
 func handleMuteInit(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) {
 	// make drainer
 	drainer := makeItemDrainerForMuteInit(ctx, client, indexerClient)
@@ -25,7 +25,7 @@ func makeItemDrainerForMuteInit(ctx context.Context, nodeHTTPAPIClient *nodeclie
 			return
 		}
 		// filter vote output
-		basicOutput, is := deps.IMManager.FilterMuteOutput(output)
+		basicOutput, is := deps.IMManager.FilterMuteOutput(output, CoreComponent.Logger())
 		if !is {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... FilterVoteOutput failed")

@@ -25,7 +25,7 @@ func makeItemDrainerForVoteInit(ctx context.Context, nodeHTTPAPIClient *nodeclie
 			return
 		}
 		// filter vote output
-		basicOutput, is := deps.IMManager.FilterVoteOutput(output)
+		basicOutput, is := deps.IMManager.FilterVoteOutput(output, CoreComponent.Logger())
 		if !is {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... FilterVoteOutput failed")

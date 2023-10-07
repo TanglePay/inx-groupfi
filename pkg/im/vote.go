@@ -2,6 +2,7 @@ package im
 
 import (
 	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -142,15 +143,15 @@ var voteTag = []byte(voteTagRawStr)
 var VoteTagStr = iotago.EncodeHex(voteTag)
 
 // filter vote basic output from output
-func (im *Manager) FilterVoteOutput(output iotago.Output) (*iotago.BasicOutput, bool) {
-	return im.FilterOutputByTag(output, voteTag)
+func (im *Manager) FilterVoteOutput(output iotago.Output, logger *logger.Logger) (*iotago.BasicOutput, bool) {
+	return im.FilterOutputByTag(output, voteTag, logger)
 }
 
 // filter vote output from ledger output
-func (im *Manager) FilterVoteOutputFromLedgerOutput(output *inx.LedgerOutput) (*iotago.BasicOutput, bool) {
+func (im *Manager) FilterVoteOutputFromLedgerOutput(output *inx.LedgerOutput, logger *logger.Logger) (*iotago.BasicOutput, bool) {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, false
 	}
-	return im.FilterVoteOutput(iotaOutput)
+	return im.FilterVoteOutput(iotaOutput, logger)
 }

@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -180,20 +181,21 @@ var markTag = []byte(markTagRawStr)
 var MarkTagStr = iotago.EncodeHex(markTag)
 
 // filter mark output by tag
-func (im *Manager) FilterMarkOutput(output iotago.Output) (*iotago.BasicOutput, bool) {
-	return im.FilterOutputByTag(output, markTag)
+func (im *Manager) FilterMarkOutput(output iotago.Output, logger *logger.Logger) (*iotago.BasicOutput, bool) {
+	return im.FilterOutputByTag(output, markTag, logger)
 }
 
 // filter mark output from ledger output
-func (im *Manager) FilterMarkOutputFromLedgerOutput(output *inx.LedgerOutput) (*iotago.BasicOutput, bool) {
+func (im *Manager) FilterMarkOutputFromLedgerOutput(output *inx.LedgerOutput, logger *logger.Logger) (*iotago.BasicOutput, bool) {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, false
 	}
-	return im.FilterMarkOutput(iotaOutput)
+	return im.FilterMarkOutput(iotaOutput, logger)
 }
 
-func (im *Manager) FilterOutputByTag(output iotago.Output, targetTag []byte) (*iotago.BasicOutput, bool) {
+func (im *Manager) FilterOutputByTag(output iotago.Output, targetTag []byte, logger *logger.Logger) (*iotago.BasicOutput, bool) {
+
 	// Ignore anything other than BasicOutputs
 	if output.Type() != iotago.OutputBasic {
 		return nil, false
@@ -206,7 +208,8 @@ func (im *Manager) FilterOutputByTag(output iotago.Output, targetTag []byte) (*i
 		return nil, false
 	}
 	tagPayload := tag.Tag
-
+	// log found output, with tag, and tag which is looking for
+	logger.Infof("Found output,payload len:%d,tag len:%d,tag:%s,targetTag:%s", len(tagPayload), len(targetTag), string(tagPayload), string(targetTag))
 	if !bytes.Equal(tagPayload, targetTag) {
 		return nil, false
 	}

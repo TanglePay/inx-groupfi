@@ -90,7 +90,7 @@ func makeDrainerForMarkInit(ctx context.Context, nodeHTTPAPIClient *nodeclient.C
 			return
 		}
 		// filter mark output
-		basicOutput, is := deps.IMManager.FilterMarkOutput(output)
+		basicOutput, is := deps.IMManager.FilterMarkOutput(output, CoreComponent.Logger())
 		if !is {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... FilterMarkOutput failed")

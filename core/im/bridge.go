@@ -52,17 +52,17 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeCreated)
 
-			mark, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output)
+			mark, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output, CoreComponent.Logger())
 			if is {
 				// log found mark
 				CoreComponent.LogInfof("LedgerUpdate just found created mark:%s", output.OutputId.String())
 				createdMark = append(createdMark, mark)
 			}
-			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output)
+			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output, CoreComponent.Logger())
 			if is {
 				createdMute = append(createdMute, mute)
 			}
-			vote, is := deps.IMManager.FilterVoteOutputFromLedgerOutput(output)
+			vote, is := deps.IMManager.FilterVoteOutputFromLedgerOutput(output, CoreComponent.Logger())
 			if is {
 				createdVote = append(createdVote, vote)
 			}
@@ -85,15 +85,15 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeConsumed)
 
-			mark, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output)
+			mark, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output, CoreComponent.Logger())
 			if is {
 				consumedMark = append(consumedMark, mark)
 			}
-			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output)
+			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output, CoreComponent.Logger())
 			if is {
 				consumedMute = append(consumedMute, mute)
 			}
-			vote, is := deps.IMManager.FilterVoteOutputFromLedgerOutput(output)
+			vote, is := deps.IMManager.FilterVoteOutputFromLedgerOutput(output, CoreComponent.Logger())
 			if is {
 				consumedVote = append(consumedVote, vote)
 			}

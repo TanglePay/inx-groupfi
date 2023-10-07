@@ -295,12 +295,7 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 	tagPayload := tag.Tag
 
 	metaPayload := meta.Data
-	// log found output, with tag
-	CoreComponent.LogInfof("Found output,payload len:%d,tag len:%d,tag:%s",
-		len(metaPayload),
-		len(tagPayload),
-		string(tagPayload),
-	)
+
 	if !bytes.Equal(tagPayload, iotacatTag) {
 		return nil
 	}

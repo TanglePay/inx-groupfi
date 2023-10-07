@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -212,15 +213,15 @@ var muteTag = []byte(muteTagRawStr)
 var MuteTagStr = iotago.EncodeHex(muteTag)
 
 // filter out mute output from output
-func (im *Manager) FilterMuteOutput(output iotago.Output) (*iotago.BasicOutput, bool) {
-	return im.FilterOutputByTag(output, muteTag)
+func (im *Manager) FilterMuteOutput(output iotago.Output, logger *logger.Logger) (*iotago.BasicOutput, bool) {
+	return im.FilterOutputByTag(output, muteTag, logger)
 }
 
 // filter out mute output from LedgerOutput
-func (im *Manager) FilterMuteOutputFromLedgerOutput(output *inx.LedgerOutput) (*iotago.BasicOutput, bool) {
+func (im *Manager) FilterMuteOutputFromLedgerOutput(output *inx.LedgerOutput, logger *logger.Logger) (*iotago.BasicOutput, bool) {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, false
 	}
-	return im.FilterMuteOutput(iotaOutput)
+	return im.FilterMuteOutput(iotaOutput, logger)
 }
