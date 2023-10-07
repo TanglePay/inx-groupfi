@@ -180,7 +180,7 @@ func (im *Manager) HandleGroupMarkBasicOutputConsumed(output *iotago.BasicOutput
 	}
 }
 
-var markTagRawStr = "GROUPFIMARKV1"
+var markTagRawStr = "GROUPFIMARKV2"
 var markTag = []byte(markTagRawStr)
 var MarkTagStr = iotago.EncodeHex(markTag)
 

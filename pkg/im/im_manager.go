@@ -224,7 +224,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	}
 	if len(createdMark) > 0 {
 		for _, mark := range createdMark {
-			im.HandleGroupMarkBasicOutputCreated(mark)
+			im.HandleGroupMarkBasicOutputCreated(mark, logger)
 		}
 	}
 	if len(consumedMark) > 0 {
