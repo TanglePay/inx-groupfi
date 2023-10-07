@@ -175,8 +175,9 @@ func (im *Manager) HandleGroupMarkBasicOutputConsumed(output *iotago.BasicOutput
 	}
 }
 
-var MarkTagStr = "GROUPFIMARKV1"
-var markTag = []byte(MarkTagStr)
+var markTagRawStr = "GROUPFIMARKV1"
+var markTag = []byte(markTagRawStr)
+var MarkTagStr = iotago.EncodeHex(markTag)
 
 // filter mark output by tag
 func (im *Manager) FilterMarkOutput(output iotago.Output) (*iotago.BasicOutput, bool) {

@@ -207,8 +207,9 @@ func (im *Manager) HandleUserMuteGroupMemberBasicOutputConsumed(output *iotago.B
 	}
 }
 
-var MuteTagStr = "GROUPFIMUTEV1"
-var muteTag = []byte(MuteTagStr)
+var muteTagRawStr = "GROUPFIMUTEV1"
+var muteTag = []byte(muteTagRawStr)
+var MuteTagStr = iotago.EncodeHex(muteTag)
 
 // filter out mute output from output
 func (im *Manager) FilterMuteOutput(output iotago.Output) (*iotago.BasicOutput, bool) {

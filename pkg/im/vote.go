@@ -137,8 +137,9 @@ func (im *Manager) HandleUserVoteGroupBasicOutputConsumed(output *iotago.BasicOu
 	}
 }
 
-var VoteTagStr = "GROUPFIVOTEV1"
-var voteTag = []byte(VoteTagStr)
+var voteTagRawStr = "GROUPFIVOTEV1"
+var voteTag = []byte(voteTagRawStr)
+var VoteTagStr = iotago.EncodeHex(voteTag)
 
 // filter vote basic output from output
 func (im *Manager) FilterVoteOutput(output iotago.Output) (*iotago.BasicOutput, bool) {
