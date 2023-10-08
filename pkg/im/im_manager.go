@@ -222,19 +222,14 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	if err := im.deleteConsumedMessages(consumedMessage, logger); err != nil {
 		return err
 	}
-	if len(createdMark) > 0 {
-		for _, mark := range createdMark {
-			im.HandleGroupMarkBasicOutputCreated(mark, logger)
-		}
-	}
 	if len(consumedMark) > 0 {
 		for _, mark := range consumedMark {
 			im.HandleGroupMarkBasicOutputConsumed(mark, logger)
 		}
 	}
-	if len(createdMute) > 0 {
-		for _, mute := range createdMute {
-			im.HandleUserMuteGroupMemberBasicOutputCreated(mute)
+	if len(createdMark) > 0 {
+		for _, mark := range createdMark {
+			im.HandleGroupMarkBasicOutputCreated(mark, logger)
 		}
 	}
 	if len(consumedMute) > 0 {
@@ -242,14 +237,19 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 			im.HandleUserMuteGroupMemberBasicOutputConsumed(mute)
 		}
 	}
-	if len(createdVote) > 0 {
-		for _, vote := range createdVote {
-			im.HandleUserVoteGroupBasicOutputCreated(vote)
+	if len(createdMute) > 0 {
+		for _, mute := range createdMute {
+			im.HandleUserMuteGroupMemberBasicOutputCreated(mute)
 		}
 	}
 	if len(consumedVote) > 0 {
 		for _, vote := range consumedVote {
 			im.HandleUserVoteGroupBasicOutputConsumed(vote)
+		}
+	}
+	if len(createdVote) > 0 {
+		for _, vote := range createdVote {
+			im.HandleUserVoteGroupBasicOutputCreated(vote)
 		}
 	}
 
