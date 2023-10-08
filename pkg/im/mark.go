@@ -83,6 +83,8 @@ func (im *Manager) MarkKeyAndValueToMark(key kvstore.Key, value kvstore.Value) *
 // get marks from group id
 func (im *Manager) GetMarksFromGroupId(groupId [GroupIdLen]byte, logger *logger.Logger) ([]*Mark, error) {
 	prefix := im.MarkKeyPrefix(groupId)
+	// log group id and prefix
+	logger.Infof("GetMarksFromGroupId,groupId:%s,prefix:%s", iotago.EncodeHex(groupId[:]), iotago.EncodeHex(prefix))
 	marks := make([]*Mark, 0)
 	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
 		// log found mark with key and value
