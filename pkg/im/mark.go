@@ -43,14 +43,14 @@ func (im *Manager) MarkKey(mark *Mark) []byte {
 }
 
 // store mark
-func (im *Manager) StoreMark(mark *Mark) error {
+func (im *Manager) StoreMark(mark *Mark, logger *logger.Logger) error {
 	key := im.MarkKey(mark)
 	value := []byte(mark.Address)
 	return im.imStore.Set(key, value)
 }
 
 // delete mark
-func (im *Manager) DeleteMark(mark *Mark) error {
+func (im *Manager) DeleteMark(mark *Mark, logger *logger.Logger) error {
 	key := im.MarkKey(mark)
 	return im.imStore.Delete(key)
 }
@@ -77,10 +77,12 @@ func (im *Manager) MarkKeyAndValueToMark(key kvstore.Key, value kvstore.Value) *
 }
 
 // get marks from group id
-func (im *Manager) GetMarksFromGroupId(groupId [GroupIdLen]byte) ([]*Mark, error) {
+func (im *Manager) GetMarksFromGroupId(groupId [GroupIdLen]byte, logger *logger.Logger) ([]*Mark, error) {
 	prefix := im.MarkKeyPrefix(groupId)
 	marks := make([]*Mark, 0)
 	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		// log found mark with key and value
+		logger.Infof("Found mark,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
 		mark := im.MarkKeyAndValueToMark(key, value)
 		marks = append(marks, mark)
 		return true
@@ -90,8 +92,8 @@ func (im *Manager) GetMarksFromGroupId(groupId [GroupIdLen]byte) ([]*Mark, error
 
 // get group member addresses from group id, get all marks from group id, and get all nfts from group id, nft contains address btw,
 // then the intersection of two address sets is the result
-func (im *Manager) GetGroupMemberAddressesFromGroupId(groupId [GroupIdLen]byte) ([]string, error) {
-	marks, err := im.GetMarksFromGroupId(groupId)
+func (im *Manager) GetGroupMemberAddressesFromGroupId(groupId [GroupIdLen]byte, logger *logger.Logger) ([]string, error) {
+	marks, err := im.GetMarksFromGroupId(groupId, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -166,7 +168,7 @@ func (im *Manager) HandleGroupMarkBasicOutputCreated(output *iotago.BasicOutput,
 		return
 	}
 	for _, mark := range marks {
-		err := im.StoreMark(mark)
+		err := im.StoreMark(mark, logger)
 		if err != nil {
 			// log error
 			logger.Infof("HandleGroupMarkBasicOutputCreated ... err:%s", err.Error())
@@ -187,7 +189,7 @@ func (im *Manager) HandleGroupMarkBasicOutputConsumed(output *iotago.BasicOutput
 		return
 	}
 	for _, mark := range marks {
-		err := im.DeleteMark(mark)
+		err := im.DeleteMark(mark, logger)
 		if err != nil {
 			return
 		}

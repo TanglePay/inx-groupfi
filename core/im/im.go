@@ -372,7 +372,7 @@ func getMarkedAddressesFromGroupId(c echo.Context) ([]string, error) {
 	CoreComponent.LogInfof("get marks from groupId:%s", iotago.EncodeHex(groupId))
 	var groupId32 [32]byte
 	copy(groupId32[:], groupId)
-	marks, err := deps.IMManager.GetMarksFromGroupId(groupId32)
+	marks, err := deps.IMManager.GetMarksFromGroupId(groupId32, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
@@ -394,7 +394,7 @@ func getGroupMemberAddressesFromGroupId(c echo.Context) ([]string, error) {
 	CoreComponent.LogInfof("get group member addresses from groupId:%s", iotago.EncodeHex(groupId))
 	var groupId32 [32]byte
 	copy(groupId32[:], groupId)
-	addresses, err := deps.IMManager.GetGroupMemberAddressesFromGroupId(groupId32)
+	addresses, err := deps.IMManager.GetGroupMemberAddressesFromGroupId(groupId32, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
