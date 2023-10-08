@@ -156,6 +156,8 @@ func (im *Manager) GetMarksFromBasicOutput(output *iotago.BasicOutput) ([]*Mark,
 
 // handle group mark basic output created
 func (im *Manager) HandleGroupMarkBasicOutputCreated(output *iotago.BasicOutput, logger *logger.Logger) {
+	// log entering
+	logger.Infof("HandleGroupMarkBasicOutputCreated ...")
 	marks, err := im.GetMarksFromBasicOutput(output)
 	if err != nil {
 		// log error
@@ -179,6 +181,8 @@ func (im *Manager) HandleGroupMarkBasicOutputCreated(output *iotago.BasicOutput,
 
 // handle group mark basic output consumed
 func (im *Manager) HandleGroupMarkBasicOutputConsumed(output *iotago.BasicOutput, logger *logger.Logger) {
+	// log entering
+	logger.Infof("HandleGroupMarkBasicOutputConsumed ...")
 	marks, err := im.GetMarksFromBasicOutput(output)
 	if err != nil {
 		// log error
