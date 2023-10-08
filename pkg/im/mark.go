@@ -46,12 +46,16 @@ func (im *Manager) MarkKey(mark *Mark) []byte {
 func (im *Manager) StoreMark(mark *Mark, logger *logger.Logger) error {
 	key := im.MarkKey(mark)
 	value := []byte(mark.Address)
+	// log mark key and value
+	logger.Infof("StoreMark,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
 	return im.imStore.Set(key, value)
 }
 
 // delete mark
 func (im *Manager) DeleteMark(mark *Mark, logger *logger.Logger) error {
 	key := im.MarkKey(mark)
+	// log mark key
+	logger.Infof("DeleteMark,key:%s", iotago.EncodeHex(key))
 	return im.imStore.Delete(key)
 }
 
