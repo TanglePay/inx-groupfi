@@ -8,6 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/serializer/v2"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/pkg/errors"
 )
 
 type Mark struct {
@@ -15,11 +16,11 @@ type Mark struct {
 	// group id
 	GroupId [GroupIdLen]byte
 	// timestamp
-	Timestamp [2]byte
+	Timestamp [4]byte
 }
 
 // newMark creates a new Mark.
-func NewMark(address string, groupId [GroupIdLen]byte, timestamp [2]byte) *Mark {
+func NewMark(address string, groupId [GroupIdLen]byte, timestamp [4]byte) *Mark {
 	return &Mark{
 		Address:   address,
 		GroupId:   groupId,
@@ -29,14 +30,14 @@ func NewMark(address string, groupId [GroupIdLen]byte, timestamp [2]byte) *Mark 
 
 // key = prefix + groupid + timestamp + addressSha256Hash. value = empty
 func (im *Manager) MarkKey(mark *Mark) []byte {
-	key := make([]byte, 1+GroupIdLen+2+Sha256HashLen)
+	key := make([]byte, 1+GroupIdLen+TimestampLen+Sha256HashLen)
 	index := 0
 	key[index] = ImStoreKeyPrefixGroupMark
 	index++
 	copy(key[index:], mark.GroupId[:])
 	index += GroupIdLen
 	copy(key[index:], mark.Timestamp[:])
-	index += 2
+	index += TimestampLen
 	copy(key[index:], Sha256Hash(mark.Address))
 	return key
 }
@@ -68,10 +69,10 @@ func (im *Manager) MarkKeyPrefix(groupId [GroupIdLen]byte) []byte {
 func (im *Manager) MarkKeyAndValueToMark(key kvstore.Key, value kvstore.Value) *Mark {
 	var groupId [GroupIdLen]byte
 	copy(groupId[:], key[1:1+GroupIdLen])
-	var timestamp [2]byte
-	copy(timestamp[:], key[1+GroupIdLen:1+GroupIdLen+2])
+	var timestamp [TimestampLen]byte
+	copy(timestamp[:], key[1+GroupIdLen:1+GroupIdLen+TimestampLen])
 	var addressSha256 [Sha256HashLen]byte
-	copy(addressSha256[:], key[1+GroupIdLen+2:])
+	copy(addressSha256[:], key[1+GroupIdLen+TimestampLen:])
 	return NewMark(string(value), groupId, timestamp)
 }
 
@@ -114,43 +115,51 @@ func (im *Manager) GetGroupMemberAddressesFromGroupId(groupId [GroupIdLen]byte) 
 }
 
 // deserialized using func ReadBytesWithUint16Len(bytes []byte, idx *int, providedLength ...int) ([]byte, error) {
-func (im *Manager) DeserializeUserMarkedGroupIds(address string, data []byte) []*Mark {
+func (im *Manager) DeserializeUserMarkedGroupIds(address string, data []byte) ([]*Mark, error) {
 	marks := make([]*Mark, 0)
 	idx := 1
 	for idx < len(data) {
 		groupId, err := ReadBytesWithUint16Len(data, &idx, GroupIdLen)
 		if err != nil {
-			return nil
+			return nil, err
 		}
 		var groupIdBytes [GroupIdLen]byte
 		copy(groupIdBytes[:], groupId)
-		timestamp, err := ReadBytesWithUint16Len(data, &idx, 2)
+		timestamp, err := ReadBytesWithUint16Len(data, &idx, TimestampLen)
 		if err != nil {
-			return nil
+			return nil, err
 		}
-		var timestampBytes [2]byte
+		var timestampBytes [TimestampLen]byte
 		copy(timestampBytes[:], timestamp)
 		marks = append(marks, NewMark(address, groupIdBytes, timestampBytes))
 	}
-	return marks
+	return marks, nil
 }
 
 // get unlock address and []*Mark from BasicOutput
-func (im *Manager) GetMarksFromBasicOutput(output *iotago.BasicOutput) []*Mark {
+func (im *Manager) GetMarksFromBasicOutput(output *iotago.BasicOutput) ([]*Mark, error) {
 	unlockConditionSet := output.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
 	featureSet := output.FeatureSet()
 	meta := featureSet.MetadataFeature()
 	if meta == nil {
-		return nil
+		return nil, errors.New("meta is nil")
 	}
-	marks := im.DeserializeUserMarkedGroupIds(ownerAddress, meta.Data)
-	return marks
+	marks, err := im.DeserializeUserMarkedGroupIds(ownerAddress, meta.Data)
+	if err != nil {
+		return nil, err
+	}
+	return marks, nil
 }
 
 // handle group mark basic output created
 func (im *Manager) HandleGroupMarkBasicOutputCreated(output *iotago.BasicOutput, logger *logger.Logger) {
-	marks := im.GetMarksFromBasicOutput(output)
+	marks, err := im.GetMarksFromBasicOutput(output)
+	if err != nil {
+		// log error
+		logger.Infof("HandleGroupMarkBasicOutputCreated ... err:%s", err.Error())
+		return
+	}
 	if len(marks) == 0 {
 		// log zero marks
 		logger.Infof("HandleGroupMarkBasicOutputCreated ... zero marks")
@@ -167,8 +176,13 @@ func (im *Manager) HandleGroupMarkBasicOutputCreated(output *iotago.BasicOutput,
 }
 
 // handle group mark basic output consumed
-func (im *Manager) HandleGroupMarkBasicOutputConsumed(output *iotago.BasicOutput) {
-	marks := im.GetMarksFromBasicOutput(output)
+func (im *Manager) HandleGroupMarkBasicOutputConsumed(output *iotago.BasicOutput, logger *logger.Logger) {
+	marks, err := im.GetMarksFromBasicOutput(output)
+	if err != nil {
+		// log error
+		logger.Infof("HandleGroupMarkBasicOutputConsumed ... err:%s", err.Error())
+		return
+	}
 	if len(marks) == 0 {
 		return
 	}

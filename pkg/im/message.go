@@ -41,3 +41,4 @@ const GroupIdLen = 32
 const Sha256HashLen = 32
 const OutputIdLen = 34
 const NFTIdLen = 32
+const TimestampLen = 4
