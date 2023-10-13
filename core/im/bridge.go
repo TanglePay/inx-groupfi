@@ -142,6 +142,10 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 		if err != nil {
 			continue
 		}
+		// check if block or payload is nil
+		if block == nil || block.Payload == nil {
+			continue
+		}
 		if block.Payload.PayloadType() != iotago.PayloadTransaction {
 			continue
 		}
