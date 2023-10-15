@@ -52,6 +52,9 @@ const (
 
 	// get group votes
 	RouteGroupVotes = "/groupvotes"
+
+	// get group votes count
+	RouteGroupVotesCount = "/groupvotescount"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -314,6 +317,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// get group votes
 	e.GET(RouteGroupVotes, func(c echo.Context) error {
 		resp, err := getGroupVotes(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// get group votes count
+	e.GET(RouteGroupVotesCount, func(c echo.Context) error {
+		resp, err := getGroupVotesCount(c)
 		if err != nil {
 			return err
 		}

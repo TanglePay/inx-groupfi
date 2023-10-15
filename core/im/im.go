@@ -427,6 +427,27 @@ func getGroupVotes(c echo.Context) ([]*VoteResponse, error) {
 	return voteResponseArr, nil
 }
 
+// getGroupVotesCount
+func getGroupVotesCount(c echo.Context) (*VoteCountResponse, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get group votes count from groupId:%s", iotago.EncodeHex(groupId))
+	var groupId32 [32]byte
+	copy(groupId32[:], groupId)
+	publicCt, privateCt, err := deps.IMManager.CountVotesForGroup(groupId32)
+	if err != nil {
+		return nil, err
+	}
+	resp := &VoteCountResponse{
+		PublicCount:  publicCt,
+		PrivateCount: privateCt,
+		GroupId:      iotago.EncodeHex(groupId),
+	}
+	return resp, nil
+}
+
 // get all groups under renter
 func getGroupConfigsForRenter(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 	renderName, err := parseAttrNameQueryParam(c, "renderName")

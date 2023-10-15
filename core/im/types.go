@@ -44,6 +44,13 @@ type VoteResponse struct {
 	Vote              int    `json:"vote"`
 }
 
+// VoteCountResponse
+type VoteCountResponse struct {
+	GroupId      string `json:"groupId"`
+	PublicCount  int    `json:"publicCount"`
+	PrivateCount int    `json:"privateCount"`
+}
+
 // enum for output type created or consumed
 const (
 	ImOutputTypeCreated = iota
