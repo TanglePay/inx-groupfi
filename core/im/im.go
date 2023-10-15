@@ -237,6 +237,9 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 		return nil, err
 	}
 	publicCt, privateCt, err := deps.IMManager.CountVotesForGroup(groupId32)
+	if err != nil {
+		return nil, err
+	}
 	// group is forced to be public if there are more than 100 members, or public votes are more than private votes
 	if ct > 100 || publicCt > privateCt {
 		// throw http error with code 901
