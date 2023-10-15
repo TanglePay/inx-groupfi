@@ -150,7 +150,7 @@ func (im *Manager) HandleUserVoteGroupBasicOutputConsumed(output *iotago.BasicOu
 	}
 }
 
-var voteTagRawStr = "GROUPFIVOTEV1"
+var voteTagRawStr = "GROUPFIVOTEV2"
 var voteTag = []byte(voteTagRawStr)
 var VoteTagStr = iotago.EncodeHex(voteTag)
 
