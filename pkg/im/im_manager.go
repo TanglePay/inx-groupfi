@@ -244,12 +244,12 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	}
 	if len(consumedVote) > 0 {
 		for _, vote := range consumedVote {
-			im.HandleUserVoteGroupBasicOutputConsumed(vote)
+			im.HandleUserVoteGroupBasicOutputConsumed(vote, logger)
 		}
 	}
 	if len(createdVote) > 0 {
 		for _, vote := range createdVote {
-			im.HandleUserVoteGroupBasicOutputCreated(vote)
+			im.HandleUserVoteGroupBasicOutputCreated(vote, logger)
 		}
 	}
 

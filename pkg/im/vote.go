@@ -42,15 +42,19 @@ func (im *Manager) VoteKey(vote *Vote) []byte {
 }
 
 // store vote
-func (im *Manager) StoreVote(vote *Vote) error {
+func (im *Manager) StoreVote(vote *Vote, logger *logger.Logger) error {
 	key := im.VoteKey(vote)
 	value := []byte{vote.Vote}
+	// log vote key and value
+	logger.Infof("StoreVote,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
 	return im.imStore.Set(key, value)
 }
 
 // delete vote
-func (im *Manager) DeleteVote(vote *Vote) error {
+func (im *Manager) DeleteVote(vote *Vote, logger *logger.Logger) error {
 	key := im.VoteKey(vote)
+	// log vote key
+	logger.Infof("DeleteVote,key:%s", iotago.EncodeHex(key))
 	return im.imStore.Delete(key)
 }
 
@@ -111,28 +115,36 @@ func (im *Manager) GetUserVoteGroupsFromBasicOutput(output *iotago.BasicOutput) 
 }
 
 // handle user vote group basic output created
-func (im *Manager) HandleUserVoteGroupBasicOutputCreated(output *iotago.BasicOutput) {
+func (im *Manager) HandleUserVoteGroupBasicOutputCreated(output *iotago.BasicOutput, logger *logger.Logger) {
+	// log entering
+	logger.Infof("HandleUserVoteGroupBasicOutputCreated ...")
 	userVoteGroups := im.GetUserVoteGroupsFromBasicOutput(output)
 	if len(userVoteGroups) == 0 {
 		return
 	}
 	for _, userVoteGroup := range userVoteGroups {
-		err := im.StoreVote(userVoteGroup)
+		err := im.StoreVote(userVoteGroup, logger)
 		if err != nil {
+			// log error
+			logger.Infof("HandleUserVoteGroupBasicOutputCreated ... err:%s", err.Error())
 			return
 		}
 	}
 }
 
 // handle user vote group basic output consumed
-func (im *Manager) HandleUserVoteGroupBasicOutputConsumed(output *iotago.BasicOutput) {
+func (im *Manager) HandleUserVoteGroupBasicOutputConsumed(output *iotago.BasicOutput, logger *logger.Logger) {
+	// log entering
+	logger.Infof("HandleUserVoteGroupBasicOutputConsumed ...")
 	userVoteGroups := im.GetUserVoteGroupsFromBasicOutput(output)
 	if len(userVoteGroups) == 0 {
 		return
 	}
 	for _, userVoteGroup := range userVoteGroups {
-		err := im.DeleteVote(userVoteGroup)
+		err := im.DeleteVote(userVoteGroup, logger)
 		if err != nil {
+			// log error
+			logger.Infof("HandleUserVoteGroupBasicOutputConsumed ... err:%s", err.Error())
 			return
 		}
 	}

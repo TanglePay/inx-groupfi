@@ -31,6 +31,6 @@ func makeItemDrainerForVoteInit(ctx context.Context, nodeHTTPAPIClient *nodeclie
 			CoreComponent.LogWarnf("LedgerInit ... FilterVoteOutput failed")
 			return
 		}
-		deps.IMManager.HandleUserVoteGroupBasicOutputCreated(basicOutput)
+		deps.IMManager.HandleUserVoteGroupBasicOutputCreated(basicOutput, CoreComponent.Logger())
 	}, 100, 10, 200)
 }
