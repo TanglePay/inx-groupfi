@@ -232,22 +232,19 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 	}
 	CoreComponent.LogInfof("get shared from group:%s", groupId)
 	var groupId32 [32]byte
-	ct, err := deps.IMManager.GetGroupMemberAddressesCountFromGroupId(groupId32, CoreComponent.Logger())
-	if err != nil {
-		// log error
-		CoreComponent.LogWarnf("get shared from group:%s,GetGroupMemberAddressesCountFromGroupId failed:%s", groupId, err)
-		return nil, err
-	}
+	copy(groupId32[:], groupId)
 	publicCt, privateCt, err := deps.IMManager.CountVotesForGroup(groupId32)
 	if err != nil {
-		// log error
-		CoreComponent.LogWarnf("get shared from group:%s,CountVotesForGroup failed:%s", groupId, err)
+		return nil, err
+	}
+	memberCt, err := deps.IMManager.GetGroupMemberAddressesCountFromGroupId(groupId32, CoreComponent.Logger())
+	if err != nil {
 		return nil, err
 	}
 	// log group ct, public ct, private ct
-	CoreComponent.LogInfof("get shared from group:%s,group ct:%d,public ct:%d,private ct:%d", iotago.EncodeHex(groupId), ct, publicCt, privateCt)
+	CoreComponent.LogInfof("get shared from group:%s,group memberCt:%d,public ct:%d,private ct:%d", iotago.EncodeHex(groupId), memberCt, publicCt, privateCt)
 	// group is forced to be public if there are more than 100 members, or public votes are more than private votes
-	if ct > 100 || publicCt > privateCt {
+	if memberCt > 100 || publicCt > privateCt {
 		// throw http error with code 901
 		return nil, echo.NewHTTPError(901, "adjusted to be public")
 	}
