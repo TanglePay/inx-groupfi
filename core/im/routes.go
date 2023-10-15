@@ -49,6 +49,9 @@ const (
 
 	// group member addresses
 	RouteGroupMemberAddresses = "/groupmemberaddresses"
+
+	// get group votes
+	RouteGroupVotes = "/groupvotes"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -302,6 +305,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// group member addresses
 	e.GET(RouteGroupMemberAddresses, func(c echo.Context) error {
 		resp, err := getGroupMemberAddressesFromGroupId(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// get group votes
+	e.GET(RouteGroupVotes, func(c echo.Context) error {
+		resp, err := getGroupVotes(c)
 		if err != nil {
 			return err
 		}

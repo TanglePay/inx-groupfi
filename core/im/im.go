@@ -402,6 +402,31 @@ func getGroupMemberAddressesFromGroupId(c echo.Context) ([]string, error) {
 	return addresses, nil
 }
 
+// get all group votes from groupId
+func getGroupVotes(c echo.Context) ([]*VoteResponse, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get group votes from groupId:%s", iotago.EncodeHex(groupId))
+	var groupId32 [32]byte
+	copy(groupId32[:], groupId)
+	votes, err := deps.IMManager.GetAllVotesFromGroupId(groupId32, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get group votes from groupId:%s,found votes:%d", iotago.EncodeHex(groupId), len(votes))
+	voteResponseArr := make([]*VoteResponse, len(votes))
+	for i, vote := range votes {
+		voteResponseArr[i] = &VoteResponse{
+			GroupId:           iotago.EncodeHex(vote.GroupId[:]),
+			AddressSha256Hash: iotago.EncodeHex(vote.AddressSha256[:]),
+			Vote:              int(vote.Vote),
+		}
+	}
+	return voteResponseArr, nil
+}
+
 // get all groups under renter
 func getGroupConfigsForRenter(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 	renderName, err := parseAttrNameQueryParam(c, "renderName")

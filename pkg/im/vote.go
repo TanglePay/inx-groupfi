@@ -68,6 +68,26 @@ func (im *Manager) VoteKeyPrefix(groupId [GroupIdLen]byte) []byte {
 	return key
 }
 
+// get Vote from key and value
+func (im *Manager) GetVoteFromKeyAndValue(key kvstore.Key, value kvstore.Value) *Vote {
+	var groupId [GroupIdLen]byte
+	copy(groupId[:], key[1:1+GroupIdLen])
+	var addressSha256 [Sha256HashLen]byte
+	copy(addressSha256[:], key[1+GroupIdLen:])
+	return NewVote(groupId, addressSha256, value[0])
+}
+
+// get all votes from group id
+func (im *Manager) GetAllVotesFromGroupId(groupId [GroupIdLen]byte, logger *logger.Logger) ([]*Vote, error) {
+	prefix := im.VoteKeyPrefix(groupId)
+	votes := make([]*Vote, 0)
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		votes = append(votes, im.GetVoteFromKeyAndValue(key, value))
+		return true
+	})
+	return votes, err
+}
+
 // count votes for group
 func (im *Manager) CountVotesForGroup(groupId [GroupIdLen]byte) (int, int, error) {
 	prefix := im.VoteKeyPrefix(groupId)

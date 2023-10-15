@@ -37,6 +37,13 @@ type TokenBalanceResponse struct {
 	TotalBalance string `json:"TotalBalance"`
 }
 
+// VoteResponse
+type VoteResponse struct {
+	GroupId           string `json:"groupId"`
+	AddressSha256Hash string `json:"token"`
+	Vote              int    `json:"vote"`
+}
+
 // enum for output type created or consumed
 const (
 	ImOutputTypeCreated = iota
