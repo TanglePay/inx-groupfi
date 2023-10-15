@@ -234,10 +234,14 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 	var groupId32 [32]byte
 	ct, err := deps.IMManager.GetGroupMemberAddressesCountFromGroupId(groupId32, CoreComponent.Logger())
 	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("get shared from group:%s,GetGroupMemberAddressesCountFromGroupId failed:%s", groupId, err)
 		return nil, err
 	}
 	publicCt, privateCt, err := deps.IMManager.CountVotesForGroup(groupId32)
 	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("get shared from group:%s,CountVotesForGroup failed:%s", groupId, err)
 		return nil, err
 	}
 	// log group ct, public ct, private ct
