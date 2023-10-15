@@ -240,6 +240,8 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	// log group ct, public ct, private ct
+	CoreComponent.LogInfof("get shared from group:%s,group ct:%d,public ct:%d,private ct:%d", iotago.EncodeHex(groupId), ct, publicCt, privateCt)
 	// group is forced to be public if there are more than 100 members, or public votes are more than private votes
 	if ct > 100 || publicCt > privateCt {
 		// throw http error with code 901
