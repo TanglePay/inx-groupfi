@@ -122,6 +122,15 @@ func (im *Manager) GetGroupMemberAddressesFromGroupId(groupId [GroupIdLen]byte, 
 	return groupMemberAddresses, nil
 }
 
+// get group member addresses count
+func (im *Manager) GetGroupMemberAddressesCountFromGroupId(groupId [GroupIdLen]byte, logger *logger.Logger) (int, error) {
+	groupMemberAddresses, err := im.GetGroupMemberAddressesFromGroupId(groupId, logger)
+	if err != nil {
+		return 0, err
+	}
+	return len(groupMemberAddresses), nil
+}
+
 // deserialized using func ReadBytesWithUint16Len(bytes []byte, idx *int, providedLength ...int) ([]byte, error) {
 func (im *Manager) DeserializeUserMarkedGroupIds(address string, data []byte) ([]*Mark, error) {
 	marks := make([]*Mark, 0)

@@ -231,13 +231,16 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 		return nil, err
 	}
 	CoreComponent.LogInfof("get shared from group:%s", groupId)
-	ct, err := deps.IMManager.GetGroupPublicKeyCount(groupId)
+	var groupId32 [32]byte
+	ct, err := deps.IMManager.GetGroupMemberAddressesCountFromGroupId(groupId32, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
-	if ct > 100 {
+	publicCt, privateCt, err := deps.IMManager.CountVotesForGroup(groupId32)
+	// group is forced to be public if there are more than 100 members, or public votes are more than private votes
+	if ct > 100 || publicCt > privateCt {
 		// throw http error with code 901
-		return nil, echo.NewHTTPError(901, "too many public keys")
+		return nil, echo.NewHTTPError(901, "adjusted to be public")
 	}
 	shared, err := deps.IMManager.ReadSharedFromGroupId(groupId)
 	if err != nil {
@@ -440,9 +443,14 @@ func getGroupVotesCount(c echo.Context) (*VoteCountResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	memberCt, err := deps.IMManager.GetGroupMemberAddressesCountFromGroupId(groupId32, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
 	resp := &VoteCountResponse{
 		PublicCount:  publicCt,
 		PrivateCount: privateCt,
+		MemberCount:  memberCt,
 		GroupId:      iotago.EncodeHex(groupId),
 	}
 	return resp, nil

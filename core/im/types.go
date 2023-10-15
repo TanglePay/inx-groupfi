@@ -49,6 +49,7 @@ type VoteCountResponse struct {
 	GroupId      string `json:"groupId"`
 	PublicCount  int    `json:"publicCount"`
 	PrivateCount int    `json:"privateCount"`
+	MemberCount  int    `json:"memberCount"`
 }
 
 // enum for output type created or consumed
