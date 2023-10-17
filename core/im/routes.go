@@ -342,5 +342,5 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			return err
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
-	}
+	})
 }
