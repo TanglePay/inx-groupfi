@@ -462,6 +462,23 @@ func getGroupVotesCount(c echo.Context) (*VoteCountResponse, error) {
 	return resp, nil
 }
 
+// getGroupBlacklist
+func getGroupBlacklist(c echo.Context) ([]string, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get group blacklist from groupId:%s", iotago.EncodeHex(groupId))
+	var groupId32 [32]byte
+	copy(groupId32[:], groupId)
+	blacklist, err := deps.IMManager.GetAddresseHashsFromGroupBlacklist(groupId32, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get group blacklist from groupId:%s,found blacklist:%d", iotago.EncodeHex(groupId), len(blacklist))
+	return blacklist, nil
+}
+
 // get all groups under renter
 func getGroupConfigsForRenter(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 	renderName, err := parseAttrNameQueryParam(c, "renderName")

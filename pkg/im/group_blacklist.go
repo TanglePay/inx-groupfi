@@ -1,6 +1,10 @@
 package im
 
-import "github.com/iotaledger/hive.go/core/kvstore"
+import (
+	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hive.go/core/logger"
+	iotago "github.com/iotaledger/iota.go/v3"
+)
 
 // key = prefix + groupid + addressSha256Hash, value = empty
 func (im *Manager) GroupBlacklistKey(groupId [GroupIdLen]byte, addressSha256Hash [Sha256HashLen]byte) []byte {
@@ -38,12 +42,12 @@ func (im *Manager) GroupBlacklistKeyPrefix(groupId [GroupIdLen]byte) []byte {
 }
 
 // get all addresses from group blacklist for group id
-func (im *Manager) GetAddressesFromGroupBlacklist(groupId [GroupIdLen]byte) ([][]byte, error) {
+func (im *Manager) GetAddresseHashsFromGroupBlacklist(groupId [GroupIdLen]byte, logger *logger.Logger) ([]string, error) {
 	prefix := im.GroupBlacklistKeyPrefix(groupId)
-	addresses := make([][]byte, 0)
+	addresses := make([]string, 0)
 	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
 		address := key[1+GroupIdLen:]
-		addresses = append(addresses, address)
+		addresses = append(addresses, iotago.EncodeHex(address))
 		return true
 	})
 	return addresses, err

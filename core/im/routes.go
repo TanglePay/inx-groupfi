@@ -55,6 +55,9 @@ const (
 
 	// get group votes count
 	RouteGroupVotesCount = "/groupvotescount"
+
+	// get group blacklist
+	RouteGroupBlacklist = "/groupblacklist"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -331,4 +334,13 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
+
+	// get group blacklist
+	e.GET(RouteGroupBlacklist, func(c echo.Context) error {
+		resp, err := getGroupBlacklist(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	}
 }
