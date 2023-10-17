@@ -47,6 +47,10 @@ const (
 	ImStoreKeyPrefixGroupBlacklist byte = 24
 
 	ImStoreKeyPrefixVote byte = 25
+
+	ImStoreKeyPrefixGroupMember byte = 26
+
+	ImStoreKeyPrefixGroupQualification byte = 27
 	// inbox messsage types
 	// plain text, new message
 	ImInboxMessageTypeNewMessage      byte = 1

@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 )
 
 var (
@@ -107,7 +108,9 @@ func PerformGetRequest(ctx context.Context, targetURL string, params map[string]
 	}
 	return nil
 }
-
+func GetCurrentEpochTimestamp() uint32 {
+	return uint32(time.Now().Unix())
+}
 func AppendBytesWithUint16Len(bytes *[]byte, idx *int, slice []byte, appendLength bool) {
 	length := len(slice)
 

@@ -2,6 +2,7 @@ package im
 
 import (
 	"bytes"
+	"encoding/binary"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
@@ -16,7 +17,7 @@ type Mark struct {
 	// group id
 	GroupId [GroupIdLen]byte
 	// timestamp
-	Timestamp [4]byte
+	Timestamp [TimestampLen]byte
 }
 
 // newMark creates a new Mark.
@@ -28,27 +29,46 @@ func NewMark(address string, groupId [GroupIdLen]byte, timestamp [4]byte) *Mark 
 	}
 }
 
-// key = prefix + groupid + timestamp + addressSha256Hash. value = empty
+// key = prefix + groupid + addressSha256Hash. value = timestamp + address
 func (im *Manager) MarkKey(mark *Mark) []byte {
-	key := make([]byte, 1+GroupIdLen+TimestampLen+Sha256HashLen)
+	key := make([]byte, 1+GroupIdLen+Sha256HashLen)
 	index := 0
 	key[index] = ImStoreKeyPrefixGroupMark
 	index++
 	copy(key[index:], mark.GroupId[:])
 	index += GroupIdLen
-	copy(key[index:], mark.Timestamp[:])
-	index += TimestampLen
 	copy(key[index:], Sha256Hash(mark.Address))
 	return key
 }
 
-// store mark
+// store mark value = timestamp + address
 func (im *Manager) StoreMark(mark *Mark, logger *logger.Logger) error {
 	key := im.MarkKey(mark)
-	value := []byte(mark.Address)
+	value := make([]byte, 4+len(mark.Address))
+	index := 0
+	binary.LittleEndian.PutUint32(value[index:], binary.LittleEndian.Uint32(mark.Timestamp[:]))
+	index += 4
+	copy(value[index:], mark.Address)
 	// log mark key and value
 	logger.Infof("StoreMark,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
-	return im.imStore.Set(key, value)
+	err := im.imStore.Set(key, value)
+	if err != nil {
+		return err
+	}
+	// check if group qualification exists, if so, store group member
+	groupQualification := NewGroupQualification(mark.GroupId, mark.Address, "", 0, "")
+	exists, err := im.GroupQualificationExists(groupQualification)
+	if err != nil {
+		return err
+	}
+	if exists {
+		groupMember := NewGroupMember(mark.GroupId, mark.Address, GetCurrentEpochTimestamp())
+		err = im.StoreGroupMember(groupMember, logger)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // delete mark
@@ -56,7 +76,23 @@ func (im *Manager) DeleteMark(mark *Mark, logger *logger.Logger) error {
 	key := im.MarkKey(mark)
 	// log mark key
 	logger.Infof("DeleteMark,key:%s", iotago.EncodeHex(key))
-	return im.imStore.Delete(key)
+	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	// delete group member as well
+	groupMember := NewGroupMember(mark.GroupId, mark.Address, 0)
+	err = im.DeleteGroupMember(groupMember, logger)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// check if mark exists, input is group id and address
+func (im *Manager) MarkExists(groupId [GroupIdLen]byte, address string) (bool, error) {
+	key := im.MarkKey(NewMark(address, groupId, [4]byte{}))
+	return im.imStore.Has(key)
 }
 
 // MarkKeyPrefix returns the prefix for the given group id.
@@ -69,15 +105,14 @@ func (im *Manager) MarkKeyPrefix(groupId [GroupIdLen]byte) []byte {
 	return key
 }
 
-// MarkKeyToMark
+// MarkKeyToMark, key = prefix + groupid + addressSha256Hash. value = timestamp + address
 func (im *Manager) MarkKeyAndValueToMark(key kvstore.Key, value kvstore.Value) *Mark {
 	var groupId [GroupIdLen]byte
 	copy(groupId[:], key[1:1+GroupIdLen])
 	var timestamp [TimestampLen]byte
-	copy(timestamp[:], key[1+GroupIdLen:1+GroupIdLen+TimestampLen])
-	var addressSha256 [Sha256HashLen]byte
-	copy(addressSha256[:], key[1+GroupIdLen+TimestampLen:])
-	return NewMark(string(value), groupId, timestamp)
+	copy(timestamp[:], value[:TimestampLen])
+	address := string(value[TimestampLen:])
+	return NewMark(address, groupId, timestamp)
 }
 
 // get marks from group id
@@ -94,41 +129,6 @@ func (im *Manager) GetMarksFromGroupId(groupId [GroupIdLen]byte, logger *logger.
 		return true
 	})
 	return marks, err
-}
-
-// get group member addresses from group id, get all marks from group id, and get all nfts from group id, nft contains address btw,
-// then the intersection of two address sets is the result
-func (im *Manager) GetGroupMemberAddressesFromGroupId(groupId [GroupIdLen]byte, logger *logger.Logger) ([]string, error) {
-	marks, err := im.GetMarksFromGroupId(groupId, logger)
-	if err != nil {
-		return nil, err
-	}
-	// markAddresses map[string]bool
-	markAddresses := make(map[string]bool)
-	for _, mark := range marks {
-		markAddresses[mark.Address] = true
-	}
-	nfts, err := im.ReadNFTsFromGroupId(groupId[:])
-	if err != nil {
-		return nil, err
-	}
-	var groupMemberAddresses []string
-	for _, nft := range nfts {
-		nftAddress := string(nft.OwnerAddress)
-		if markAddresses[nftAddress] {
-			groupMemberAddresses = append(groupMemberAddresses, nftAddress)
-		}
-	}
-	return groupMemberAddresses, nil
-}
-
-// get group member addresses count
-func (im *Manager) GetGroupMemberAddressesCountFromGroupId(groupId [GroupIdLen]byte, logger *logger.Logger) (int, error) {
-	groupMemberAddresses, err := im.GetGroupMemberAddressesFromGroupId(groupId, logger)
-	if err != nil {
-		return 0, err
-	}
-	return len(groupMemberAddresses), nil
 }
 
 // deserialized using func ReadBytesWithUint16Len(bytes []byte, idx *int, providedLength ...int) ([]byte, error) {

@@ -61,12 +61,29 @@ func (im *Manager) storeSingleNFT(nft *NFT, logger *logger.Logger) error {
 	} else {
 		return errors.New("invalid group qualify type")
 	}
+	qualification, err := im.GetQualificationFromNFT(nft)
+	if err != nil {
+		return err
+	}
+	// store group qualification
+	err = im.StoreGroupQualification(qualification, logger)
+	if err != nil {
+		return err
+	}
 	err = im.StoreAddressGroup(addressGroup)
 	return err
 }
 
+// get qualification from nft
+func (im *Manager) GetQualificationFromNFT(nft *NFT) (*GroupQualification, error) {
+	var groupId32 [GroupIdLen]byte
+	copy(groupId32[:], nft.GroupId)
+	qualification := NewGroupQualification(groupId32, string(nft.OwnerAddress), nft.GroupName, nft.GroupQualifyType, nft.IpfsLink)
+	return qualification, nil
+}
+
 // delete single nft
-func (im *Manager) DeleteNFT(nft *NFT) error {
+func (im *Manager) DeleteNFT(nft *NFT, logger *logger.Logger) error {
 	key := im.NftKeyFromGroupIdAndNftId(
 		nft.GroupId,
 		nft.NFTId)
@@ -75,8 +92,23 @@ func (im *Manager) DeleteNFT(nft *NFT) error {
 		return err
 	}
 	addressGroup := NewAddressGroup(nft.OwnerAddress, nft.GroupId)
+	qualification, err := im.GetQualificationFromNFT(nft)
+	if err != nil {
+		return err
+	}
+	// delete group qualification
+	err = im.DeleteGroupQualification(qualification, logger)
+	if err != nil {
+		return err
+	}
 	err = im.DeleteAddressGroup(addressGroup)
 	return err
+}
+
+// check if nft exists, input is group id and address
+func (im *Manager) NFTExists(groupId []byte, nftId []byte) (bool, error) {
+	key := im.NftKeyFromGroupIdAndNftId(groupId, nftId)
+	return im.imStore.Has(key)
 }
 func (im *Manager) storeNewNFTsDeleteConsumedNfts(createdNfts []*NFT, consumedNfts []*NFT, logger *logger.Logger) error {
 	// hash set store all groupId, groupId is []byte
@@ -99,7 +131,7 @@ func (im *Manager) storeNewNFTsDeleteConsumedNfts(createdNfts []*NFT, consumedNf
 		groupIdSet[iotago.EncodeHex(nft.GroupId)] = true
 	}
 	for _, nft := range consumedNfts {
-		if err := im.DeleteNFT(nft); err != nil {
+		if err := im.DeleteNFT(nft, logger); err != nil {
 			return err
 		}
 		groupIdSet[iotago.EncodeHex(nft.GroupId)] = true

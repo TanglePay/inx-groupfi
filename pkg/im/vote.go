@@ -6,6 +6,7 @@ import (
 	"github.com/iotaledger/hive.go/serializer/v2"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/pkg/errors"
 )
 
 type Vote struct {
@@ -41,8 +42,15 @@ func (im *Manager) VoteKey(vote *Vote) []byte {
 	return key
 }
 
-// store vote
+// store vote, check if user has group member, if not, return error
 func (im *Manager) StoreVote(vote *Vote, logger *logger.Logger) error {
+	exists, err := im.GroupMemberExistsFromGroupIdAndAddressSha256Hash(vote.GroupId, vote.AddressSha256)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("user has no group member")
+	}
 	key := im.VoteKey(vote)
 	value := []byte{vote.Vote}
 	// log vote key and value

@@ -217,6 +217,6 @@ func (im *Manager) SetWhaleEligibility(tokenType uint16, address string, isEligi
 	if isEligible {
 		return im.storeSingleNFT(nft, logger)
 	} else {
-		return im.DeleteNFT(nft)
+		return im.DeleteNFT(nft, logger)
 	}
 }

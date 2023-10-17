@@ -8,6 +8,7 @@ import (
 	"github.com/iotaledger/hive.go/serializer/v2"
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/pkg/errors"
 )
 
 type UserMuteGroupMember struct {
@@ -39,11 +40,28 @@ func (im *Manager) UserMuteGroupMemberKey(userMuteGroupMember *UserMuteGroupMemb
 	return key
 }
 
-// store user mute group member
+// check if user has group member
+func (im *Manager) UserHasGroupMember(userMuteGroupMember *UserMuteGroupMember) (bool, error) {
+
+	exists, err := im.GroupMemberExistsFromGroupIdAndAddressSha256Hash(userMuteGroupMember.GroupId, userMuteGroupMember.MutedAddrSha256Hash)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+// store user mute group member, check if user has group member, if not, return error
 func (im *Manager) StoreUserMuteGroupMember(userMuteGroupMember *UserMuteGroupMember) error {
+	exists, err := im.UserHasGroupMember(userMuteGroupMember)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		return errors.New("user has no group member")
+	}
 	key := im.UserMuteGroupMemberKey(userMuteGroupMember)
 	value := []byte{}
-	err := im.imStore.Set(key, value)
+	err = im.imStore.Set(key, value)
 	if err != nil {
 		return err
 	}
