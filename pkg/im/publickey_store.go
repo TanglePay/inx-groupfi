@@ -56,7 +56,7 @@ var shimmerMainNet = IotaNodeInfo{
 }
 
 func GetTransactionHistory(ctx context.Context, node IotaNodeInfo, bech32Address string) (string, error) {
-	url := fmt.Sprintf("%s/transactionhistory/%s/%s", node.ExplorerApiUrl, node.ExplorerApiNetwork, bech32Address)
+	url := fmt.Sprintf("%s/transactionhistory/%s/%s?pageSize=1000&sort=newest", node.ExplorerApiUrl, node.ExplorerApiNetwork, bech32Address)
 	params := map[string]string{
 		"pageSize": "1000",
 		"sort":     "newest",
