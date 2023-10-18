@@ -479,6 +479,20 @@ func getGroupBlacklist(c echo.Context) ([]string, error) {
 	return blacklist, nil
 }
 
+func getAddressMemberGroups(c echo.Context) ([]string, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address member groups from address:%s", address)
+	groupIds, err := deps.IMManager.GetMemberGroups(address)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address member groups from address:%s,found groupIds:%d", address, len(groupIds))
+	return groupIds, nil
+}
+
 // get all groups under renter
 func getGroupConfigsForRenter(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 	renderName, err := parseAttrNameQueryParam(c, "renderName")

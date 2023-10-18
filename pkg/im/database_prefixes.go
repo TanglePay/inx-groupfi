@@ -51,6 +51,8 @@ const (
 	ImStoreKeyPrefixGroupMember byte = 26
 
 	ImStoreKeyPrefixGroupQualification byte = 27
+
+	ImStoreKeyPrefixMemberGroup byte = 28
 	// inbox messsage types
 	// plain text, new message
 	ImInboxMessageTypeNewMessage      byte = 1

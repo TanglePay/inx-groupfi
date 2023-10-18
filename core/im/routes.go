@@ -58,6 +58,9 @@ const (
 
 	// get group blacklist
 	RouteGroupBlacklist = "/groupblacklist"
+
+	// get address member groups
+	RouteAddressMemberGroups = "/addressmembergroups"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -338,6 +341,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// get group blacklist
 	e.GET(RouteGroupBlacklist, func(c echo.Context) error {
 		resp, err := getGroupBlacklist(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// get address member groups
+	e.GET(RouteAddressMemberGroups, func(c echo.Context) error {
+		resp, err := getAddressMemberGroups(c)
 		if err != nil {
 			return err
 		}

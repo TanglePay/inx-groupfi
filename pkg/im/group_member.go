@@ -40,6 +40,18 @@ func (im *Manager) GroupMemberKey(groupMember *GroupMember) []byte {
 	return key
 }
 
+// member group, key = prefix + addressSha256Hash + groupid
+func (im *Manager) MemberGroupKey(groupMember *GroupMember) []byte {
+	key := make([]byte, 1+Sha256HashLen+GroupIdLen)
+	index := 0
+	key[index] = ImStoreKeyPrefixMemberGroup
+	index++
+	copy(key[index:], Sha256Hash(groupMember.Address))
+	index += Sha256HashLen
+	copy(key[index:], groupMember.GroupId[:])
+	return key
+}
+
 // group member key from groupid + addressSha256Hash
 func (im *Manager) GroupMemberKeyFromGroupIdAndAddressSha256Hash(groupId [GroupIdLen]byte, addressSha256Hash [Sha256HashLen]byte) []byte {
 	key := make([]byte, 1+GroupIdLen+Sha256HashLen)
@@ -62,6 +74,25 @@ func (im *Manager) StoreGroupMember(groupMember *GroupMember, logger *logger.Log
 	copy(value[index:], groupMember.Address)
 	// log group member key and value
 	logger.Infof("StoreGroupMember,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
+	err := im.imStore.Set(key, value)
+	if err != nil {
+		return err
+	}
+	// store member group
+	err = im.StoreMemberGroup(groupMember, logger)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// store member group
+func (im *Manager) StoreMemberGroup(groupMember *GroupMember, logger *logger.Logger) error {
+	key := im.MemberGroupKey(groupMember)
+	// value is empty
+	value := []byte{}
+	// log group member key and value
+	logger.Infof("StoreMemberGroup,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
 	return im.imStore.Set(key, value)
 }
 
@@ -70,6 +101,23 @@ func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Lo
 	key := im.GroupMemberKey(groupMember)
 	// log group member key
 	logger.Infof("DeleteGroupMember,key:%s", iotago.EncodeHex(key))
+	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	// delete member group as well
+	err = im.DeleteMemberGroup(groupMember, logger)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// delete member group
+func (im *Manager) DeleteMemberGroup(groupMember *GroupMember, logger *logger.Logger) error {
+	key := im.MemberGroupKey(groupMember)
+	// log group member key
+	logger.Infof("DeleteMemberGroup,key:%s", iotago.EncodeHex(key))
 	return im.imStore.Delete(key)
 }
 
@@ -92,6 +140,16 @@ func (im *Manager) GroupMemberKeyPrefix(groupId [GroupIdLen]byte) []byte {
 	key[index] = ImStoreKeyPrefixGroupMember
 	index++
 	copy(key[index:], groupId[:])
+	return key
+}
+
+// member group key prefix
+func (im *Manager) MemberGroupKeyPrefix(address string) []byte {
+	key := make([]byte, 1+Sha256HashLen)
+	index := 0
+	key[index] = ImStoreKeyPrefixMemberGroup
+	index++
+	copy(key[index:], Sha256Hash(address))
 	return key
 }
 
@@ -124,6 +182,20 @@ func (im *Manager) GetGroupMembers(groupId [GroupIdLen]byte) ([]*GroupMember, er
 	return groupMembers, nil
 }
 
+// get all member groups, return group ids in string
+func (im *Manager) GetMemberGroups(address string) ([]string, error) {
+	prefix := im.MemberGroupKeyPrefix(address)
+	groupIds := make([]string, 0)
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		groupId := key[1+Sha256HashLen:]
+		groupIds = append(groupIds, iotago.EncodeHex(groupId))
+		return true
+	})
+	if err != nil {
+		return nil, err
+	}
+	return groupIds, nil
+}
 func (im *Manager) GetGroupMemberAddressesFromGroupId(groupId [GroupIdLen]byte, logger *logger.Logger) ([]string, error) {
 	groupMembers, err := im.GetGroupMembers(groupId)
 	if err != nil {
