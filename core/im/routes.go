@@ -355,4 +355,19 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
+
+	// get public key of one address
+	e.GET("/getaddresspublickey", func(c echo.Context) error {
+		address, err := parseAddressQueryParam(c)
+		if err != nil {
+			return err
+		}
+		CoreComponent.LogInfof("get address public key from address:%s", address)
+		publicKeyBytes, err := deps.IMManager.GetAddressPublicKey(ctx, client, address)
+		if err != nil {
+			return err
+		}
+		publicKey := iotago.EncodeHex(publicKeyBytes)
+		return httpserver.JSONResponse(c, http.StatusOK, publicKey)
+	})
 }
