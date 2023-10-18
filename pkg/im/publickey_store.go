@@ -56,8 +56,8 @@ var shimmerMainNet = IotaNodeInfo{
 	InxMqttEndpoint:    "wss://test.api.iotacat.com/api/iotacatmqtt/v1",
 }
 
-func GetTransactionHistory(ctx context.Context, node IotaNodeInfo, bech32Address string) (string, error) {
-	url := fmt.Sprintf("%s/transactionhistory/%s/%s?pageSize=1000&sort=newest", node.ExplorerApiUrl, node.ExplorerApiNetwork, bech32Address)
+func GetTransactionHistory(ctx context.Context, node IotaNodeInfo, bech32Address string, logger *logger.Logger) (string, error) {
+	url := fmt.Sprintf("%s/transactionhistory/%s/%s", node.ExplorerApiUrl, node.ExplorerApiNetwork, bech32Address)
 	params := map[string]string{
 		"pageSize": "1000",
 		"sort":     "newest",
@@ -125,7 +125,7 @@ func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.C
 	}
 
 	// if not found, get from http request
-	outputIdHex, err := GetTransactionHistory(ctx, shimmerMainNet, address)
+	outputIdHex, err := GetTransactionHistory(ctx, shimmerMainNet, address, logger)
 	if err != nil {
 		return nil, err
 	}
