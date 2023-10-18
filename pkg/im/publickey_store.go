@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hive.go/core/logger"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
@@ -109,17 +110,20 @@ func GetPublicKeyViaTransactionId(ctx context.Context, node IotaNodeInfo, transa
 	return "", nil
 }
 
-func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.Client, address string) ([]byte, error) {
+func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.Client, address string, skipStorage bool, logger *logger.Logger) ([]byte, error) {
 	// first get from store
-	addressPublicKeyWrapped, err := im.ReadOnePublicKey(address)
-	if err != nil {
-		if err != kvstore.ErrKeyNotFound {
-			return nil, err
+	if !skipStorage {
+		addressPublicKeyWrapped, err := im.ReadOnePublicKey(address)
+		if err != nil {
+			if err != kvstore.ErrKeyNotFound {
+				return nil, err
+			}
+		}
+		if addressPublicKeyWrapped != nil {
+			return addressPublicKeyWrapped, nil
 		}
 	}
-	if addressPublicKeyWrapped != nil {
-		return addressPublicKeyWrapped, nil
-	}
+
 	// if not found, get from http request
 	outputIdHex, err := GetTransactionHistory(ctx, shimmerMainNet, address)
 	if err != nil {
@@ -128,6 +132,8 @@ func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.C
 	if outputIdHex == "" {
 		return nil, nil
 	}
+	// log output id
+	logger.Infof("GetAddressPublicKey, address:%s, TransactionoutputIdHex:%s", address, outputIdHex)
 	outputId, err := iotago.OutputIDFromHex(outputIdHex)
 	if err != nil {
 		return nil, err
@@ -137,6 +143,8 @@ func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.C
 		return nil, err
 	}
 	transactionId := metaResponse.TransactionID
+	// log transaction id
+	logger.Infof("GetAddressPublicKey, address:%s, transactionId:%s", address, transactionId)
 	publicKey, err := GetPublicKeyViaTransactionId(ctx, shimmerMainNet, transactionId)
 	if err != nil {
 		return nil, err

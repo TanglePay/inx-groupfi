@@ -82,7 +82,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			PublicKey:    "",
 		}
 		// get public key from address
-		publicKeyBytes, err := deps.IMManager.GetAddressPublicKey(ctx, client, address)
+		publicKeyBytes, err := deps.IMManager.GetAddressPublicKey(ctx, client, address, false, CoreComponent.Logger())
 		if err != nil {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... GetAddressPublicKey failed:%s", err)
@@ -363,7 +363,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			return err
 		}
 		CoreComponent.LogInfof("get address public key from address:%s", address)
-		publicKeyBytes, err := deps.IMManager.GetAddressPublicKey(ctx, client, address)
+		publicKeyBytes, err := deps.IMManager.GetAddressPublicKey(ctx, client, address, true, CoreComponent.Logger())
 		if err != nil {
 			return err
 		}
