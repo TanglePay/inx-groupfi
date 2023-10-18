@@ -17,6 +17,7 @@ import (
 var iotacatTagStr = "GROUPFIV2"
 var iotacatTag = []byte(iotacatTagStr)
 var iotacatTagHex = iotago.EncodeHex(iotacatTag)
+
 var iotacatsharedTagStr = "GROUPFISHAREDV2"
 var iotacatsharedTag = []byte(iotacatsharedTagStr)
 var iotacatsharedTagHex = iotago.EncodeHex(iotacatsharedTag)
@@ -330,7 +331,7 @@ func filterOutputForPush(output iotago.Output) (isMessage bool, senderAddressHas
 	}
 	tagPayload := tag.Tag
 
-	if !bytes.Equal(tagPayload, iotacatTag) && !bytes.Equal(tagPayload, iotacatsharedTag) {
+	if !bytes.Equal(tagPayload, iotacatTag) {
 		return false, nil, nil, nil
 	}
 	metaPayload := meta.Data
