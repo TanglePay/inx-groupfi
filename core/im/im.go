@@ -198,6 +198,28 @@ func getRawNFTsFromGroupId(c echo.Context) ([]*im.NFT, error) {
 	return deps.IMManager.GetRawNFTsFromGroupIdImpl(groupId, CoreComponent.Logger())
 }
 
+// get raw member in nfts from groupId
+func getRawMemberInNFTsFromGroupId(c echo.Context) ([]*im.NFT, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	var groupId32 [32]byte
+	copy(groupId32[:], groupId)
+	addresses, err := deps.IMManager.GetGroupMemberAddressesFromGroupId(groupId32, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	// map addresses to nfts, nft should be created with owner address only
+	nfts := make([]*im.NFT, len(addresses))
+	for i, address := range addresses {
+		nfts[i] = &im.NFT{
+			OwnerAddress: []byte(address),
+		}
+	}
+	return nfts, nil
+}
+
 // get nfts
 func getNFTsFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
 	nfts, err := getRawNFTsFromGroupId(c)
@@ -217,7 +239,7 @@ func getNFTsFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
 
 // getNFTsWithPublicKeyFromGroupId
 func getNFTsWithPublicKeyFromGroupId(c echo.Context, drainer *im.ItemDrainer) ([]*im.NFTResponse, error) {
-	nfts, err := getRawNFTsFromGroupId(c)
+	nfts, err := getRawMemberInNFTsFromGroupId(c)
 	if err != nil {
 		return nil, err
 	}
