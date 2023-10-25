@@ -161,13 +161,15 @@ func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) e
 
 	go func() {
 		// TODO change to actual group member
-		nfts, err := im.ReadNFTsFromGroupId(message.GroupId)
+		var groupId32 [GroupIdLen]byte
+		copy(groupId32[:], message.GroupId)
+		addresses, err := im.GetGroupMemberAddressesFromGroupId(groupId32, logger)
 		if err != nil {
 			logger.Errorf("ReadNFTsFromGroupId error %v", err)
 		}
-		for _, nft := range nfts {
+		for _, address := range addresses {
 			//log nft
-			err := im.storeInbox(nft.OwnerAddress, message, valuePayload, logger)
+			err := im.storeInbox([]byte(address), message, valuePayload, logger)
 			if err != nil {
 				logger.Errorf("storeInbox error %v", err)
 			}
