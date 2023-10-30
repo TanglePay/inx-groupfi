@@ -515,6 +515,58 @@ func getAddressMemberGroups(c echo.Context) ([]string, error) {
 	return groupIds, nil
 }
 
+// getGroupUserReputation
+func getGroupUserReputation(c echo.Context) ([]*GroupUserReputationResponse, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get group user reputation from groupId:%s", iotago.EncodeHex(groupId))
+	var groupId32 [32]byte
+	copy(groupId32[:], groupId)
+	reputations, err := deps.IMManager.GetGroupAllUsersReputation(groupId32, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get group user reputation from groupId:%s,found reputations:%d", iotago.EncodeHex(groupId), len(reputations))
+	reputationResponseArr := make([]*GroupUserReputationResponse, len(reputations))
+	for i, reputation := range reputations {
+		reputationResponseArr[i] = &GroupUserReputationResponse{
+			GroupId:           iotago.EncodeHex(reputation.GroupId[:]),
+			AddressSha256Hash: iotago.EncodeHex(reputation.AddrSha256Hash[:]),
+			Reputation:        reputation.Reputation,
+		}
+	}
+	return reputationResponseArr, nil
+}
+
+// get user group reputation
+func getUserGroupReputation(c echo.Context) (*GroupUserReputationResponse, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get user group reputation from groupId:%s,address:%s", iotago.EncodeHex(groupId), address)
+	var groupId32 [32]byte
+	copy(groupId32[:], groupId)
+
+	reputation, err := deps.IMManager.GetUserGroupReputation(groupId32, address, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get user group reputation from groupId:%s,address:%s,found reputation:%f", iotago.EncodeHex(groupId), address, reputation)
+	resp := &GroupUserReputationResponse{
+		GroupId:           iotago.EncodeHex(reputation.GroupId[:]),
+		AddressSha256Hash: iotago.EncodeHex(reputation.AddrSha256Hash[:]),
+		Reputation:        reputation.Reputation,
+	}
+	return resp, nil
+}
+
 // get all groups under renter
 func getGroupConfigsForRenter(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 	renderName, err := parseAttrNameQueryParam(c, "renderName")

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"sync"
@@ -173,4 +174,18 @@ func Uint16ToBytes(num uint16) []byte {
 // bytes to uint16
 func BytesToUint16(bytes []byte) uint16 {
 	return binary.BigEndian.Uint16(bytes)
+}
+
+// Float32ToBytes
+func Float32ToBytes(num float32) []byte {
+	bits := math.Float32bits(num)
+	bytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(bytes, bits)
+	return bytes
+}
+
+// BytesToFloat32
+func BytesToFloat32(bytes []byte) float32 {
+	bits := binary.BigEndian.Uint32(bytes)
+	return math.Float32frombits(bits)
 }

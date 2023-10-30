@@ -53,6 +53,10 @@ const (
 	ImStoreKeyPrefixGroupQualification byte = 27
 
 	ImStoreKeyPrefixMemberGroup byte = 28
+
+	ImStoreKeyPrefixGroupUserReputation byte = 29
+
+	ImStoreKeyPrefixUserGroupReputation byte = 30
 	// inbox messsage types
 	// plain text, new message
 	ImInboxMessageTypeNewMessage      byte = 1

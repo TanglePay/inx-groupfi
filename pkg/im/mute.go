@@ -78,6 +78,16 @@ func (im *Manager) UpdateGroupBlacklist(userMuteGroupMember *UserMuteGroupMember
 	if err != nil {
 		return err
 	}
+	// store user group reputation
+	userGroupReputation := NewUserGroupReputation(userMuteGroupMember.GroupId, userMuteGroupMember.MutedAddrSha256Hash, reputationScore)
+	err = im.StoreGroupUserReputation(userGroupReputation)
+	if err != nil {
+		return err
+	}
+	err = im.StoreUserGroupReputation(userGroupReputation)
+	if err != nil {
+		return err
+	}
 	// if reputation score < 60, add muted user to group blacklist
 	if reputationScore < 60 {
 		err = im.AddAddressToGroupBlacklist(userMuteGroupMember.MutedAddrSha256Hash, userMuteGroupMember.GroupId)

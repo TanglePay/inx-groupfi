@@ -61,6 +61,12 @@ const (
 
 	// get address member groups
 	RouteAddressMemberGroups = "/addressmembergroups"
+
+	// get group user reputation
+	RouteGroupUserReputation = "/groupuserreputation"
+
+	// get user group reputation
+	RouteUserGroupReputation = "/usergroupreputation"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -370,4 +376,23 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		publicKey := iotago.EncodeHex(publicKeyBytes)
 		return httpserver.JSONResponse(c, http.StatusOK, publicKey)
 	})
+
+	// get group user reputation
+	e.GET(RouteGroupUserReputation, func(c echo.Context) error {
+		resp, err := getGroupUserReputation(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// get user group reputation
+	e.GET(RouteUserGroupReputation, func(c echo.Context) error {
+		resp, err := getUserGroupReputation(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
 }
