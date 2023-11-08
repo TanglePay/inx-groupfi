@@ -96,6 +96,6 @@ func makeDrainerForMarkInit(ctx context.Context, nodeHTTPAPIClient *nodeclient.C
 			CoreComponent.LogWarnf("LedgerInit ... FilterMarkOutput failed")
 			return
 		}
-		deps.IMManager.HandleGroupMarkBasicOutputCreated(basicOutput, CoreComponent.Logger())
+		deps.IMManager.HandleGroupMarkBasicOutputConsumedAndCreated(nil, basicOutput, CoreComponent.Logger())
 	}, 100, 10, 200)
 }

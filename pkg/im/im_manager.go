@@ -175,6 +175,7 @@ func (im *Manager) LedgerIndex() iotago.MilestoneIndex {
 func (im *Manager) GetImStore() kvstore.KVStore {
 	return im.imStore
 }
+
 func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromListenning *DataFromListenning, logger *logger.Logger, isSkipUpdate bool) error {
 	// Lock the state to avoid anyone reading partial results while we apply the state
 	im.Lock()
@@ -222,15 +223,17 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	if err := im.deleteConsumedMessages(consumedMessage, logger); err != nil {
 		return err
 	}
-	if len(consumedMark) > 0 {
-		for _, mark := range consumedMark {
-			im.HandleGroupMarkBasicOutputConsumed(mark, logger)
-		}
+	// pair consumed mark with created mark, by address
+	outputPairMap := make(map[string]*OutputPair)
+	for _, mark := range consumedMark {
+		ProcessOutputToOutputPair(outputPairMap, mark, true)
 	}
-	if len(createdMark) > 0 {
-		for _, mark := range createdMark {
-			im.HandleGroupMarkBasicOutputCreated(mark, logger)
-		}
+	for _, mark := range createdMark {
+		ProcessOutputToOutputPair(outputPairMap, mark, false)
+	}
+	// for each outputPair, call HandleGroupMarkBasicOutputConsumedAndCreated
+	for _, outputPair := range outputPairMap {
+		im.HandleGroupMarkBasicOutputConsumedAndCreated(outputPair.ConsumedOutput, outputPair.CreatedOutput, logger)
 	}
 	if len(consumedMute) > 0 {
 		for _, mute := range consumedMute {

@@ -108,9 +108,16 @@ func (im *Manager) StoreGroupQualification(groupQualification *GroupQualificatio
 	}
 	if exists {
 		groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, GetCurrentEpochTimestamp())
-		err = im.StoreGroupMember(groupMember, logger)
+		isActuallyStored, err := im.StoreGroupMember(groupMember, logger)
 		if err != nil {
 			return err
+		}
+		// delete group shared if previous group member is actually stored
+		if isActuallyStored {
+			err = im.DeleteSharedFromGroupId(groupQualification.GroupId[:])
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -127,9 +134,16 @@ func (im *Manager) DeleteGroupQualification(groupQualification *GroupQualificati
 	}
 	// delete group member as well
 	groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, 0)
-	err = im.DeleteGroupMember(groupMember, logger)
+	isActuallyDeleted, err := im.DeleteGroupMember(groupMember, logger)
 	if err != nil {
 		return err
+	}
+	// delete group shared when previous group member is actually deleted
+	if isActuallyDeleted {
+		err = im.DeleteSharedFromGroupId(groupQualification.GroupId[:])
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }

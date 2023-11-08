@@ -120,7 +120,6 @@ func (im *Manager) storeNewNFTsDeleteConsumedNfts(createdNfts []*NFT, consumedNf
 				logger.Errorf("failed to decode groupId %s", groupId)
 				continue
 			}
-			im.DeleteSharedFromGroupId(groupIdBytes)
 			im.CalculateNumberOfGroupMembersWithPublicKey(groupIdBytes, logger)
 		}
 	}()

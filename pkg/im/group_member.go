@@ -65,25 +65,33 @@ func (im *Manager) GroupMemberKeyFromGroupIdAndAddressSha256Hash(groupId [GroupI
 }
 
 // store group member
-func (im *Manager) StoreGroupMember(groupMember *GroupMember, logger *logger.Logger) error {
+func (im *Manager) StoreGroupMember(groupMember *GroupMember, logger *logger.Logger) (bool, error) {
+	// check if group member exists
+	exists, err := im.GroupMemberExists(groupMember.GroupId, groupMember.Address)
+	if err != nil {
+		return false, err
+	}
+	isActuallyStored := !exists
 	key := im.GroupMemberKey(groupMember)
 	value := make([]byte, 4+len(groupMember.Address))
 	index := 0
 	binary.LittleEndian.PutUint32(value[index:], groupMember.Timestamp)
 	index += 4
 	copy(value[index:], groupMember.Address)
+
 	// log group member key and value
 	logger.Infof("StoreGroupMember,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
-	err := im.imStore.Set(key, value)
+	err = im.imStore.Set(key, value)
 	if err != nil {
-		return err
+		return isActuallyStored, err
 	}
 	// store member group
 	err = im.StoreMemberGroup(groupMember, logger)
 	if err != nil {
-		return err
+		return isActuallyStored, err
 	}
-	return nil
+
+	return isActuallyStored, nil
 }
 
 // store member group
@@ -97,20 +105,27 @@ func (im *Manager) StoreMemberGroup(groupMember *GroupMember, logger *logger.Log
 }
 
 // delete group member
-func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Logger) error {
+func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Logger) (bool, error) {
+	// check if group member exists
+	exists, err := im.GroupMemberExists(groupMember.GroupId, groupMember.Address)
+	isActuallyDeleted := exists
+	if err != nil {
+		return false, err
+	}
+
 	key := im.GroupMemberKey(groupMember)
 	// log group member key
 	logger.Infof("DeleteGroupMember,key:%s", iotago.EncodeHex(key))
-	err := im.imStore.Delete(key)
+	err = im.imStore.Delete(key)
 	if err != nil {
-		return err
+		return isActuallyDeleted, err
 	}
 	// delete member group as well
 	err = im.DeleteMemberGroup(groupMember, logger)
 	if err != nil {
-		return err
+		return isActuallyDeleted, err
 	}
-	return nil
+	return isActuallyDeleted, nil
 }
 
 // delete member group

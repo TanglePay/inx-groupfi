@@ -42,7 +42,7 @@ func (im *Manager) MarkKey(mark *Mark) []byte {
 }
 
 // store mark value = timestamp + address
-func (im *Manager) StoreMark(mark *Mark, logger *logger.Logger) error {
+func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.Logger) error {
 	key := im.MarkKey(mark)
 	value := make([]byte, 4+len(mark.Address))
 	index := 0
@@ -63,16 +63,23 @@ func (im *Manager) StoreMark(mark *Mark, logger *logger.Logger) error {
 	}
 	if exists {
 		groupMember := NewGroupMember(mark.GroupId, mark.Address, GetCurrentEpochTimestamp())
-		err = im.StoreGroupMember(groupMember, logger)
+		isActuallyStored, err := im.StoreGroupMember(groupMember, logger)
 		if err != nil {
 			return err
+		}
+		// delete group shared if group member is actually stored and is actually marked
+		if isActuallyStored && isActuallyMarked {
+			err = im.DeleteSharedFromGroupId(groupQualification.GroupId[:])
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
 // delete mark
-func (im *Manager) DeleteMark(mark *Mark, logger *logger.Logger) error {
+func (im *Manager) DeleteMark(mark *Mark, isActuallyUnmarked bool, logger *logger.Logger) error {
 	key := im.MarkKey(mark)
 	// log mark key
 	logger.Infof("DeleteMark,key:%s", iotago.EncodeHex(key))
@@ -82,10 +89,18 @@ func (im *Manager) DeleteMark(mark *Mark, logger *logger.Logger) error {
 	}
 	// delete group member as well
 	groupMember := NewGroupMember(mark.GroupId, mark.Address, 0)
-	err = im.DeleteGroupMember(groupMember, logger)
+	isActuallyDeleted, err := im.DeleteGroupMember(groupMember, logger)
 	if err != nil {
 		return err
 	}
+	// delete group shared when previous group member is actually deleted and is actually unmarked
+	if isActuallyDeleted && isActuallyUnmarked {
+		err = im.DeleteSharedFromGroupId(mark.GroupId[:])
+		if err != nil {
+			return err
+		}
+	}
+
 	return nil
 }
 
@@ -170,46 +185,86 @@ func (im *Manager) GetMarksFromBasicOutput(output *iotago.BasicOutput) ([]*Mark,
 }
 
 // handle group mark basic output created
-func (im *Manager) HandleGroupMarkBasicOutputCreated(output *iotago.BasicOutput, logger *logger.Logger) {
+func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(consumedOutput *iotago.BasicOutput, createdOutput *iotago.BasicOutput, logger *logger.Logger) {
+
 	// log entering
-	logger.Infof("HandleGroupMarkBasicOutputCreated ...")
-	marks, err := im.GetMarksFromBasicOutput(output)
-	if err != nil {
-		// log error
-		logger.Infof("HandleGroupMarkBasicOutputCreated ... err:%s", err.Error())
-		return
-	}
-	if len(marks) == 0 {
-		// log zero marks
-		logger.Infof("HandleGroupMarkBasicOutputCreated ... zero marks")
-		return
-	}
-	for _, mark := range marks {
-		err := im.StoreMark(mark, logger)
+	logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ...")
+	var consumedMarks []*Mark
+	var createdMarks []*Mark
+	if consumedOutput != nil {
+		_consumedMarks, err := im.GetMarksFromBasicOutput(consumedOutput)
 		if err != nil {
 			// log error
-			logger.Infof("HandleGroupMarkBasicOutputCreated ... err:%s", err.Error())
+			logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
+			return
+		}
+		consumedMarks = _consumedMarks
+	}
+	if createdOutput != nil {
+		_createdMarks, err := im.GetMarksFromBasicOutput(createdOutput)
+		if err != nil {
+			// log error
+			logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
+			return
+		}
+		createdMarks = _createdMarks
+	}
+	// map consumed marks to map[GroupId]true
+	consumedMarksMap := make(map[[GroupIdLen]byte]bool)
+	for _, mark := range consumedMarks {
+		consumedMarksMap[mark.GroupId] = true
+	}
+	// map created marks to map[GroupId]true
+	createdMarksMap := make(map[[GroupIdLen]byte]bool)
+	for _, mark := range createdMarks {
+		createdMarksMap[mark.GroupId] = true
+	}
+	// filter created marks out of consumed marks
+	// loop through consumed marks, if groupId is in created marks, delete it
+	var filteredConsumedMarks []*Mark
+	for _, mark := range consumedMarks {
+		_, ok := createdMarksMap[mark.GroupId]
+		if ok {
+			continue
+		}
+		filteredConsumedMarks = append(filteredConsumedMarks, mark)
+	}
+	// filter consumed marks out of created marks
+	// loop through created marks, if groupId is in consumed marks, delete it
+	var filteredCreatedMarks []*Mark
+	for _, mark := range createdMarks {
+		_, ok := consumedMarksMap[mark.GroupId]
+		if ok {
+			continue
+		}
+		filteredCreatedMarks = append(filteredCreatedMarks, mark)
+	}
+	// store filtered consumed marks
+
+	for _, mark := range filteredConsumedMarks {
+		err := im.DeleteMark(mark, true, logger)
+		if err != nil {
+			// log error
+			logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
 			return
 		}
 	}
-}
-
-// handle group mark basic output consumed
-func (im *Manager) HandleGroupMarkBasicOutputConsumed(output *iotago.BasicOutput, logger *logger.Logger) {
-	// log entering
-	logger.Infof("HandleGroupMarkBasicOutputConsumed ...")
-	marks, err := im.GetMarksFromBasicOutput(output)
-	if err != nil {
-		// log error
-		logger.Infof("HandleGroupMarkBasicOutputConsumed ... err:%s", err.Error())
-		return
-	}
-	if len(marks) == 0 {
-		return
-	}
-	for _, mark := range marks {
-		err := im.DeleteMark(mark, logger)
+	// store filtered created marks
+	for _, mark := range filteredCreatedMarks {
+		err := im.StoreMark(mark, true, logger)
 		if err != nil {
+			// log error
+			logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
+			return
+		}
+	}
+
+	// store filtered created marks
+	for _, mark := range filteredCreatedMarks {
+		err := im.StoreMark(mark, true, logger)
+		if err != nil {
+			// log error
+			logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
 			return
 		}
 	}

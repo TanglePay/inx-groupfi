@@ -12,6 +12,8 @@ import (
 	"net/url"
 	"sync"
 	"time"
+
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
@@ -188,4 +190,24 @@ func Float32ToBytes(num float32) []byte {
 func BytesToFloat32(bytes []byte) float32 {
 	bits := binary.BigEndian.Uint32(bytes)
 	return math.Float32frombits(bits)
+}
+
+type OutputPair struct {
+	CreatedOutput  *iotago.BasicOutput
+	ConsumedOutput *iotago.BasicOutput
+}
+
+// process output to OutputPair map
+func ProcessOutputToOutputPair(pair map[string]*OutputPair, output *iotago.BasicOutput, isConsumed bool) {
+	unlockConditionSet := output.UnlockConditionSet()
+	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
+	// if address not in map, add new pair
+	if _, ok := pair[ownerAddress]; !ok {
+		pair[ownerAddress] = &OutputPair{}
+	}
+	if isConsumed {
+		pair[ownerAddress].ConsumedOutput = output
+	} else {
+		pair[ownerAddress].CreatedOutput = output
+	}
 }
