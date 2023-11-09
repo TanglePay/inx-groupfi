@@ -13,6 +13,8 @@ type GroupQualification struct {
 
 	Address string
 
+	NFTId [Sha256HashLen]byte
+
 	// group name
 	GroupName string
 
@@ -24,25 +26,41 @@ type GroupQualification struct {
 }
 
 // newGroupQualification creates a new GroupQualification.
-func NewGroupQualification(groupId [GroupIdLen]byte, address string, groupName string, qualificationType int, ipfsLink string) *GroupQualification {
+func NewGroupQualification(groupId [GroupIdLen]byte, address string, nftId [Sha256HashLen]byte,
+	groupName string, qualificationType int, ipfsLink string) *GroupQualification {
 	return &GroupQualification{
 		GroupId:          groupId,
 		Address:          address,
+		NFTId:            nftId,
 		GroupName:        groupName,
 		GroupQualifyType: qualificationType,
 		IpfsLink:         ipfsLink,
 	}
 }
 
-// key = prefix + groupid + addressSha256Hash. value = qualification type + len(address) + address + len(groupname) + groupname + len(ipfslink) + ipfslink
+// key = prefix + groupid + addressSha256Hash + nftId. value = qualification type + len(address) + address + len(groupname) + groupname + len(ipfslink) + ipfslink
 func (im *Manager) GroupQualificationKey(groupQualification *GroupQualification) []byte {
-	key := make([]byte, 1+GroupIdLen+Sha256HashLen)
+	key := make([]byte, 1+GroupIdLen+Sha256HashLen+Sha256HashLen)
 	index := 0
 	key[index] = ImStoreKeyPrefixGroupQualification
 	index++
 	copy(key[index:], groupQualification.GroupId[:])
 	index += GroupIdLen
 	copy(key[index:], Sha256Hash(groupQualification.Address))
+	index += Sha256HashLen
+	copy(key[index:], groupQualification.NFTId[:])
+	return key
+}
+
+// prefix = prefix + groupid + addressSha256Hash
+func (im *Manager) GroupQualificationKeyPrefixForExist(groupId [GroupIdLen]byte, addressSha256Hash [Sha256HashLen]byte) []byte {
+	key := make([]byte, 1+GroupIdLen+Sha256HashLen)
+	index := 0
+	key[index] = ImStoreKeyPrefixGroupQualification
+	index++
+	copy(key[index:], groupId[:])
+	index += GroupIdLen
+	copy(key[index:], addressSha256Hash[:])
 	return key
 }
 
@@ -61,6 +79,7 @@ func (im *Manager) GroupQualificationValue(groupQualification *GroupQualificatio
 // key and value to struct
 func (im *Manager) ParseGroupQualificationKeyAndValue(key []byte, value []byte) (*GroupQualification, error) {
 	groupId := key[1 : 1+GroupIdLen]
+	nftId := key[1+GroupIdLen+Sha256HashLen:]
 	idx := 0
 	qualificationType, err := ReadBytesWithUint16Len(value, &idx, 1)
 	if err != nil {
@@ -80,9 +99,12 @@ func (im *Manager) ParseGroupQualificationKeyAndValue(key []byte, value []byte) 
 	}
 	var groupId32 [GroupIdLen]byte
 	copy(groupId32[:], groupId)
+	var nftId32 [Sha256HashLen]byte
+	copy(nftId32[:], nftId)
 	groupQualification := &GroupQualification{
 		GroupId:          groupId32,
 		Address:          string(address),
+		NFTId:            nftId32,
 		GroupName:        string(groupName),
 		GroupQualifyType: int(qualificationType[0]),
 		IpfsLink:         string(ipfsLink),
@@ -132,26 +154,44 @@ func (im *Manager) DeleteGroupQualification(groupQualification *GroupQualificati
 	if err != nil {
 		return err
 	}
-	// delete group member as well
-	groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, 0)
-	isActuallyDeleted, err := im.DeleteGroupMember(groupMember, logger)
+	isQualify, err := im.GroupQualificationExists(groupQualification.GroupId, groupQualification.Address)
 	if err != nil {
 		return err
 	}
-	// delete group shared when previous group member is actually deleted
-	if isActuallyDeleted {
-		err = im.DeleteSharedFromGroupId(groupQualification.GroupId[:])
+	if !isQualify {
+		// delete group member as well
+		groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, 0)
+		isActuallyDeleted, err := im.DeleteGroupMember(groupMember, logger)
 		if err != nil {
 			return err
+		}
+		// delete group shared when previous group member is actually deleted
+		if isActuallyDeleted {
+			err = im.DeleteSharedFromGroupId(groupQualification.GroupId[:])
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
 // check if group qualification exists, input is group id and address
-func (im *Manager) GroupQualificationExists(groupQualification *GroupQualification) (bool, error) {
-	key := im.GroupQualificationKey(groupQualification)
-	return im.imStore.Has(key)
+func (im *Manager) GroupQualificationExists(groupId [GroupIdLen]byte, address string) (bool, error) {
+	addressHash := Sha256Hash(address)
+	var addressHash32 [Sha256HashLen]byte
+	copy(addressHash32[:], addressHash)
+	prefix := im.GroupQualificationKeyPrefixForExist(groupId, addressHash32)
+	// scan then count
+	count := 0
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		count++
+		return true
+	})
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }
 
 // get prefix from group id

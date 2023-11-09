@@ -78,7 +78,9 @@ func (im *Manager) storeSingleNFT(nft *NFT, logger *logger.Logger) error {
 func (im *Manager) GetQualificationFromNFT(nft *NFT) (*GroupQualification, error) {
 	var groupId32 [GroupIdLen]byte
 	copy(groupId32[:], nft.GroupId)
-	qualification := NewGroupQualification(groupId32, string(nft.OwnerAddress), nft.GroupName, nft.GroupQualifyType, nft.IpfsLink)
+	var nftId32 [Sha256HashLen]byte
+	copy(nftId32[:], nft.NFTId)
+	qualification := NewGroupQualification(groupId32, string(nft.OwnerAddress), nftId32, nft.GroupName, nft.GroupQualifyType, nft.IpfsLink)
 	return qualification, nil
 }
 

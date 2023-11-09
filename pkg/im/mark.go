@@ -56,8 +56,7 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 		return err
 	}
 	// check if group qualification exists, if so, store group member
-	groupQualification := NewGroupQualification(mark.GroupId, mark.Address, "", 0, "")
-	exists, err := im.GroupQualificationExists(groupQualification)
+	exists, err := im.GroupQualificationExists(mark.GroupId, mark.Address)
 	if err != nil {
 		return err
 	}
@@ -69,7 +68,7 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 		}
 		// delete group shared if group member is actually stored and is actually marked
 		if isActuallyStored && isActuallyMarked {
-			err = im.DeleteSharedFromGroupId(groupQualification.GroupId[:])
+			err = im.DeleteSharedFromGroupId(mark.GroupId[:])
 			if err != nil {
 				return err
 			}

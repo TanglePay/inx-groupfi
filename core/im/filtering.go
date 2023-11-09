@@ -234,7 +234,7 @@ func handleSmrAmount(smrAmount uint64, iotaOutput iotago.Output, outputId []byte
 			smrTotal.Sub(smrAmountBig)
 		}
 		// handle whale eligibility
-		handleTokenWhaleEligibilityFromAddressGivenTotalAmount(im.ImTokenTypeSMR, ownerAddress, smrTotal.Get(), deps.IMManager, CoreComponent.Logger())
+		defer handleTokenWhaleEligibilityFromAddressGivenTotalAmount(im.ImTokenTypeSMR, ownerAddress, smrTotal.Get(), deps.IMManager, CoreComponent.Logger())
 	}
 
 	smrAmountText := smrAmountBig.Text(10)
