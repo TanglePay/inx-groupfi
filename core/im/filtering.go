@@ -23,14 +23,14 @@ var iotacatsharedTagStr = "GROUPFISHAREDV2"
 var iotacatsharedTag = []byte(iotacatsharedTagStr)
 var iotacatsharedTagHex = iotago.EncodeHex(iotacatsharedTag)
 
-func nftFromINXLedgerOutput(output *inx.LedgerOutput, log *logger.Logger) *im.NFT {
+func nftFromINXLedgerOutput(output *inx.LedgerOutput, log *logger.Logger) []*im.NFT {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil
 	}
 	return nftFromINXOutput(iotaOutput, output.OutputId.Id, output.MilestoneIndexBooked, output.MilestoneTimestampBooked, log)
 }
-func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint32, milestoneTimestamp uint32, log *logger.Logger) *im.NFT {
+func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint32, milestoneTimestamp uint32, log *logger.Logger) []*im.NFT {
 
 	if iotaOutput.Type() != iotago.OutputNFT {
 		return nil
@@ -88,23 +88,29 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 		milestoneTimestamp,
 	)
 
-	groupId, groupName := im.ChainNameAndCollectionIdToGroupIdAndGroupName("smr", collectionId)
-	if groupId == nil || groupName == "" {
+	pairs := im.ChainNameAndCollectionIdToGroupIdAndGroupNamePairs("smr", collectionId)
+	if len(pairs) == 0 {
 		return nil
 	}
 	unlockConditionSet := nftOutput.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
-	// log groupId, ownerAddress, nftId, milestone, milestoneTimestamp, outputid
-	CoreComponent.LogInfof("Found NFT output,groupId:%s,ownerAddress:%s,nftId:%s,milestoneIndex:%d,milestoneTimestamp:%d, outputId:%s",
-		iotago.EncodeHex(groupId),
-		ownerAddress,
-		iotago.EncodeHex(nftId),
-		milestone,
-		milestoneTimestamp,
-		iotago.EncodeHex(outputId),
-	)
-
-	return im.NewNFT(groupId, ownerAddress, nftId, groupName, ipfsLink, milestone, milestoneTimestamp)
+	var nfts []*im.NFT
+	for _, pair := range pairs {
+		groupId := pair.GroupId
+		groupName := pair.GroupName
+		// log groupId, ownerAddress, nftId, milestone, milestoneTimestamp, outputid
+		CoreComponent.LogInfof("Found NFT output,groupId:%s,ownerAddress:%s,nftId:%s,milestoneIndex:%d,milestoneTimestamp:%d, outputId:%s",
+			iotago.EncodeHex(groupId),
+			ownerAddress,
+			iotago.EncodeHex(nftId),
+			milestone,
+			milestoneTimestamp,
+			iotago.EncodeHex(outputId),
+		)
+		nft := im.NewNFT(groupId, ownerAddress, nftId, groupName, ipfsLink, milestone, milestoneTimestamp)
+		nfts = append(nfts, nft)
+	}
+	return nfts
 }
 
 // filterNFTOutput
@@ -390,9 +396,9 @@ func fetchNextNFTs(ctx context.Context, client *nodeclient.Client, indexerClient
 		if err != nil {
 			return nil, nil, err
 		}
-		nft := nftFromINXOutput(output, outputId, milestoneIndex, milestoneTimestamp, log)
-		if nft != nil {
-			nfts = append(nfts, nft)
+		nftList := nftFromINXOutput(output, outputId, milestoneIndex, milestoneTimestamp, log)
+		if len(nftList) > 0 {
+			nfts = append(nfts, nftList...)
 		}
 	}
 	return nfts, offset, nil

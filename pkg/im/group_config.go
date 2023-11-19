@@ -20,10 +20,16 @@ const MessageTypePublic = 2
 const IcebergGroup = "iceberg"
 const IcebergCollectionConfigIssuerAddress = "smr1zqry6r4wlwr2jn4nymlkx0pzehm5fhkv492thya32u45f8fjftn3wkng2mp"
 
-func ChainNameAndCollectionIdToGroupIdAndGroupName(chainName string, collectionId string) ([]byte, string) {
+type GroupIdAndGroupNamePair struct {
+	GroupId   []byte
+	GroupName string
+}
+
+func ChainNameAndCollectionIdToGroupIdAndGroupNamePairs(chainName string, collectionId string) []*GroupIdAndGroupNamePair {
 	if (ConfigStoreChainNameAndQualifyTypeToGroupId[chainName] == nil) || (ConfigStoreChainNameAndQualifyTypeToGroupId[chainName]["nft"] == nil) {
-		return nil, ""
+		return nil
 	}
+	var res []*GroupIdAndGroupNamePair
 	for _, groupIdHex := range ConfigStoreChainNameAndQualifyTypeToGroupId[chainName]["nft"] {
 		if ConfigStoreGroupIdToGroupConfig[groupIdHex].CollectionIds == nil {
 			continue
@@ -32,13 +38,17 @@ func ChainNameAndCollectionIdToGroupIdAndGroupName(chainName string, collectionI
 			if collectionIdInGroupConfig == collectionId {
 				groupId, err := iotago.DecodeHex(groupIdHex)
 				if err != nil {
-					return nil, ""
+					return nil
 				}
-				return groupId, ConfigStoreGroupIdToGroupConfig[groupIdHex].GroupName
+				res = append(res, &GroupIdAndGroupNamePair{
+					GroupId:   groupId,
+					GroupName: ConfigStoreGroupIdToGroupConfig[groupIdHex].GroupName,
+				})
+				break
 			}
 		}
 	}
-	return nil, ""
+	return res
 }
 
 func sortAndSha256Map(m map[string]string) []byte {

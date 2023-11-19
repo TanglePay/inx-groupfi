@@ -42,9 +42,9 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if o != nil {
 				createdMessage = append(createdMessage, o)
 			}
-			nft := nftFromINXLedgerOutput(output, CoreComponent.Logger())
-			if nft != nil {
-				createdNft = append(createdNft, nft)
+			nfts := nftFromINXLedgerOutput(output, CoreComponent.Logger())
+			if len(nfts) > 0 {
+				createdNft = append(createdNft, nfts...)
 			}
 			shared := sharedOutputFromINXLedgerOutput(output)
 			if shared != nil {
@@ -79,9 +79,9 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if shared != nil {
 				consumedShared = append(consumedShared, shared)
 			}
-			nft := nftFromINXLedgerOutput(output, CoreComponent.Logger())
-			if nft != nil {
-				consumedNft = append(consumedNft, nft)
+			nfts := nftFromINXLedgerOutput(output, CoreComponent.Logger())
+			if len(nfts) > 0 {
+				consumedNft = append(consumedNft, nfts...)
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeConsumed)
 
