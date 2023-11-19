@@ -53,12 +53,9 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	if meta == nil {
 		return nil
 	}
-	nftIdHex := nftOutput.NFTID.ToHex()
-	nftId, err := iotago.DecodeHex(nftIdHex)
-	if err != nil {
-		log.Errorf("nftFromINXOutput failed:%s", err)
-		return nil
-	}
+
+	nftIdHex := iotago.EncodeHex(outputId)
+	nftId := outputId
 
 	metaMap := make(map[string]interface{})
 	err = json.Unmarshal(meta.Data, &metaMap)
