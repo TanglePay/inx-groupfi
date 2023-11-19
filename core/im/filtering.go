@@ -12,6 +12,7 @@ import (
 	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
+	"golang.org/x/crypto/blake2b"
 )
 
 var iotacatTagStr = "GROUPFIV3"
@@ -54,8 +55,18 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 		return nil
 	}
 
-	nftIdHex := iotago.EncodeHex(outputId)
-	nftId := outputId
+	var nftIdHex string
+	if nftOutput.NFTID.Empty() {
+		outputIdHash := blake2b.Sum256(outputId)
+		nftIdHex = iotago.EncodeHex(outputIdHash[:])
+	} else {
+		nftIdHex = nftOutput.NFTID.ToHex()
+	}
+	nftId, err := iotago.DecodeHex(nftIdHex)
+	if err != nil {
+		log.Errorf("nftFromINXOutput failed:%s", err)
+		return nil
+	}
 
 	metaMap := make(map[string]interface{})
 	err = json.Unmarshal(meta.Data, &metaMap)

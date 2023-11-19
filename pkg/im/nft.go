@@ -50,6 +50,7 @@ func NewNFTForToken(groupId []byte, ownerAddress string, nftId []byte, groupName
 func (n *NFT) GetGroupIdStr() string {
 	return iotago.EncodeHex(n.GroupId)
 }
+
 func (n *NFT) GetAddressStr() string {
 	return iotago.EncodeHex(n.OwnerAddress)
 }
