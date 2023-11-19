@@ -152,7 +152,9 @@ func (im *Manager) HandleGroupConfigRawContent(contentRaw []byte, logger *logger
 		}
 		logger.Infof("HandleGroupNFTOutputCreated ... messageGroupMeta:%s", jsonStr)
 		im.LogConfigStoreGroupIdToGroupConfig(logger)
-		err = im.StoreOneGroupConfig(&messageGroupMeta)
+		// clone messageGroupMeta
+		messageGroupMetaClone := messageGroupMeta
+		err = im.StoreOneGroupConfig(&messageGroupMetaClone)
 		if err != nil {
 			// log error then continue
 			logger.Infof("HandleGroupNFTOutputCreated ... StoreOneGroupConfig failed:%s", err)
