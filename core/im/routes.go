@@ -30,6 +30,10 @@ const (
 	RouteIMAddressGroupIds = "/addressgroupids"
 	// address group details
 	RouteIMAddressGroupDetails = "/addressgroupdetails"
+
+	// address qualified group configs
+	RouteIMAddressQualifiedGroupConfigs = "/addressqualifiedgroupconfigs"
+
 	// consolidation for message
 	RouteImConsolidationForMessage = "/consolidation/message"
 	// consolidation for shared
@@ -255,6 +259,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, groupIds)
 	})
 
+	//addressqualifiedgroupconfigs
+	e.GET(RouteIMAddressQualifiedGroupConfigs, func(c echo.Context) error {
+		groupConfigs, err := getQualifiedGroupConfigsFromAddress(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, groupConfigs)
+	})
 	//RouteIMAddressGroupDetails
 	e.GET(RouteIMAddressGroupDetails, func(c echo.Context) error {
 		resp, err := getAddressGroupDetails(c)

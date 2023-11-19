@@ -53,8 +53,12 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	if meta == nil {
 		return nil
 	}
-	//nftId := nftOutput.NFTID
-	nftId := im.Sha256HashBytes(meta.Data)
+	nftIdHex := nftOutput.NFTID.ToHex()
+	nftId, err := iotago.DecodeHex(nftIdHex)
+	if err != nil {
+		log.Errorf("nftFromINXOutput failed:%s", err)
+		return nil
+	}
 
 	metaMap := make(map[string]interface{})
 	err = json.Unmarshal(meta.Data, &metaMap)
@@ -63,16 +67,20 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 		return nil
 	}
 	ipfsLink := metaMap["uri"].(string)
-
-	issuerAddress := issuer.Address.Bech32(iotago.PrefixShimmer)
+	if issuer.Address.Type() != iotago.AddressNFT {
+		return nil
+	}
+	nftAddress := issuer.Address.(*iotago.NFTAddress)
+	collectionId := nftAddress.NFTID().ToHex()
 	// log
-	CoreComponent.LogInfof("Found NFT output,issuer:%s，milestoneIndex:%d,milestoneTimestamp:%d",
-		issuerAddress,
+	CoreComponent.LogInfof("Found NFT output, nftId:%s,collectionId:%s，milestoneIndex:%d,milestoneTimestamp:%d",
+		nftIdHex,
+		collectionId,
 		milestone,
 		milestoneTimestamp,
 	)
 
-	groupId, groupName := im.IssuerBech32AddressToGroupIdAndGroupName(issuerAddress)
+	groupId, groupName := im.ChainNameAndCollectionIdToGroupIdAndGroupName("smr", collectionId)
 	if groupId == nil || groupName == "" {
 		return nil
 	}
@@ -89,38 +97,6 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	)
 
 	return im.NewNFT(groupId, ownerAddress, nftId, groupName, ipfsLink, milestone, milestoneTimestamp)
-}
-
-// filter nft INXLedgerOutput based on a set of issuer address
-func filterNFTINXLedgerOutputViaIssuerAddress(output *inx.LedgerOutput, issuerBech32AddressMap map[string]bool) (isNFT bool, issuerAddress string, nft *iotago.NFTOutput) {
-	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
-	if err != nil {
-		return false, "", nil
-	}
-	return filterNFTOutputViaIssuerAddress(iotaOutput, issuerBech32AddressMap)
-}
-
-// filter nft output based on a set of issuer address
-func filterNFTOutputViaIssuerAddress(output iotago.Output, issuerBech32AddressMap map[string]bool) (isNFT bool, issuerAddress string, nft *iotago.NFTOutput) {
-	// call filterNFTOutput
-	isNFT, nftOutput := filterNFTOutput(output)
-	if !isNFT {
-		return false, "", nil
-	}
-	featureSet, err := nftOutput.ImmutableFeatures.Set()
-	if err != nil {
-		return false, "", nil
-	}
-	issuer := featureSet.IssuerFeature()
-	if issuer == nil {
-		return false, "", nil
-	}
-	issuerAddress = issuer.Address.Bech32(iotago.PrefixShimmer)
-	_, ok := issuerBech32AddressMap[issuerAddress]
-	if !ok {
-		return false, "", nil
-	}
-	return true, issuerAddress, nftOutput
 }
 
 // filterNFTOutput

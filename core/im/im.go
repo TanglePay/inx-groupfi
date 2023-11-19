@@ -252,6 +252,7 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	groupIdHex := iotago.EncodeHex(groupId)
 	CoreComponent.LogInfof("get shared from group:%s", groupId)
 	var groupId32 [32]byte
 	copy(groupId32[:], groupId)
@@ -267,8 +268,11 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 	CoreComponent.LogInfof("get shared from group:%s,group memberCt:%d,public ct:%d,private ct:%d", iotago.EncodeHex(groupId), memberCt, publicCt, privateCt)
 	// group is forced to be public if there are more than 100 members, or public votes are more than private votes
 	if memberCt > 100 || publicCt > privateCt {
+		deps.IMManager.AddGroupIdToPublicGroupIds(groupIdHex)
 		// throw http error with code 901
 		return nil, echo.NewHTTPError(901, "adjusted to be public")
+	} else {
+		deps.IMManager.RemoveGroupIdFromPublicGroupIds(groupIdHex)
 	}
 	shared, err := deps.IMManager.ReadSharedFromGroupId(groupId)
 	if err != nil {
@@ -316,6 +320,29 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 		groupIdStrArr[i] = iotago.EncodeHex(groupId)
 	}
 	return groupIdStrArr, nil
+}
+
+// getQualifiedGroupConfigsFromAddress
+func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
+	groupIdHexList, err := getGroupIdsFromAddress(c)
+	if err != nil {
+		return nil, err
+	}
+	publicGroupIds := deps.IMManager.GetAllPublicGroupIds()
+	// append public groupIds to groupIdHexList
+	groupIdHexList = append(groupIdHexList, publicGroupIds...)
+	// loop groupIdHexList
+	var groupConfigs []*im.MessageGroupMetaJSON
+	for _, groupIdHex := range groupIdHexList {
+		config := deps.IMManager.GroupIdToGroupConfig(groupIdHex)
+		// if config is nil, continue
+		if config == nil {
+			continue
+		}
+		// if config is not nil, append to groupConfigs
+		groupConfigs = append(groupConfigs, config)
+	}
+	return groupConfigs, nil
 }
 
 // getAddressGroupDetails
