@@ -143,15 +143,7 @@ func (im *Manager) HandleGroupConfigRawContent(contentRaw []byte, logger *logger
 	}
 	// store all group config
 	for _, messageGroupMeta := range messageGroupMetaList {
-		// log messageGroupMeta
-		jsonStr, err := json.Marshal(messageGroupMeta)
-		if err != nil {
-			// log error then continue
-			logger.Infof("HandleGroupNFTOutputCreated ... json.Marshal failed:%s", err)
-			continue
-		}
-		logger.Infof("HandleGroupNFTOutputCreated ... messageGroupMeta:%s", jsonStr)
-		im.LogConfigStoreGroupIdToGroupConfig(logger)
+
 		// clone messageGroupMeta
 		messageGroupMetaClone := messageGroupMeta
 		err = im.StoreOneGroupConfig(&messageGroupMetaClone)
