@@ -329,8 +329,16 @@ func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMeta
 		return nil, err
 	}
 	publicGroupIds := deps.IMManager.GetAllPublicGroupIds()
+	hash := map[string]bool{}
+	for _, groupIdHex := range groupIdHexList {
+		hash[groupIdHex] = true
+	}
 	// append public groupIds to groupIdHexList
-	groupIdHexList = append(groupIdHexList, publicGroupIds...)
+	for _, groupIdHex := range publicGroupIds {
+		if _, ok := hash[groupIdHex]; !ok {
+			groupIdHexList = append(groupIdHexList, groupIdHex)
+		}
+	}
 	// loop groupIdHexList
 	var groupConfigs []*im.MessageGroupMetaJSON
 	for _, groupIdHex := range groupIdHexList {
