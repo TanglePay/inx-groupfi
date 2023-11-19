@@ -261,7 +261,7 @@ func run() error {
 
 		// handle group config init
 		handleGroupConfigInit(ctx, nodeHTTPAPIClient, indexerClient)
-
+		return
 		// handle nft init
 		handleNFTInit(ctx, nodeHTTPAPIClient, indexerClient)
 

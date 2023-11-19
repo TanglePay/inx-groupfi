@@ -22,6 +22,7 @@ func handleGroupConfigInit(ctx context.Context, client *nodeclient.Client, index
 ]`
 	configRawContent := []byte(config)
 	deps.IMManager.HandleGroupConfigRawContent(configRawContent, CoreComponent.Logger())
+	deps.IMManager.LogConfigStoreGroupIdToGroupConfig(CoreComponent.Logger())
 	return
 	issuerBech32Address := im.IcebergCollectionConfigIssuerAddress
 	drainer := makeDrainerForGroupConfigNft(ctx, client, indexerClient)

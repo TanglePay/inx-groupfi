@@ -243,6 +243,18 @@ func (im *Manager) StoreOneGroupConfig(messageGroupMeta *MessageGroupMetaJSON) e
 	return nil
 }
 
+// log ConfigStoreGroupIdToGroupConfig
+func (im *Manager) LogConfigStoreGroupIdToGroupConfig(logger *logger.Logger) {
+	// loop ConfigStoreGroupIdToGroupConfig
+	for groupIdHex, groupMeta := range ConfigStoreGroupIdToGroupConfig {
+		jsonStr, err := json.Marshal(groupMeta)
+		if err != nil {
+			continue
+		}
+		logger.Infof("LogConfigStoreGroupIdToGroupConfig ... groupId:%s, groupMeta:%s", groupIdHex, jsonStr)
+	}
+}
+
 // read one group config (renterName, groupName)
 func (im *Manager) ReadOneGroupConfig(renterName string, groupName string) (*MessageGroupMetaJSON, error) {
 	// key = prefix + renterNameSha256 + groupNameSha256
