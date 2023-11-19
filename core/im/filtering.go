@@ -92,6 +92,19 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	if len(pairs) == 0 {
 		return nil
 	}
+	// log pairs, loop then concat groupId:%s,groupName:%s"
+	var logStr string
+	for _, pair := range pairs {
+		logStr += iotago.EncodeHex(pair.GroupId) + "," + pair.GroupName + ";"
+	}
+	CoreComponent.LogInfof("Found NFT output, nftId:%s,collectionId:%s，milestoneIndex:%d,milestoneTimestamp:%d,groupId,groupName:%s",
+		nftIdHex,
+		collectionId,
+		milestone,
+		milestoneTimestamp,
+		logStr,
+	)
+
 	unlockConditionSet := nftOutput.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
 	var nfts []*im.NFT
