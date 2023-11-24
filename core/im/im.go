@@ -322,8 +322,16 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 	return groupIdStrArr, nil
 }
 
+type GroupParam struct {
+	GroupName string `json:"groupName"`
+}
+
 // getQualifiedGroupConfigsFromAddress
 func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
+	var groups []GroupParam
+
+	c.Bind(&groups)
+
 	groupIdHexList, err := getGroupIdsFromAddress(c)
 	if err != nil {
 		return nil, err
@@ -339,12 +347,19 @@ func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMeta
 			groupIdHexList = append(groupIdHexList, groupIdHex)
 		}
 	}
+	groupNameMap := map[string]bool{}
+	for _, group := range groups {
+		groupNameMap[group.GroupName] = true
+	}
 	// loop groupIdHexList
 	var groupConfigs []*im.MessageGroupMetaJSON
 	for _, groupIdHex := range groupIdHexList {
 		config := deps.IMManager.GroupIdToGroupConfig(groupIdHex)
 		// if config is nil, continue
 		if config == nil {
+			continue
+		}
+		if (len(groups) > 0) && (!groupNameMap[config.GroupName]) {
 			continue
 		}
 		// if config is not nil, append to groupConfigs

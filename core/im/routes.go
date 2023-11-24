@@ -260,7 +260,8 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	})
 
 	//addressqualifiedgroupconfigs
-	e.GET(RouteIMAddressQualifiedGroupConfigs, func(c echo.Context) error {
+	// switch to using post
+	e.POST(RouteIMAddressQualifiedGroupConfigs, func(c echo.Context) error {
 		groupConfigs, err := getQualifiedGroupConfigsFromAddress(c)
 		if err != nil {
 			return err
