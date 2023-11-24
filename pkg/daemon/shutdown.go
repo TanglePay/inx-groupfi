@@ -2,7 +2,8 @@ package daemon
 
 const (
 	PriorityDisconnectINX = iota // no dependencies
-	PriorityCloseParticipationDatabase
-	PriorityStopParticipation
-	PriorityStopParticipationAPI
+	PriorityCloseIMDatabase
+	PriorityStopIM
+	PriorityStopIMAPI
+	PriorityStopIMMQTT
 )

@@ -1,1 +1,1 @@
-# inx-participation
+# inx-iotacat

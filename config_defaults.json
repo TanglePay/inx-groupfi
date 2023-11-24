@@ -25,7 +25,7 @@
     "maxConnectionAttempts": 30,
     "targetNetworkName": ""
   },
-  "participation": {
+  "im": {
     "db": {
       "engine": "rocksdb",
       "path": "database"
@@ -35,6 +35,11 @@
     "bindAddress": "localhost:9892",
     "advertiseAddress": "",
     "debugRequestLoggerEnabled": false
+  },
+  "mqtt": {
+    "websocket": {
+      "bindAddress": "localhost:1888"
+    }
   },
   "profiling": {
     "enabled": false,
