@@ -322,16 +322,25 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 	return groupIdStrArr, nil
 }
 
-type GroupParam struct {
+type IncludeData struct {
 	GroupName string `json:"groupName"`
+}
+
+type GroupParam struct {
+	Includes []IncludeData `json:"includes"`
 }
 
 // getQualifiedGroupConfigsFromAddress
 func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
-	var groups []GroupParam
-
-	c.Bind(&groups)
-
+	var groupParam GroupParam
+	hasGroupParam := true
+	err := c.Bind(&groupParam)
+	if err != nil {
+		hasGroupParam = false
+		// log error
+		CoreComponent.LogWarnf("getQualifiedGroupConfigsFromAddress ... Bind failed:%s", err)
+	}
+	CoreComponent.LogInfof("get qualified group configs from address:%s", groupParam)
 	groupIdHexList, err := getGroupIdsFromAddress(c)
 	if err != nil {
 		return nil, err
@@ -347,10 +356,13 @@ func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMeta
 			groupIdHexList = append(groupIdHexList, groupIdHex)
 		}
 	}
-	groupNameMap := map[string]bool{}
-	for _, group := range groups {
-		groupNameMap[group.GroupName] = true
+	includeGroupNameMap := map[string]bool{}
+	if hasGroupParam && (len(groupParam.Includes) > 0) {
+		for _, include := range groupParam.Includes {
+			includeGroupNameMap[include.GroupName] = true
+		}
 	}
+
 	// loop groupIdHexList
 	var groupConfigs []*im.MessageGroupMetaJSON
 	for _, groupIdHex := range groupIdHexList {
@@ -359,7 +371,7 @@ func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMeta
 		if config == nil {
 			continue
 		}
-		if (len(groups) > 0) && (!groupNameMap[config.GroupName]) {
+		if (len(includeGroupNameMap) > 0) && (!includeGroupNameMap[config.GroupName]) {
 			continue
 		}
 		// if config is not nil, append to groupConfigs
