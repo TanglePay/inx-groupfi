@@ -112,7 +112,7 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	)
 
 	unlockConditionSet := nftOutput.UnlockConditionSet()
-	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
+	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
 	var nfts []*im.NFT
 	for _, pair := range pairs {
 		groupId := pair.GroupId
