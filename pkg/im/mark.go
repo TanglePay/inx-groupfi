@@ -16,6 +16,7 @@ type Mark struct {
 	Address string
 	// group id
 	GroupId [GroupIdLen]byte
+
 	// timestamp
 	Timestamp [TimestampLen]byte
 }
@@ -61,7 +62,7 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 		return err
 	}
 	if exists {
-		groupMember := NewGroupMember(mark.GroupId, mark.Address, GetCurrentEpochTimestamp())
+		groupMember := NewGroupMember(mark.GroupId, mark.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
 		isActuallyStored, err := im.StoreGroupMember(groupMember, logger)
 		if err != nil {
 			return err
@@ -87,7 +88,7 @@ func (im *Manager) DeleteMark(mark *Mark, isActuallyUnmarked bool, logger *logge
 		return err
 	}
 	// delete group member as well
-	groupMember := NewGroupMember(mark.GroupId, mark.Address, 0)
+	groupMember := NewGroupMember(mark.GroupId, mark.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
 	isActuallyDeleted, err := im.DeleteGroupMember(groupMember, logger)
 	if err != nil {
 		return err

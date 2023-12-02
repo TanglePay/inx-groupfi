@@ -158,22 +158,17 @@ func makeMessageResponse(messages []*im.Message) *MessagesResponse {
 	}
 }
 
-// make inbox message response from inbox message
-func makeInboxMessageResponse(messages []*im.Message) *InboxMessagesResponse {
-	messageResponseArr := make([]*MessageResponse, len(messages))
+// make inbox items response from inbox items
+func makeInboxItemsResponse(items []im.InboxItem) *InboxItemsResponse {
+	itemJsonList := make([]im.InboxItemJson, len(items))
 	var token string
-	for i, message := range messages {
-		token = iotago.EncodeHex(message.Token)
-		messageResponseArr[i] = &MessageResponse{
-			OutputId:  iotago.EncodeHex(message.OutputId),
-			Timestamp: message.MileStoneTimestamp,
-			Token:     token,
-		}
-
+	for i, item := range items {
+		token = iotago.EncodeHex(item.GetToken())
+		itemJsonList[i] = item.Jsonable()
 	}
-	return &InboxMessagesResponse{
-		Messages: messageResponseArr,
-		Token:    token,
+	return &InboxItemsResponse{
+		Items: itemJsonList,
+		Token: token,
 	}
 }
 
@@ -645,7 +640,7 @@ func getGroupConfigsForRenter(c echo.Context) ([]*im.MessageGroupMetaJSON, error
 }
 
 // get inbox message
-func getInboxMessage(c echo.Context) (*InboxMessagesResponse, error) {
+func getInboxList(c echo.Context) (*InboxItemsResponse, error) {
 	// get address
 	address, err := parseAddressQueryParam(c)
 	if err != nil {
@@ -663,12 +658,12 @@ func getInboxMessage(c echo.Context) (*InboxMessagesResponse, error) {
 	}
 	CoreComponent.LogInfof("get inbox message from address:%s,token:%d", address, token)
 	// get inbox message
-	inboxMessage, err := deps.IMManager.ReadInboxMessage(im.Sha256Hash(address), token, size, CoreComponent.Logger())
+	inboxItems, err := deps.IMManager.ReadInbox(im.Sha256Hash(address), token, size, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
-	CoreComponent.LogInfof("get inbox message from address:%s,token:%d,found inboxMessage:%d", address, token, len(inboxMessage))
+	CoreComponent.LogInfof("get inbox items from address:%s,token:%d,found inbox items:%d", address, token, len(inboxItems))
 	// make inbox message response
-	inboxMessageResponse := makeInboxMessageResponse(inboxMessage)
-	return inboxMessageResponse, nil
+	inboxItemsResponse := makeInboxItemsResponse(inboxItems)
+	return inboxItemsResponse, nil
 }

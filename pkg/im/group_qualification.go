@@ -129,7 +129,7 @@ func (im *Manager) StoreGroupQualification(groupQualification *GroupQualificatio
 		return err
 	}
 	if exists {
-		groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, GetCurrentEpochTimestamp())
+		groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
 		isActuallyStored, err := im.StoreGroupMember(groupMember, logger)
 		if err != nil {
 			return err
@@ -160,7 +160,7 @@ func (im *Manager) DeleteGroupQualification(groupQualification *GroupQualificati
 	}
 	if !isQualify {
 		// delete group member as well
-		groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, 0)
+		groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
 		isActuallyDeleted, err := im.DeleteGroupMember(groupMember, logger)
 		if err != nil {
 			return err

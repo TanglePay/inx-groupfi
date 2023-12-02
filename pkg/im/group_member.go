@@ -3,6 +3,7 @@ package im
 import (
 	"encoding/binary"
 	"sort"
+	"time"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
@@ -15,16 +16,21 @@ type GroupMember struct {
 	GroupId [GroupIdLen]byte
 	// address
 	Address string
+
+	// milestone index
+	MilestoneIndex uint32
+
 	// timestamp
 	Timestamp uint32
 }
 
 // newGroupMember creates a new GroupMember.
-func NewGroupMember(groupId [GroupIdLen]byte, address string, timestamp uint32) *GroupMember {
+func NewGroupMember(groupId [GroupIdLen]byte, address string, milestoneIndex uint32, timestamp uint32) *GroupMember {
 	return &GroupMember{
-		GroupId:   groupId,
-		Address:   address,
-		Timestamp: timestamp,
+		GroupId:        groupId,
+		Address:        address,
+		MilestoneIndex: milestoneIndex,
+		Timestamp:      timestamp,
 	}
 }
 
@@ -91,6 +97,38 @@ func (im *Manager) StoreGroupMember(groupMember *GroupMember, logger *logger.Log
 		return isActuallyStored, err
 	}
 
+	if isActuallyStored && !IsIniting {
+		debouncer := GetDebouncer()
+		key := "EventGroupMemberChanged:" + iotago.EncodeHex(groupMember.GroupId[:])
+		debouncer.Debounce(key, 100*time.Millisecond, func() {
+			// log
+			logger.Infof("GroupMemberChangedEvent, debouncer.Debounce, key:%s", key)
+			// get group members
+			groupMembers, err := im.GetGroupMembers(groupMember.GroupId)
+			if err != nil {
+				logger.Errorf("GroupMemberChangedEvent, debouncer.Debounce, err:%s", err)
+				return
+			}
+			// get group member addresses
+			addresses := make([]string, len(groupMembers))
+			for i, groupMember := range groupMembers {
+				addresses[i] = groupMember.Address
+			}
+
+			// create group member changed event
+			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp)
+			// store group member changed event to inbox
+			for _, address := range addresses {
+				addressSha256Hash := Sha256Hash(address)
+				im.PushInbox(groupMemberChangedEvent.ToPushTopic(), groupMemberChangedEvent.ToPushPayload(), logger)
+				err = im.StoreGroupMemberChangedEventToInbox(addressSha256Hash, groupMemberChangedEvent, logger)
+				if err != nil {
+					logger.Errorf("GroupMemberChangedEvent, debouncer.Debounce, err:%s", err)
+					return
+				}
+			}
+		})
+	}
 	return isActuallyStored, nil
 }
 
@@ -125,6 +163,38 @@ func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Lo
 	if err != nil {
 		return isActuallyDeleted, err
 	}
+	if isActuallyDeleted && !IsIniting {
+		debouncer := GetDebouncer()
+		key := "EventGroupMemberChanged:" + iotago.EncodeHex(groupMember.GroupId[:])
+		debouncer.Debounce(key, 100*time.Millisecond, func() {
+			// log
+			logger.Infof("GroupMemberChangedEvent, debouncer.Debounce, key:%s", key)
+			// get group members
+			groupMembers, err := im.GetGroupMembers(groupMember.GroupId)
+			if err != nil {
+				logger.Errorf("GroupMemberChangedEvent, debouncer.Debounce, err:%s", err)
+				return
+			}
+			// get group member addresses
+			addresses := make([]string, len(groupMembers))
+			for i, groupMember := range groupMembers {
+				addresses[i] = groupMember.Address
+			}
+
+			// create group member changed event
+			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp)
+			// store group member changed event to inbox
+			for _, address := range addresses {
+				addressSha256Hash := Sha256Hash(address)
+				im.PushInbox(groupMemberChangedEvent.ToPushTopic(), groupMemberChangedEvent.ToPushPayload(), logger)
+				err = im.StoreGroupMemberChangedEventToInbox(addressSha256Hash, groupMemberChangedEvent, logger)
+				if err != nil {
+					logger.Errorf("GroupMemberChangedEvent, debouncer.Debounce, err:%s", err)
+					return
+				}
+			}
+		})
+	}
 	return isActuallyDeleted, nil
 }
 
@@ -138,7 +208,7 @@ func (im *Manager) DeleteMemberGroup(groupMember *GroupMember, logger *logger.Lo
 
 // check if group member exists, input is group id and address
 func (im *Manager) GroupMemberExists(groupId [GroupIdLen]byte, address string) (bool, error) {
-	key := im.GroupMemberKey(NewGroupMember(groupId, address, 0))
+	key := im.GroupMemberKey(NewGroupMember(groupId, address, 0, 0))
 	return im.imStore.Has(key)
 }
 
@@ -175,7 +245,7 @@ func (im *Manager) GetGroupMemberFromKeyAndValue(key kvstore.Key, value kvstore.
 	var timestamp [TimestampLen]byte
 	copy(timestamp[:], value[:TimestampLen])
 	address := string(value[TimestampLen:])
-	return NewGroupMember(groupId, address, binary.LittleEndian.Uint32(timestamp[:]))
+	return NewGroupMember(groupId, address, 0, BytesToUint32(timestamp[:]))
 }
 
 // get all group members, input is group id, sorted by timestamp

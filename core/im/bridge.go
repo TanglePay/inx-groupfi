@@ -23,6 +23,7 @@ func NodeStatus(ctx context.Context) (confirmedIndex iotago.MilestoneIndex, prun
 func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex, handler func(index iotago.MilestoneIndex, dataFromListenning *im.DataFromListenning) error) error {
 	return deps.NodeBridge.ListenToLedgerUpdates(ctx, startIndex, endIndex, func(update *nodebridge.LedgerUpdate) error {
 		index := update.MilestoneIndex
+		im.CurrentMilestoneIndex = index
 		// log
 		CoreComponent.LogInfof("LedgerUpdate start:%d, end::%d, milestoneIndex:%d", startIndex, endIndex, index)
 		var createdMessage []*im.Message
@@ -38,6 +39,10 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		var createdMute []*iotago.BasicOutput
 		var consumedMute []*iotago.BasicOutput
 		for _, output := range update.Created {
+			// im.CurrentMilestoneTimestamp = max(im.CurrentMilestoneTimestamp, output.MilestoneTimestampBooked)
+			if output.MilestoneTimestampBooked > im.CurrentMilestoneTimestamp {
+				im.CurrentMilestoneTimestamp = output.MilestoneTimestampBooked
+			}
 			o := messageFromINXLedgerOutput(output)
 			if o != nil {
 				createdMessage = append(createdMessage, o)
@@ -157,7 +162,7 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 				CoreComponent.LogInfof("LedgerUpdateBlock before push sender len:%d", len(sender))
 				go func() {
 					// prefix ImInboxMessageTypeNewMessageP2PV1 + sender + meta
-					pl := append([]byte{im.ImInboxMessageTypeNewMessageP2PV1}, sender...)
+					pl := append([]byte{im.ImInboxEventTypeNewMessage}, sender...)
 					pl = append(pl, meta...)
 					deps.IMManager.PushInbox(groupId, pl, CoreComponent.Logger())
 				}()

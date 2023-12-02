@@ -1,20 +1,16 @@
 package im
 
+import "github.com/TanglePay/inx-iotacat/pkg/im"
+
 // MessagesResponse defines the response of a GET RouteIMMessages REST API call.
 type MessagesResponse struct {
 	Messages  []*MessageResponse `json:"messages"`
 	HeadToken string             `json:"headToken"`
 	TailToken string             `json:"tailToken"`
 }
-type InboxMessagesResponse struct {
-	Messages []*MessageResponse `json:"messages"`
-	Token    string             `json:"token"`
-}
-type MessageResponse struct {
-	GroupId   string `json:"groupId"`
-	Token     string `json:"token"`
-	OutputId  string `json:"outputId"`
-	Timestamp uint32 `json:"timestamp"`
+type InboxItemsResponse struct {
+	Items []im.InboxItemJson `json:"items"`
+	Token string             `json:"token"`
 }
 
 // AddressGroupDetailsResponse

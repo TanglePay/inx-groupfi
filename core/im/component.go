@@ -3,6 +3,7 @@ package im
 import (
 	"context"
 	"net/http"
+	"os"
 	"time"
 
 	"go.uber.org/dig"
@@ -17,6 +18,7 @@ import (
 	"github.com/iotaledger/inx-app/pkg/nodebridge"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
+	"github.com/joho/godotenv"
 	"github.com/pkg/errors"
 )
 
@@ -248,8 +250,15 @@ func startListeningToLedgerUpdate() {
 }
 
 func run() error {
+	im.IsIniting = true
+	// load .groupfi-env file
+	godotenv.Load(".groupfi-env")
+	apiUrl := os.Getenv("SHIMMER_API_URL")
+	// log api url
+	CoreComponent.LogInfof("apiUrl:%s", apiUrl)
+
 	im.InitIpfsShell()
-	nodeHTTPAPIClient := nodeclient.New("https://api.shimmer.network")
+	nodeHTTPAPIClient := nodeclient.New(apiUrl)
 	// create a background worker that handles the init situation
 	if err := CoreComponent.Daemon().BackgroundWorker("LedgerInit", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting LedgerInit ... done")
@@ -384,6 +393,7 @@ func run() error {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
+	im.IsIniting = false
 	return nil
 }
 

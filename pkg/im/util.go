@@ -166,6 +166,13 @@ func ReadBytesWithUint16Len(bytes []byte, idx *int, providedLength ...int) ([]by
 	return data, nil
 }
 
+// uint32 to bytes
+func Uint32ToBytes(num uint32) []byte {
+	tmp := make([]byte, 4)
+	binary.BigEndian.PutUint32(tmp, num)
+	return tmp
+}
+
 // uint16 to bytes
 func Uint16ToBytes(num uint16) []byte {
 	tmp := make([]byte, 2)
@@ -176,6 +183,11 @@ func Uint16ToBytes(num uint16) []byte {
 // bytes to uint16
 func BytesToUint16(bytes []byte) uint16 {
 	return binary.BigEndian.Uint16(bytes)
+}
+
+// bytes to uint32
+func BytesToUint32(bytes []byte) uint32 {
+	return binary.BigEndian.Uint32(bytes)
 }
 
 // Float32ToBytes

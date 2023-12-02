@@ -102,32 +102,6 @@ func (im *Manager) MessageKeyFromMessage(message *Message, groupIdOverride []byt
 	return key
 }
 
-// inbox key from message, key = prefix + addressSha256Hash + mileStoneIndex + mileStoneTimestamp + metaSha256
-func (im *Manager) InboxKeyFromMessage(message *Message, receiverAddressSha256 []byte) []byte {
-	index := 0
-	key := make([]byte, 1+Sha256HashLen+4+4+Sha256HashLen) // 4 bytes for uint32
-	key[index] = ImStoreKeyPrefixInbox
-	index++
-	copy(key[index:], receiverAddressSha256)
-	index += Sha256HashLen
-	binary.BigEndian.PutUint32(key[index:], message.MileStoneIndex)
-	index += 4
-	binary.BigEndian.PutUint32(key[index:], message.MileStoneTimestamp)
-	index += 4
-	copy(key[index:], message.MetaSha256)
-	return key
-}
-
-// inbox prefix for address hash
-func (im *Manager) InboxPrefixFromAddressHash(addressHash []byte) []byte {
-	index := 0
-	key := make([]byte, 1+Sha256HashLen) // 4 bytes for uint32
-	key[index] = ImStoreKeyPrefixInbox
-	index++
-	copy(key[index:], addressHash)
-	index += Sha256HashLen
-	return key
-}
 func (im *Manager) MessageKeyFromGroupId(groupId []byte) []byte {
 	return im.KeyFromSha256hashAndPrefix(groupId, ImStoreKeyPrefixMessage)
 }
@@ -169,7 +143,7 @@ func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) e
 		}
 		for _, address := range addresses {
 			//log nft
-			err := im.storeInbox([]byte(address), message, valuePayload, logger)
+			err := im.storeInboxMessage([]byte(address), message, valuePayload, logger)
 			if err != nil {
 				logger.Errorf("storeInbox error %v", err)
 			}
@@ -188,7 +162,7 @@ func (im *Manager) deleteSingleMessage(message *Message, logger *logger.Logger) 
 		}
 		for _, nft := range nfts {
 			//log nft
-			err := im.DeleteInbox(nft.OwnerAddress, message, logger)
+			err := im.DeleteInboxMessage(nft.OwnerAddress, message, logger)
 			if err != nil {
 				logger.Errorf("storeInbox error %v", err)
 			}
@@ -244,7 +218,7 @@ func (im *Manager) deleteConsumedMessages(messages []*Message, logger *logger.Lo
 }
 
 // handle inbox storage
-func (imm *Manager) storeInbox(receiverAddress []byte, message *Message, value []byte, logger *logger.Logger) error {
+func (imm *Manager) storeInboxMessage(receiverAddress []byte, message *Message, value []byte, logger *logger.Logger) error {
 	receiverAddressSha256 := Sha256HashBytes(receiverAddress)
 	key := imm.InboxKeyFromMessage(message, receiverAddressSha256)
 	// log receiverAddress receiverAddressSha256 key
@@ -253,40 +227,8 @@ func (imm *Manager) storeInbox(receiverAddress []byte, message *Message, value [
 	return err
 }
 
-// read inbox for address, from given token, limit by size
-func (im *Manager) ReadInboxMessage(receiverAddressSha256Hash []byte, coninueationToken []byte, size int, logger *logger.Logger) ([]*Message, error) {
-	keyPrefix := im.InboxPrefixFromAddressHash(receiverAddressSha256Hash)
-	var res []*Message
-	skiping := len(coninueationToken) > 0
-	startPoint := ConcatByteSlices(keyPrefix, coninueationToken)
-	ct := 0
-	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
-		if skiping {
-			// log key startPoint
-			logger.Infof("ReadInboxMessage : key %s, startPoint %s", iotago.EncodeHex(key), iotago.EncodeHex(startPoint))
-			if bytes.Equal(key, startPoint) {
-				skiping = false
-			}
-			return true
-		}
-		message, err := im.ParseMessageValuePayload(value)
-		// token is key remove prefix and groupId
-		token := key[(1 + GroupIdLen):]
-		message.Token = token
-		if err != nil {
-			// log and continue
-			logger.Errorf("ParseMessageValuePayload error %v", err)
-			return true
-		}
-		res = append(res, message)
-		ct++
-		return ct < size
-	})
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
-
+func (im *Manager) InboxKeyFromMessage(message *Message, receiverAddressSha256 []byte) []byte {
+	return im.InboxKeyFromValues(receiverAddressSha256, message.MileStoneIndex, message.MileStoneTimestamp, message.MetaSha256, ImInboxEventTypeNewMessage)
 }
 
 // message for consolidation
@@ -336,10 +278,11 @@ func (im *Manager) ReadMessageForConsolidation(ownerAddress string, thresMileSto
 }
 
 // handle inbox delete
-func (im *Manager) DeleteInbox(receiverAddress []byte, message *Message, logger *logger.Logger) error {
+func (im *Manager) DeleteInboxMessage(receiverAddress []byte, message *Message, logger *logger.Logger) error {
 	receiverAddressSha256 := Sha256HashBytes(receiverAddress)
 	key := im.InboxKeyFromMessage(message, receiverAddressSha256)
 	err := im.imStore.Delete(key)
+	//TODO cleanup any event before this message
 	return err
 }
 
