@@ -109,7 +109,7 @@ func (im *Manager) UnserializeGroupMemberChangedEvent(bytes []byte) (*GroupMembe
 // store group member changed event to inbox
 func (im *Manager) StoreGroupMemberChangedEventToInbox(receiverAddressSha256 []byte, groupMemberChangedEvent *GroupMemberChangedEvent, logger *logger.Logger) error {
 	// serialize group member changed event
-	bytes := im.SerializeGroupMemberChangedEvent(groupMemberChangedEvent)
+	bytes := SerializeGroupMemberChangedEvent(groupMemberChangedEvent)
 	// get inbox key
 	key := im.InboxKeyFromGroupMemberChangedEvent(receiverAddressSha256, groupMemberChangedEvent)
 	// store to inbox

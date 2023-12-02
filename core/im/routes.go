@@ -110,22 +110,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		nftWithRespChan.RespChan <- nftResponse
 	}, 2000, 1000, 1000)
 	//e.Use(AddCORS)
-	e.GET(RouteIMMessages, func(c echo.Context) error {
-		resp, err := getMesssagesFrom(c)
-		if err != nil {
-			return err
-		}
-		return httpserver.JSONResponse(c, http.StatusOK, resp)
-	})
 
-	//messages until
-	e.GET(RouteIMMessagesUntil, func(c echo.Context) error {
-		resp, err := getMesssagesUntil(c)
-		if err != nil {
-			return err
-		}
-		return httpserver.JSONResponse(c, http.StatusOK, resp)
-	})
 	//nft
 	e.GET(RouteIMNFTs, func(c echo.Context) error {
 		resp, err := getNFTsFromGroupId(c)

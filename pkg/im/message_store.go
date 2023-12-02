@@ -323,11 +323,12 @@ func (im *Manager) ReadMessageFromPrefix(keyPrefix []byte, size int, coninueatio
 			}
 			return true
 		}
-		res = append(res, &Message{
+		msg := &Message{
 			OutputId:           value[4:],
-			Token:              key,
 			MileStoneTimestamp: binary.BigEndian.Uint32(value[:4]),
-		})
+		}
+		msg.SetToken(key)
+		res = append(res, msg)
 		ct++
 		return ct < size
 	})
@@ -356,11 +357,12 @@ func (im *Manager) ReadMessageUntilPrefix(keyPrefix []byte, size int, coninueati
 		if bytes.Equal(key, coninueationToken) {
 			return false
 		}
-		res = append(res, &Message{
+		msg := &Message{
 			OutputId:           value[4:],
-			Token:              key,
 			MileStoneTimestamp: binary.BigEndian.Uint32(value[:4]),
-		})
+		}
+		msg.SetToken(key)
+		res = append(res, msg)
 		ct++
 		return ct < size
 	})
