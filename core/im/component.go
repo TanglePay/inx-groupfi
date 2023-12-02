@@ -8,8 +8,8 @@ import (
 
 	"go.uber.org/dig"
 
-	"github.com/TanglePay/inx-iotacat/pkg/daemon"
-	"github.com/TanglePay/inx-iotacat/pkg/im"
+	"github.com/TanglePay/inx-groupfi/pkg/daemon"
+	"github.com/TanglePay/inx-groupfi/pkg/im"
 	"github.com/iotaledger/hive.go/core/app"
 	"github.com/iotaledger/hive.go/core/app/pkg/shutdown"
 	"github.com/iotaledger/hive.go/core/database"

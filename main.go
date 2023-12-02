@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/TanglePay/inx-iotacat/core/app"
+	"github.com/TanglePay/inx-groupfi/core/app"
 )
 
 func main() {

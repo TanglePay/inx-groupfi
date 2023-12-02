@@ -6,4 +6,4 @@
 DIR="$( cd -- "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
 
 commit_hash=$(git rev-parse --short HEAD)
-go build -ldflags="-s -w -X github.com/TanglePay/inx-iotacat/core/app.Version=$commit_hash"
+go build -ldflags="-s -w -X github.com/TanglePay/inx-groupfi/core/app.Version=$commit_hash"

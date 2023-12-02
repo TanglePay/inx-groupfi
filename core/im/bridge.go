@@ -4,7 +4,7 @@ import (
 	"context"
 	"io"
 
-	"github.com/TanglePay/inx-iotacat/pkg/im"
+	"github.com/TanglePay/inx-groupfi/pkg/im"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	"github.com/iotaledger/inx-app/pkg/nodebridge"
 	inx "github.com/iotaledger/inx/go"

@@ -4,7 +4,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/TanglePay/inx-iotacat/pkg/im"
+	"github.com/TanglePay/inx-groupfi/pkg/im"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/labstack/echo/v4"
 	"github.com/pkg/errors"

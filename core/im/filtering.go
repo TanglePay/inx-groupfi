@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"math/big"
 
-	"github.com/TanglePay/inx-iotacat/pkg/im"
+	"github.com/TanglePay/inx-groupfi/pkg/im"
 	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/serializer/v2"
 	inx "github.com/iotaledger/inx/go"
@@ -32,6 +32,8 @@ func nftFromINXLedgerOutput(output *inx.LedgerOutput, log *logger.Logger) []*im.
 }
 func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint32, milestoneTimestamp uint32, log *logger.Logger) []*im.NFT {
 
+	// log enter nftFromINXOutput, outputId:%s
+	CoreComponent.LogInfof("nftFromINXOutput, outputId:%s", iotago.EncodeHex(outputId))
 	if iotaOutput.Type() != iotago.OutputNFT {
 		return nil
 	}

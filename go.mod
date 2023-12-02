@@ -1,4 +1,4 @@
-module github.com/TanglePay/inx-iotacat
+module github.com/TanglePay/inx-groupfi
 
 go 1.19
 

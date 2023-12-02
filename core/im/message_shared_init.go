@@ -3,7 +3,7 @@ package im
 import (
 	"context"
 
-	"github.com/TanglePay/inx-iotacat/pkg/im"
+	"github.com/TanglePay/inx-groupfi/pkg/im"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 

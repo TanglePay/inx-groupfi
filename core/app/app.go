@@ -1,7 +1,7 @@
 package app
 
 import (
-	"github.com/TanglePay/inx-iotacat/core/im"
+	"github.com/TanglePay/inx-groupfi/core/im"
 	"github.com/iotaledger/hive.go/core/app"
 	"github.com/iotaledger/hive.go/core/app/core/shutdown"
 	"github.com/iotaledger/hive.go/core/app/plugins/profiling"

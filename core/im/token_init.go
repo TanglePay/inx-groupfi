@@ -5,7 +5,7 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/TanglePay/inx-iotacat/pkg/im"
+	"github.com/TanglePay/inx-groupfi/pkg/im"
 	"github.com/iotaledger/hive.go/core/kvstore"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"

@@ -1,6 +1,6 @@
 package im
 
-import "github.com/TanglePay/inx-iotacat/pkg/im"
+import "github.com/TanglePay/inx-groupfi/pkg/im"
 
 type InboxItemsResponse struct {
 	Items []im.InboxItemJson `json:"items"`
