@@ -72,13 +72,15 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 		return nil
 	}
 
+	// log nftIdHex
+	CoreComponent.LogInfof("nftFromINXOutput, nftIdHex:%s", nftIdHex)
 	metaMap := make(map[string]interface{})
 	err = json.Unmarshal(meta.Data, &metaMap)
 	if err != nil {
 		log.Errorf("nftFromINXOutput failed:%s", err)
 		return nil
 	}
-	ipfsLink := metaMap["uri"].(string)
+	//ipfsLink := metaMap["uri"].(string)
 	if issuer.Address.Type() != iotago.AddressNFT {
 		return nil
 	}
@@ -92,7 +94,7 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 		milestoneTimestamp,
 	)
 
-	pairs := im.ChainNameAndCollectionIdToGroupIdAndGroupNamePairs("smr", collectionId)
+	pairs := im.ChainNameAndCollectionIdToGroupIdAndGroupNamePairs(im.HornetChainName, collectionId)
 	if len(pairs) == 0 {
 		return nil
 	}
@@ -124,7 +126,7 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 			milestoneTimestamp,
 			iotago.EncodeHex(outputId),
 		)
-		nft := im.NewNFT(groupId, ownerAddress, nftId, groupName, ipfsLink, milestone, milestoneTimestamp)
+		nft := im.NewNFT(groupId, ownerAddress, nftId, groupName, "ipfsLink", milestone, milestoneTimestamp)
 		nfts = append(nfts, nft)
 	}
 	return nfts

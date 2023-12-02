@@ -254,6 +254,8 @@ func run() error {
 	// load .groupfi-env file
 	godotenv.Load(".groupfi-env")
 	apiUrl := os.Getenv("SHIMMER_API_URL")
+	hornetChainName := os.Getenv("HORNET_CHAINNAME")
+	im.HornetChainName = hornetChainName
 	// log api url
 	CoreComponent.LogInfof("apiUrl:%s", apiUrl)
 

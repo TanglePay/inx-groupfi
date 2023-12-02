@@ -1,1 +1,2 @@
 SHIMMER_API_URL='https://api.shimmer.network'
+HORNET_CHAINNAME='smr'
