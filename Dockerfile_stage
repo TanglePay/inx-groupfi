@@ -19,11 +19,12 @@ RUN go mod download
 RUN go mod verify
 
 # Build the binary
-RUN go build -o /app/inx-iotacat -a -tags rocksdb
+RUN go build -o /app/inx-groupfi -a -tags rocksdb
 
 # Copy the assets
 COPY ./config_defaults.json /app/config.json
 
+COPY ./.groupfi-env-stage /app/.groupfi-env
 ############################
 # Image
 ############################
@@ -37,4 +38,4 @@ COPY --chown=nonroot:nonroot --from=build /app /app
 WORKDIR /app
 USER nonroot
 
-ENTRYPOINT ["/app/inx-iotacat"]
+ENTRYPOINT ["/app/inx-groupfi"]
