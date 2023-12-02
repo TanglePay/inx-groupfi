@@ -42,6 +42,8 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	if !is {
 		return nil
 	}
+	// log casted to NFTOutput
+	CoreComponent.LogInfof("nftFromINXOutput, casted to NFTOutput")
 	featureSet, err := nftOutput.ImmutableFeatures.Set()
 	if err != nil {
 		// log error
