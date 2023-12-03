@@ -195,6 +195,8 @@ func handlePublicKeyOutputFromINXLedgerOutput(output *inx.LedgerOutput) (*im.Out
 	return handlePublicKeyOutputFromINXOutput(iotaOutput, output.OutputId.Id)
 }
 func handlePublicKeyOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte) (*im.OutputIdHexAndAddressPair, error) {
+	//TODO check if output is sent from self
+
 	// Ignore anything other than BasicOutputs
 	if iotaOutput.Type() != iotago.OutputBasic {
 		return nil, nil

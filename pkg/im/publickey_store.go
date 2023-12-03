@@ -108,18 +108,34 @@ type TransactionResponse struct {
 	} `json:"block"`
 }
 
-func GetPublicKeyViaTransactionId(ctx context.Context, node IotaNodeInfo, transactionId string) (string, error) {
-	url := fmt.Sprintf("%s/transaction/%s/%s", node.ExplorerApiUrl, node.ExplorerApiNetwork, transactionId)
-	params := map[string]string{} // No additional parameters in the original function
+func GetPublicKeyViaTransactionId(ctx context.Context, client *nodeclient.Client, node IotaNodeInfo, transactionId string) (string, error) {
 
-	var resp TransactionResponse
-	if err := PerformGetRequest(ctx, url, params, &resp); err != nil {
+	/*
+		url := fmt.Sprintf("%s/transaction/%s/%s", node.ExplorerApiUrl, node.ExplorerApiNetwork, transactionId)
+		params := map[string]string{} // No additional parameters in the original function
+			var resp TransactionResponse
+			if err := PerformGetRequest(ctx, url, params, &resp); err != nil {
+				return "", err
+			}
+	*/
+
+	transactionIdBytes, err := iotago.DecodeHex(transactionId)
+	if err != nil {
 		return "", err
 	}
-
-	for _, unlock := range resp.Block.Payload.Unlocks {
-		if unlock.Type == 0 {
-			return unlock.Signature.PublicKey, nil
+	var txId iotago.TransactionID
+	copy(txId[:], transactionIdBytes)
+	block, err := client.TransactionIncludedBlock(ctx, txId, nil)
+	if err != nil {
+		return "", err
+	}
+	for _, unlock := range block.Payload.(*iotago.Transaction).Unlocks {
+		if unlock.Type() == iotago.UnlockSignature {
+			sigUnlock := unlock.(*iotago.SignatureUnlock)
+			if sigUnlock.Signature.Type() == iotago.SignatureEd25519 {
+				ed25519Sig := sigUnlock.Signature.(*iotago.Ed25519Signature)
+				return iotago.EncodeHex(ed25519Sig.PublicKey[:]), nil
+			}
 		}
 	}
 
@@ -170,7 +186,7 @@ func (im *Manager) GetAddressPublicKeyFromOutputId(ctx context.Context, client *
 	transactionId := metaResponse.TransactionID
 	// log transaction id
 	logger.Infof("GetAddressPublicKey, address:%s, transactionId:%s", address, transactionId)
-	publicKey, err := GetPublicKeyViaTransactionId(ctx, CurrentNetwork, transactionId)
+	publicKey, err := GetPublicKeyViaTransactionId(ctx, client, CurrentNetwork, transactionId)
 	if err != nil {
 		return nil, err
 	}
