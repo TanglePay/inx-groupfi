@@ -61,19 +61,15 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 	if err != nil {
 		return err
 	}
+	// log group qualification GroupId, address, exists
+	logger.Infof("StoreMark,group qualification exists,groupId:%s,address:%s,exists:%t", iotago.EncodeHex(mark.GroupId[:]), mark.Address, exists)
 	if exists {
 		groupMember := NewGroupMember(mark.GroupId, mark.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
-		isActuallyStored, err := im.StoreGroupMember(groupMember, logger)
+		_, err := im.StoreGroupMember(groupMember, logger)
 		if err != nil {
 			return err
 		}
-		// delete group shared if group member is actually stored and is actually marked
-		if isActuallyStored && isActuallyMarked {
-			err = im.DeleteSharedFromGroupId(mark.GroupId[:])
-			if err != nil {
-				return err
-			}
-		}
+
 	}
 	return nil
 }
