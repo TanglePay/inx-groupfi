@@ -108,7 +108,7 @@ type TransactionResponse struct {
 	} `json:"block"`
 }
 
-func GetPublicKeyViaTransactionId(ctx context.Context, client *nodeclient.Client, node IotaNodeInfo, transactionId string) (string, error) {
+func GetPublicKeyViaTransactionId(ctx context.Context, client *nodeclient.Client, transactionId string) (string, error) {
 
 	/*
 		url := fmt.Sprintf("%s/transaction/%s/%s", node.ExplorerApiUrl, node.ExplorerApiNetwork, transactionId)
@@ -186,7 +186,7 @@ func (im *Manager) GetAddressPublicKeyFromOutputId(ctx context.Context, client *
 	transactionId := metaResponse.TransactionID
 	// log transaction id
 	logger.Infof("GetAddressPublicKey, address:%s, transactionId:%s", address, transactionId)
-	publicKey, err := GetPublicKeyViaTransactionId(ctx, client, CurrentNetwork, transactionId)
+	publicKey, err := GetPublicKeyViaTransactionId(ctx, client, transactionId)
 	if err != nil {
 		return nil, err
 	}

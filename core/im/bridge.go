@@ -57,10 +57,12 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 				createdShared = append(createdShared, shared)
 			}
 			outputIdHexAndAddressPair, err := handlePublicKeyOutputFromINXLedgerOutput(output)
-			createdPublicKeyOutputIdHexAndAddressPairs = append(createdPublicKeyOutputIdHexAndAddressPairs, outputIdHexAndAddressPair)
 			if err != nil {
 				// log error
 				CoreComponent.LogErrorf("LedgerUpdate handlePublicKeyOutputFromINXLedgerOutput error:%s", err.Error())
+			}
+			if outputIdHexAndAddressPair != nil {
+				createdPublicKeyOutputIdHexAndAddressPairs = append(createdPublicKeyOutputIdHexAndAddressPairs, outputIdHexAndAddressPair)
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeCreated)
 
