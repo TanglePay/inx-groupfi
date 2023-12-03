@@ -103,16 +103,16 @@ func (im *Manager) StoreGroupMember(groupMember *GroupMember, logger *logger.Log
 		debouncer.Debounce(key, 100*time.Millisecond, func() {
 			// log
 			logger.Infof("GroupMemberChangedEvent, debouncer.Debounce, key:%s", key)
-			// get group members
-			groupMembers, err := im.GetGroupMembers(groupMember.GroupId)
+			// get group qualifications
+			groupQualifications, err := im.GetAllGroupQualificationsFromGroupId(groupMember.GroupId, logger)
 			if err != nil {
 				logger.Errorf("GroupMemberChangedEvent, debouncer.Debounce, err:%s", err)
 				return
 			}
 			// get group member addresses
-			addresses := make([]string, len(groupMembers))
-			for i, groupMember := range groupMembers {
-				addresses[i] = groupMember.Address
+			addresses := make([]string, len(groupQualifications))
+			for i, groupQualification := range groupQualifications {
+				addresses[i] = groupQualification.Address
 			}
 
 			// create group member changed event
@@ -169,16 +169,17 @@ func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Lo
 		debouncer.Debounce(key, 100*time.Millisecond, func() {
 			// log
 			logger.Infof("GroupMemberChangedEvent, debouncer.Debounce, key:%s", key)
-			// get group members
-			groupMembers, err := im.GetGroupMembers(groupMember.GroupId)
+			// get group qualifications
+			groupQualifications, err := im.GetAllGroupQualificationsFromGroupId(groupMember.GroupId, logger)
+
 			if err != nil {
 				logger.Errorf("GroupMemberChangedEvent, debouncer.Debounce, err:%s", err)
 				return
 			}
 			// get group member addresses
-			addresses := make([]string, len(groupMembers))
-			for i, groupMember := range groupMembers {
-				addresses[i] = groupMember.Address
+			addresses := make([]string, len(groupQualifications))
+			for i, groupQualification := range groupQualifications {
+				addresses[i] = groupQualification.Address
 			}
 
 			// create group member changed event

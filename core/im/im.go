@@ -161,7 +161,7 @@ func getNFTsWithPublicKeyFromGroupId(c echo.Context, drainer *im.ItemDrainer) ([
 	if err != nil {
 		return nil, err
 	}
-	return deps.IMManager.GetNFTsWithPublicKeyFromGroupIdImpl(nfts, drainer, CoreComponent.Logger())
+	return deps.IMManager.FullfillNFTsWithPublickKey(nfts, drainer, CoreComponent.Logger())
 }
 
 // get shared from groupId
@@ -397,7 +397,7 @@ func getMarkedAddressesFromGroupId(c echo.Context) ([]string, error) {
 }
 
 // get all group member addresses from groupId
-func getGroupMemberAddressesFromGroupId(c echo.Context) ([]string, error) {
+func getGroupMemberAddressesFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
 	groupId, err := parseGroupIdQueryParam(c)
 	if err != nil {
 		return nil, err
@@ -409,8 +409,17 @@ func getGroupMemberAddressesFromGroupId(c echo.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	// map addresses to nfts, nft should be created with owner address only
+	nfts := make([]*im.NFT, len(addresses))
+	for i, address := range addresses {
+		nfts[i] = &im.NFT{
+			OwnerAddress: []byte(address),
+		}
+	}
 	CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d", iotago.EncodeHex(groupId), len(addresses))
-	return addresses, nil
+	resp, err := deps.IMManager.FullfillNFTsWithPublickKey(nfts, im.PublicKeyDrainer, CoreComponent.Logger())
+
+	return resp, nil
 }
 
 // get all group votes from groupId

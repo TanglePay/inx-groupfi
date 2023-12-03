@@ -42,7 +42,7 @@ func (imm *Manager) CalculateNumberOfGroupMembersWithPublicKey(groupId []byte, l
 	if err != nil {
 		return err
 	}
-	resp, err := imm.GetNFTsWithPublicKeyFromGroupIdImpl(nfts, PublicKeyDrainer, logger)
+	resp, err := imm.FullfillNFTsWithPublickKey(nfts, PublicKeyDrainer, logger)
 	if err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (imm *Manager) CalculateNumberOfGroupMembersWithPublicKey(groupId []byte, l
 	return nil
 }
 
-func (im *Manager) GetNFTsWithPublicKeyFromGroupIdImpl(nfts []*NFT, drainer *ItemDrainer, logger *logger.Logger) ([]*NFTResponse, error) {
+func (im *Manager) FullfillNFTsWithPublickKey(nfts []*NFT, drainer *ItemDrainer, logger *logger.Logger) ([]*NFTResponse, error) {
 	// make respChan as chan[NFTResponse]
 	respChan := make(chan interface{})
 	// wrap nfts to {nft *im.NFT, respChan chan interface{}} and drain
@@ -76,7 +76,7 @@ func (im *Manager) GetNFTsWithPublicKeyFromGroupIdImpl(nfts []*NFT, drainer *Ite
 		drainer.Drain(nftsInterface)
 	} else {
 		// log
-		logger.Warnf("GetNFTsWithPublicKeyFromGroupIdImpl drainer is nil")
+		logger.Warnf("FullfillNFTsWithPublickKey drainer is nil")
 	}
 	// make nftResponseArr, start empty, then fill it with respChan, plus timeout, then return
 	nftResponseArr := make([]*NFTResponse, 0)
