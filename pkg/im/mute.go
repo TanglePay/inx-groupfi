@@ -198,7 +198,7 @@ func (im *Manager) deserializeUserMuteGroupMember(muteAddress string, data []byt
 // get user mute group members from basicoutput
 func (im *Manager) GetUserMuteGroupMembersFromBasicOutput(output *iotago.BasicOutput) []*UserMuteGroupMember {
 	unlockConditionSet := output.UnlockConditionSet()
-	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
+	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
 	featureSet := output.FeatureSet()
 	meta := featureSet.MetadataFeature()
 	if meta == nil {

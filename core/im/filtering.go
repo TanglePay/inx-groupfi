@@ -173,7 +173,7 @@ func sharedOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte, milest
 	groupId := metaPayload[1 : im.GroupIdLen+1]
 	metapayloadSha256 := im.Sha256HashBytes(metaPayload)
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
-	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
+	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
 	senderAddressSha256 := im.Sha256Hash(senderAddressStr)
 	CoreComponent.LogInfof("Found IOTACATSHARED output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d，senderAddress:%s",
 		len(metaPayload),
@@ -273,7 +273,7 @@ func handleSmrAmount(smrAmount uint64, iotaOutput iotago.Output, outputId []byte
 	smrAmountBig := new(big.Int).SetUint64(smrAmount)
 	tokenStatus := outputStatusToTokenStatus(outputStatus)
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
-	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
+	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
 
 	if isUpdateGlobalAmount {
 		smrTotal := GetSmrTokenTotal()
@@ -353,7 +353,7 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 	groupId := metaPayload[1 : im.GroupIdLen+1]
 	metapayloadSha256 := im.Sha256HashBytes(metaPayload)
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
-	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.PrefixShimmer)
+	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
 	senderAddressSha256 := im.Sha256Hash(senderAddressStr)
 	CoreComponent.LogInfof("Found IOTACAT output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d，senderAddress:%s",
 		len(metaPayload),
