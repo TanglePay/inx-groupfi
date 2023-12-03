@@ -1,2 +1,3 @@
 SHIMMER_API_URL='https://api.shimmer.network'
 HORNET_CHAINNAME='smr'
+NETWORK_ID='102'

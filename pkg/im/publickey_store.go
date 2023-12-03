@@ -10,6 +10,10 @@ import (
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
+var publicKeyTagRawStr = "GROUPFISELFPUBLICKEY"
+var PublicKeyTag = []byte(publicKeyTagRawStr)
+var PublicKeyTagStr = iotago.EncodeHex(PublicKeyTag)
+
 func keyFromAddressPublicKey(address string) []byte {
 	return ConcatByteSlices([]byte{ImStoreKeyPrefixAddressPublicKey}, Sha256Hash(address))
 }
@@ -46,15 +50,27 @@ type TransactionHistoryResponse struct {
 	Items []TransactionItem `json:"items"`
 }
 
-var shimmerMainNet = IotaNodeInfo{
-	ID:                 102,
-	IsFaucetAvailable:  false,
-	ApiUrl:             "https://mainnet.shimmer.node.tanglepay.com",
-	ExplorerApiUrl:     "https://explorer-api.shimmer.network/stardust",
-	ExplorerApiNetwork: "shimmer",
-	NetworkID:          "14364762045254553490",
-	InxMqttEndpoint:    "wss://test.api.iotacat.com/api/iotacatmqtt/v1",
-}
+var (
+	ShimmerMainNet = IotaNodeInfo{
+		ID:                 102,
+		IsFaucetAvailable:  false,
+		ApiUrl:             "https://mainnet.shimmer.node.tanglepay.com",
+		ExplorerApiUrl:     "https://explorer-api.shimmer.network/stardust",
+		ExplorerApiNetwork: "shimmer",
+		NetworkID:          "14364762045254553490",
+		InxMqttEndpoint:    "wss://test.api.iotacat.com/api/iotacatmqtt/v1",
+	}
+
+	ShimmerTestNet = IotaNodeInfo{
+		ID:                 101,
+		IsFaucetAvailable:  true,
+		ApiUrl:             "https://test.api.iotacat.com",
+		ExplorerApiUrl:     "https://explorer-api.shimmer.network/stardust",
+		ExplorerApiNetwork: "testnet",
+		NetworkID:          "1856588631910923207",
+		InxMqttEndpoint:    "wss://test.api.iotacat.com/mqtt",
+	}
+)
 
 func GetTransactionHistory(ctx context.Context, node IotaNodeInfo, bech32Address string, logger *logger.Logger) (string, error) {
 	url := fmt.Sprintf("%s/transactionhistory/%s/%s", node.ExplorerApiUrl, node.ExplorerApiNetwork, bech32Address)
@@ -125,7 +141,7 @@ func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.C
 	}
 
 	// if not found, get from http request
-	outputIdHex, err := GetTransactionHistory(ctx, shimmerMainNet, address, logger)
+	outputIdHex, err := GetTransactionHistory(ctx, CurrentNetwork, address, logger)
 	if err != nil {
 		return nil, err
 	}
@@ -138,6 +154,15 @@ func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.C
 	if err != nil {
 		return nil, err
 	}
+	return im.GetAddressPublicKeyFromOutputId(ctx, client, outputId, address, logger)
+}
+
+type OutputIdHexAndAddressPair struct {
+	OutputIdHex string
+	Address     string
+}
+
+func (im *Manager) GetAddressPublicKeyFromOutputId(ctx context.Context, client *nodeclient.Client, outputId iotago.OutputID, address string, logger *logger.Logger) ([]byte, error) {
 	metaResponse, err := client.OutputMetadataByID(ctx, outputId)
 	if err != nil {
 		return nil, err
@@ -145,7 +170,7 @@ func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.C
 	transactionId := metaResponse.TransactionID
 	// log transaction id
 	logger.Infof("GetAddressPublicKey, address:%s, transactionId:%s", address, transactionId)
-	publicKey, err := GetPublicKeyViaTransactionId(ctx, shimmerMainNet, transactionId)
+	publicKey, err := GetPublicKeyViaTransactionId(ctx, CurrentNetwork, transactionId)
 	if err != nil {
 		return nil, err
 	}
@@ -162,4 +187,5 @@ func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.C
 		return nil, err
 	}
 	return publicKeyBytes, nil
+
 }

@@ -187,6 +187,44 @@ func sharedOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte, milest
 	return im.NewMessage(groupId, outputId, milestone, milestoneTimestamp, senderAddressSha256, metapayloadSha256)
 }
 
+func handlePublicKeyOutputFromINXLedgerOutput(output *inx.LedgerOutput) (*im.OutputIdHexAndAddressPair, error) {
+	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return nil, err
+	}
+	return handlePublicKeyOutputFromINXOutput(iotaOutput, output.OutputId.Id)
+}
+func handlePublicKeyOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte) (*im.OutputIdHexAndAddressPair, error) {
+	// Ignore anything other than BasicOutputs
+	if iotaOutput.Type() != iotago.OutputBasic {
+		return nil, nil
+	}
+	basicOutput := iotaOutput.(*iotago.BasicOutput)
+	// tag should have iotacat and groupId can be retrieved as well
+	featureSet := basicOutput.FeatureSet()
+	tag := featureSet.TagFeature()
+	if tag == nil {
+		return nil, nil
+	}
+	tagPayload := tag.Tag
+
+	if !bytes.Equal(tagPayload, im.PublicKeyTag) {
+		return nil, nil
+	}
+
+	outputIdHex := iotago.EncodeHex(outputId)
+	unlockConditionSet := iotaOutput.UnlockConditionSet()
+	address := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
+	CoreComponent.LogInfof("Found PUBLICKEY output,outputId:%s,address:%s",
+		outputIdHex,
+		address,
+	)
+	return &im.OutputIdHexAndAddressPair{
+		OutputIdHex: outputIdHex,
+		Address:     address,
+	}, nil
+
+}
 func handleTokenFromINXLedgerOutput(output *inx.LedgerOutput, outputStatus int) error {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {

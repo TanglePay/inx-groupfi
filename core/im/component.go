@@ -4,6 +4,7 @@ import (
 	"context"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"go.uber.org/dig"
@@ -255,21 +256,32 @@ func run() error {
 	godotenv.Load(".groupfi-env")
 	apiUrl := os.Getenv("SHIMMER_API_URL")
 	hornetChainName := os.Getenv("HORNET_CHAINNAME")
+	networkId := os.Getenv("NETWORK_ID")
 	im.HornetChainName = hornetChainName
+	networkIdInt, err := strconv.Atoi(networkId)
+	if err != nil {
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
+	}
+	if networkIdInt == im.ShimmerMainNet.ID {
+		im.CurrentNetwork = im.ShimmerMainNet
+	} else if networkIdInt == im.ShimmerTestNet.ID {
+		im.CurrentNetwork = im.ShimmerTestNet
+	}
 	// log api url
 	CoreComponent.LogInfof("apiUrl:%s", apiUrl)
 
 	im.InitIpfsShell()
 	nodeHTTPAPIClient := nodeclient.New(apiUrl)
+	im.NodeHTTPAPIClient = nodeHTTPAPIClient
 	// create a background worker that handles the init situation
 	if err := CoreComponent.Daemon().BackgroundWorker("LedgerInit", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting LedgerInit ... done")
-
+		im.ListeningCtx = ctx
 		indexerClient, err := nodeHTTPAPIClient.Indexer(ctx)
 		if err != nil {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
-
+		im.NodeIndexerAPIClient = indexerClient
 		// handle group config init
 		handleGroupConfigInit(ctx, nodeHTTPAPIClient, indexerClient)
 

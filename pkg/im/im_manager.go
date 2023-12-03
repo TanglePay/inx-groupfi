@@ -199,7 +199,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	consumedMute := dataFromListenning.ConsumedMute
 	createdVote := dataFromListenning.CreatedVote
 	consumedVote := dataFromListenning.ConsumedVote
-
+	createdPublicKeyOutputIdHexAndAddressPairs := dataFromListenning.CreatedPublicKeyOutputIdHexAndAddressPairs
 	if len(createdMessage) > 0 {
 		msg := createdMessage[0]
 		logger.Infof("store new message: groupId:%s, outputId:%s, milestoneindex:%d, milestonetimestamp:%d", msg.GetGroupIdStr(), msg.GetOutputIdStr(), msg.MileStoneIndex, msg.MileStoneTimestamp)
@@ -255,7 +255,17 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 			im.HandleUserVoteGroupBasicOutputCreated(vote, logger)
 		}
 	}
-
+	if len(createdPublicKeyOutputIdHexAndAddressPairs) > 0 {
+		for _, outputIdHexAndAddressPair := range createdPublicKeyOutputIdHexAndAddressPairs {
+			outputId, err := iotago.OutputIDFromHex(outputIdHexAndAddressPair.OutputIdHex)
+			if err != nil {
+				// log then continue
+				logger.Infof("ApplyNewLedgerUpdate, iotago.OutputIDFromHex error:%s", err.Error())
+				continue
+			}
+			im.GetAddressPublicKeyFromOutputId(ListeningCtx, NodeHTTPAPIClient, outputId, outputIdHexAndAddressPair.Address, logger)
+		}
+	}
 	return nil
 
 }
@@ -276,16 +286,17 @@ func (im *Manager) MakeMqttServer(websocketBindAddress string) (*MQTTServer, err
 }
 
 type DataFromListenning struct {
-	CreatedMessage  []*Message
-	ConsumedMessage []*Message
-	CreatedNft      []*NFT
-	CreatedShared   []*Message
-	ConsumedShared  []*Message
-	ConsumedNft     []*NFT
-	CreatedMark     []*iotago.BasicOutput
-	ConsumedMark    []*iotago.BasicOutput
-	CreatedMute     []*iotago.BasicOutput
-	ConsumedMute    []*iotago.BasicOutput
-	CreatedVote     []*iotago.BasicOutput
-	ConsumedVote    []*iotago.BasicOutput
+	CreatedMessage                             []*Message
+	ConsumedMessage                            []*Message
+	CreatedNft                                 []*NFT
+	CreatedShared                              []*Message
+	ConsumedShared                             []*Message
+	ConsumedNft                                []*NFT
+	CreatedPublicKeyOutputIdHexAndAddressPairs []*OutputIdHexAndAddressPair
+	CreatedMark                                []*iotago.BasicOutput
+	ConsumedMark                               []*iotago.BasicOutput
+	CreatedMute                                []*iotago.BasicOutput
+	ConsumedMute                               []*iotago.BasicOutput
+	CreatedVote                                []*iotago.BasicOutput
+	ConsumedVote                               []*iotago.BasicOutput
 }

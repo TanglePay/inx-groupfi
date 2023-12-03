@@ -31,6 +31,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		var createdShared []*im.Message
 		var consumedMessage []*im.Message
 		var consumedShared []*im.Message
+		var createdPublicKeyOutputIdHexAndAddressPairs []*im.OutputIdHexAndAddressPair
 		var consumedNft []*im.NFT
 		var createdMark []*iotago.BasicOutput
 		var consumedMark []*iotago.BasicOutput
@@ -54,6 +55,12 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			shared := sharedOutputFromINXLedgerOutput(output)
 			if shared != nil {
 				createdShared = append(createdShared, shared)
+			}
+			outputIdHexAndAddressPair, err := handlePublicKeyOutputFromINXLedgerOutput(output)
+			createdPublicKeyOutputIdHexAndAddressPairs = append(createdPublicKeyOutputIdHexAndAddressPairs, outputIdHexAndAddressPair)
+			if err != nil {
+				// log error
+				CoreComponent.LogErrorf("LedgerUpdate handlePublicKeyOutputFromINXLedgerOutput error:%s", err.Error())
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeCreated)
 
@@ -106,9 +113,10 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			}
 		}
 		dataFromListenning := &im.DataFromListenning{
-			CreatedMessage:  createdMessage,
-			CreatedNft:      createdNft,
-			CreatedShared:   createdShared,
+			CreatedMessage: createdMessage,
+			CreatedNft:     createdNft,
+			CreatedShared:  createdShared,
+			CreatedPublicKeyOutputIdHexAndAddressPairs: createdPublicKeyOutputIdHexAndAddressPairs,
 			ConsumedMessage: consumedMessage,
 			ConsumedShared:  consumedShared,
 			ConsumedNft:     consumedNft,
