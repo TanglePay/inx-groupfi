@@ -273,9 +273,15 @@ func run() error {
 	im.InitIpfsShell()
 	nodeHTTPAPIClient := nodeclient.New(apiUrl)
 	im.NodeHTTPAPIClient = nodeHTTPAPIClient
+
 	// create a background worker that handles the init situation
 	if err := CoreComponent.Daemon().BackgroundWorker("LedgerInit", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting LedgerInit ... done")
+		resp, err := nodeHTTPAPIClient.Info(ctx)
+		if err != nil {
+			CoreComponent.LogPanicf("failed to start worker: %s", err)
+		}
+		im.CurrentNodeProtocol = &resp.Protocol
 		im.ListeningCtx = ctx
 		indexerClient, err := nodeHTTPAPIClient.Indexer(ctx)
 		if err != nil {

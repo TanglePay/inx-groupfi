@@ -125,7 +125,7 @@ func GetPublicKeyViaTransactionId(ctx context.Context, client *nodeclient.Client
 	}
 	var txId iotago.TransactionID
 	copy(txId[:], transactionIdBytes)
-	block, err := client.TransactionIncludedBlock(ctx, txId, nil)
+	block, err := client.TransactionIncludedBlock(ctx, txId, CurrentNodeProtocol)
 	if err != nil {
 		return "", err
 	}
