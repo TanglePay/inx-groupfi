@@ -212,7 +212,7 @@ type OutputPair struct {
 // process output to OutputPair map
 func ProcessOutputToOutputPair(pair map[string]*OutputPair, output *iotago.BasicOutput, isConsumed bool) {
 	unlockConditionSet := output.UnlockConditionSet()
-	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
+	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
 	// if address not in map, add new pair
 	if _, ok := pair[ownerAddress]; !ok {
 		pair[ownerAddress] = &OutputPair{}

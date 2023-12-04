@@ -167,7 +167,7 @@ func (im *Manager) DeserializeUserMarkedGroupIds(address string, data []byte) ([
 // get unlock address and []*Mark from BasicOutput
 func (im *Manager) GetMarksFromBasicOutput(output *iotago.BasicOutput) ([]*Mark, error) {
 	unlockConditionSet := output.UnlockConditionSet()
-	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
+	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
 	featureSet := output.FeatureSet()
 	meta := featureSet.MetadataFeature()
 	if meta == nil {
