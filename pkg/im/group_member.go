@@ -103,6 +103,10 @@ func (im *Manager) StoreGroupMember(groupMember *GroupMember, logger *logger.Log
 		debouncer.Debounce(key, 100*time.Millisecond, func() {
 			// log
 			logger.Infof("GroupMemberChangedEvent, debouncer.Debounce, key:%s", key)
+			// create group member changed event
+			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp)
+
+			im.PushInbox(groupMemberChangedEvent.ToPushTopic(), groupMemberChangedEvent.ToPushPayload(), logger)
 			// get group qualifications
 			groupQualifications, err := im.GetAllGroupQualificationsFromGroupId(groupMember.GroupId, logger)
 			if err != nil {
@@ -115,12 +119,9 @@ func (im *Manager) StoreGroupMember(groupMember *GroupMember, logger *logger.Log
 				addresses[i] = groupQualification.Address
 			}
 
-			// create group member changed event
-			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp)
 			// store group member changed event to inbox
 			for _, address := range addresses {
 				addressSha256Hash := Sha256Hash(address)
-				im.PushInbox(groupMemberChangedEvent.ToPushTopic(), groupMemberChangedEvent.ToPushPayload(), logger)
 				err = im.StoreGroupMemberChangedEventToInbox(addressSha256Hash, groupMemberChangedEvent, logger)
 				if err != nil {
 					logger.Errorf("GroupMemberChangedEvent, debouncer.Debounce, err:%s", err)
