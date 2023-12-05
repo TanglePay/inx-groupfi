@@ -180,6 +180,19 @@ func Uint16ToBytes(num uint16) []byte {
 	return tmp
 }
 
+// BoolToByte
+func BoolToByte(b bool) byte {
+	if b {
+		return 1
+	}
+	return 0
+}
+
+// bytes to bool
+func BytesToBool(bytes []byte) bool {
+	return bytes[0] == 1
+}
+
 // bytes to uint16
 func BytesToUint16(bytes []byte) uint16 {
 	return binary.BigEndian.Uint16(bytes)

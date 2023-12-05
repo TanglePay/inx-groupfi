@@ -104,7 +104,10 @@ func (im *Manager) StoreGroupMember(groupMember *GroupMember, logger *logger.Log
 			// log
 			logger.Infof("GroupMemberChangedEvent, debouncer.Debounce, key:%s", key)
 			// create group member changed event
-			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp)
+			addressSha256Hash := Sha256Hash(groupMember.Address)
+			addressSha256HashFixed := [Sha256HashLen]byte{}
+			copy(addressSha256HashFixed[:], addressSha256Hash[:])
+			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp, true, addressSha256HashFixed)
 
 			im.PushInbox(groupMemberChangedEvent.ToPushTopic(), groupMemberChangedEvent.ToPushPayload(), logger)
 			// get group qualifications
@@ -184,7 +187,10 @@ func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Lo
 			}
 
 			// create group member changed event
-			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp)
+			addressSha256Hash := Sha256Hash(groupMember.Address)
+			addressSha256HashFixed := [Sha256HashLen]byte{}
+			copy(addressSha256HashFixed[:], addressSha256Hash[:])
+			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp, false, addressSha256HashFixed)
 			// store group member changed event to inbox
 			for _, address := range addresses {
 				addressSha256Hash := Sha256Hash(address)
