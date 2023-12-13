@@ -31,5 +31,6 @@ var (
 	*/
 	CONFIG_IN_TEXT = `[
 	{"groupName":"test-1","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"rms","collectionIds":["0x23aa45318688bf254512f2b6784da8288355aa3f716fa7f506ba397517683921"]},
-	{"groupName":"test-2","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"rms","collectionIds":["0x11d3946f67419eeaff94ed836e11d97ed5098878b0da81efcbf32d2d6e12c412"]}]`
+	{"groupName":"test-2","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"rms","collectionIds":["0x11d3946f67419eeaff94ed836e11d97ed5098878b0da81efcbf32d2d6e12c412"]}
+	]`
 )
