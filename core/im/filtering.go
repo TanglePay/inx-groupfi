@@ -15,7 +15,7 @@ import (
 	"golang.org/x/crypto/blake2b"
 )
 
-var iotacatTagStr = "GROUPFIV3"
+var iotacatTagStr = "GROUPFIV4"
 var iotacatTag = []byte(iotacatTagStr)
 var iotacatTagHex = iotago.EncodeHex(iotacatTag)
 
