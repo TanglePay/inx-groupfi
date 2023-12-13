@@ -71,6 +71,9 @@ const (
 
 	// get user group reputation
 	RouteUserGroupReputation = "/usergroupreputation"
+
+	// get address balance
+	RouteAddressBalance = "/addressbalance"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -196,6 +199,18 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			TotalBalance: totalBalance.Text(10),
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+	// get address balance
+	e.GET(RouteAddressBalance, func(c echo.Context) error {
+		address, err := parseAddressQueryParam(c)
+		if err != nil {
+			return err
+		}
+		balance, err := deps.IMManager.GetBalanceOfOneAddress(im.ImTokenTypeSMR, address)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, balance.Text(10))
 	})
 	// testmeta
 	e.GET("/testnftmeta", func(c echo.Context) error {
