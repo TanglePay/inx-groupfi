@@ -411,15 +411,21 @@ func getGroupMembersFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
 	}
 	// map addresses to nfts, nft should be created with owner address only
 	nfts := make([]*im.NFT, len(groupmembers))
+	var maxTimestamp uint32
 	for i, groupmember := range groupmembers {
 		nfts[i] = &im.NFT{
 			OwnerAddress:       []byte(groupmember.Address),
 			MileStoneTimestamp: groupmember.Timestamp,
 		}
+		if groupmember.Timestamp > maxTimestamp {
+			maxTimestamp = groupmember.Timestamp
+		}
 	}
-	CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d", iotago.EncodeHex(groupId), len(groupmembers))
+	CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d, maxTimestamp:%d", iotago.EncodeHex(groupId), len(nfts), maxTimestamp)
 	resp, err := deps.IMManager.FullfillNFTsWithPublickKey(nfts, im.PublicKeyDrainer, CoreComponent.Logger())
-
+	if err != nil {
+		return nil, err
+	}
 	return resp, nil
 }
 
