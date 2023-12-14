@@ -334,7 +334,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 
 	// group member addresses
 	e.GET(RouteGroupMemberAddresses, func(c echo.Context) error {
-		resp, err := getGroupMemberAddressesFromGroupId(c)
+		resp, err := getGroupMembersFromGroupId(c)
 		if err != nil {
 			return err
 		}

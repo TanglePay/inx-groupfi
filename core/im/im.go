@@ -397,7 +397,7 @@ func getMarkedAddressesFromGroupId(c echo.Context) ([]string, error) {
 }
 
 // get all group member addresses from groupId
-func getGroupMemberFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
+func getGroupMembersFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
 	groupId, err := parseGroupIdQueryParam(c)
 	if err != nil {
 		return nil, err
@@ -417,7 +417,7 @@ func getGroupMemberFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
 			MileStoneTimestamp: groupmember.Timestamp,
 		}
 	}
-	CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d", iotago.EncodeHex(groupId), len(addresses))
+	CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d", iotago.EncodeHex(groupId), len(groupmembers))
 	resp, err := deps.IMManager.FullfillNFTsWithPublickKey(nfts, im.PublicKeyDrainer, CoreComponent.Logger())
 
 	return resp, nil
