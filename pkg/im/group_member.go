@@ -1,7 +1,6 @@
 package im
 
 import (
-	"encoding/binary"
 	"sort"
 	"time"
 
@@ -22,6 +21,10 @@ type GroupMember struct {
 
 	// timestamp
 	Timestamp uint32
+}
+type GroupMemberJson struct {
+	Address   string `json:"address"`
+	Timestamp uint32 `json:"timestamp"`
 }
 
 // newGroupMember creates a new GroupMember.
@@ -79,17 +82,20 @@ func (im *Manager) StoreGroupMember(groupMember *GroupMember, logger *logger.Log
 	}
 	isActuallyStored := !exists
 	key := im.GroupMemberKey(groupMember)
-	value := make([]byte, 4+len(groupMember.Address))
-	index := 0
-	binary.LittleEndian.PutUint32(value[index:], groupMember.Timestamp)
-	index += 4
-	copy(value[index:], groupMember.Address)
+	bytes := make([]byte, 0)
+	idx := 0
+	timestampBytes := Uint32ToBytes(groupMember.Timestamp)
+	AppendBytesWithUint16Len(&bytes, &idx, timestampBytes, false)
+
+	AppendBytesWithUint16Len(&bytes, &idx, []byte(groupMember.Address), true)
 
 	// log group member key and value
-	logger.Infof("StoreGroupMember,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
-	err = im.imStore.Set(key, value)
-	if err != nil {
-		return isActuallyStored, err
+	if !exists {
+		logger.Infof("StoreGroupMember,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(bytes))
+		err = im.imStore.Set(key, bytes)
+		if err != nil {
+			return isActuallyStored, err
+		}
 	}
 	// store member group
 	err = im.StoreMemberGroup(groupMember, logger)
@@ -250,10 +256,17 @@ func (im *Manager) MemberGroupKeyPrefix(address string) []byte {
 func (im *Manager) GetGroupMemberFromKeyAndValue(key kvstore.Key, value kvstore.Value) *GroupMember {
 	var groupId [GroupIdLen]byte
 	copy(groupId[:], key[1:1+GroupIdLen])
-	var timestamp [TimestampLen]byte
-	copy(timestamp[:], value[:TimestampLen])
-	address := string(value[TimestampLen:])
-	return NewGroupMember(groupId, address, 0, BytesToUint32(timestamp[:]))
+	idx := 0
+	timestampBytes, err := ReadBytesWithUint16Len(value, &idx, TimestampLen)
+	if err != nil {
+		return nil
+	}
+	addressBytes, err := ReadBytesWithUint16Len(value, &idx)
+	if err != nil {
+		return nil
+	}
+	address := string(addressBytes)
+	return NewGroupMember(groupId, address, 0, BytesToUint32(timestampBytes))
 }
 
 // get all group members, input is group id, sorted by timestamp

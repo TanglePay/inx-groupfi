@@ -110,6 +110,7 @@ type NFTResponse struct {
 	PublicKey    string `json:"publicKey"`
 	OwnerAddress string `json:"ownerAddress"`
 	NFTId        string `json:"nftId"`
+	Timestamp    uint32 `json:"timestamp"`
 }
 
 // NFTWithRespChan
