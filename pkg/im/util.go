@@ -218,13 +218,17 @@ func BytesToFloat32(bytes []byte) float32 {
 }
 
 type OutputPair struct {
-	CreatedOutput  *iotago.BasicOutput
-	ConsumedOutput *iotago.BasicOutput
+	CreatedOutput  *OutputAndOutputId
+	ConsumedOutput *OutputAndOutputId
+}
+type OutputAndOutputId struct {
+	Output   *iotago.BasicOutput
+	OutputId iotago.OutputID
 }
 
 // process output to OutputPair map
-func ProcessOutputToOutputPair(pair map[string]*OutputPair, output *iotago.BasicOutput, isConsumed bool) {
-	unlockConditionSet := output.UnlockConditionSet()
+func ProcessOutputToOutputPair(pair map[string]*OutputPair, output *OutputAndOutputId, isConsumed bool) {
+	unlockConditionSet := output.Output.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
 	// if address not in map, add new pair
 	if _, ok := pair[ownerAddress]; !ok {
