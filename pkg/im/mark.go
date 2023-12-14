@@ -17,6 +17,7 @@ type Mark struct {
 	// group id
 	GroupId [GroupIdLen]byte
 
+	OutputId iotago.OutputID
 	// timestamp
 	Timestamp [TimestampLen]byte
 }
@@ -64,8 +65,15 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 	// log group qualification GroupId, address, exists
 	logger.Infof("StoreMark,group qualification exists,groupId:%s,address:%s,exists:%t", iotago.EncodeHex(mark.GroupId[:]), mark.Address, exists)
 	if exists {
-		groupMember := NewGroupMember(mark.GroupId, mark.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
-		_, err := im.StoreGroupMember(groupMember, logger)
+		outputId := mark.OutputId
+		resp, err := NodeHTTPAPIClient.OutputMetadataByID(ListeningCtx, outputId)
+		if err != nil {
+			return err
+		}
+
+		groupMember := NewGroupMember(mark.GroupId, mark.Address, resp.MilestoneIndexBooked, resp.MilestoneTimestampBooked)
+
+		_, err = im.StoreGroupMember(groupMember, logger)
 		if err != nil {
 			return err
 		}
@@ -165,23 +173,27 @@ func (im *Manager) DeserializeUserMarkedGroupIds(address string, data []byte) ([
 }
 
 // get unlock address and []*Mark from BasicOutput
-func (im *Manager) GetMarksFromBasicOutput(output *iotago.BasicOutput) ([]*Mark, error) {
-	unlockConditionSet := output.UnlockConditionSet()
+func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputId) ([]*Mark, error) {
+	unlockConditionSet := output.Output.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
-	featureSet := output.FeatureSet()
+	featureSet := output.Output.FeatureSet()
 	meta := featureSet.MetadataFeature()
 	if meta == nil {
 		return nil, errors.New("meta is nil")
 	}
+	outputId := output.OutputId
 	marks, err := im.DeserializeUserMarkedGroupIds(ownerAddress, meta.Data)
 	if err != nil {
 		return nil, err
+	}
+	for _, mark := range marks {
+		mark.OutputId = outputId
 	}
 	return marks, nil
 }
 
 // handle group mark basic output created
-func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(consumedOutput *iotago.BasicOutput, createdOutput *iotago.BasicOutput, logger *logger.Logger) {
+func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(consumedOutput *OutputAndOutputId, createdOutput *OutputAndOutputId, logger *logger.Logger) {
 
 	// log entering
 	logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ...")
@@ -276,12 +288,14 @@ func (im *Manager) FilterMarkOutput(output iotago.Output, logger *logger.Logger)
 }
 
 // filter mark output from ledger output
-func (im *Manager) FilterMarkOutputFromLedgerOutput(output *inx.LedgerOutput, logger *logger.Logger) (*iotago.BasicOutput, bool) {
+func (im *Manager) FilterMarkOutputFromLedgerOutput(output *inx.LedgerOutput, logger *logger.Logger) (*iotago.BasicOutput, iotago.OutputID, bool) {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
-		return nil, false
+		return nil, iotago.OutputID{}, false
 	}
-	return im.FilterMarkOutput(iotaOutput, logger)
+	outputId := output.UnwrapOutputID()
+	outputFiltered, is := im.FilterMarkOutput(iotaOutput, logger)
+	return outputFiltered, outputId, is
 }
 
 func (im *Manager) FilterOutputByTag(output iotago.Output, targetTag []byte, logger *logger.Logger) (*iotago.BasicOutput, bool) {

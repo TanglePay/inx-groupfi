@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/TanglePay/inx-groupfi/pkg/im"
+	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
@@ -96,6 +97,16 @@ func makeDrainerForMarkInit(ctx context.Context, nodeHTTPAPIClient *nodeclient.C
 			CoreComponent.LogWarnf("LedgerInit ... FilterMarkOutput failed")
 			return
 		}
-		deps.IMManager.HandleGroupMarkBasicOutputConsumedAndCreated(nil, basicOutput, CoreComponent.Logger())
+		outputIdStruct, err := iotago.OutputIDFromHex(outputId)
+		if err != nil {
+			// log error
+			CoreComponent.LogWarnf("LedgerInit ... iotago.OutputIDFromHex failed:%s", err)
+			return
+		}
+		outputAndOutputId := &im.OutputAndOutputId{
+			Output:   basicOutput,
+			OutputId: outputIdStruct,
+		}
+		deps.IMManager.HandleGroupMarkBasicOutputConsumedAndCreated(nil, outputAndOutputId, CoreComponent.Logger())
 	}, 100, 10, 200)
 }

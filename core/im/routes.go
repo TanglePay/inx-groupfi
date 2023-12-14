@@ -89,10 +89,12 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		nftWithRespChan := item.(*im.NFTWithRespChan)
 		// get address from nft
 		address := string(nftWithRespChan.NFT.OwnerAddress)
+		timestamp := nftWithRespChan.NFT.MileStoneTimestamp
 
 		nftResponse := &im.NFTResponse{
 			OwnerAddress: address,
 			PublicKey:    "",
+			Timestamp:    timestamp,
 		}
 		// get public key from address
 		publicKeyBytes, err := deps.IMManager.GetAddressPublicKey(ctx, client, address, false, CoreComponent.Logger())
@@ -332,7 +334,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 
 	// group member addresses
 	e.GET(RouteGroupMemberAddresses, func(c echo.Context) error {
-		resp, err := getGroupMemberAddressesFromGroupId(c)
+		resp, err := getGroupMembersFromGroupId(c)
 		if err != nil {
 			return err
 		}

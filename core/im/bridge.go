@@ -33,8 +33,8 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		var consumedShared []*im.Message
 		var createdPublicKeyOutputIdHexAndAddressPairs []*im.OutputIdHexAndAddressPair
 		var consumedNft []*im.NFT
-		var createdMark []*iotago.BasicOutput
-		var consumedMark []*iotago.BasicOutput
+		var createdMark []*im.OutputAndOutputId
+		var consumedMark []*im.OutputAndOutputId
 		var createdVote []*iotago.BasicOutput
 		var consumedVote []*iotago.BasicOutput
 		var createdMute []*iotago.BasicOutput
@@ -66,11 +66,15 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeCreated)
 
-			mark, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output, CoreComponent.Logger())
+			mark, outputId, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output, CoreComponent.Logger())
+			markAndOutputId := &im.OutputAndOutputId{
+				Output:   mark,
+				OutputId: outputId,
+			}
 			if is {
 				// log found mark
 				CoreComponent.LogInfof("LedgerUpdate just found created mark:%s", iotago.EncodeHex(output.OutputId.Id))
-				createdMark = append(createdMark, mark)
+				createdMark = append(createdMark, markAndOutputId)
 			}
 			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output, CoreComponent.Logger())
 			if is {
@@ -99,11 +103,15 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeConsumed)
 
-			mark, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output, CoreComponent.Logger())
+			mark, outputId, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output, CoreComponent.Logger())
+			markAndOutputId := &im.OutputAndOutputId{
+				Output:   mark,
+				OutputId: outputId,
+			}
 			if is {
 				// log found mark
 				CoreComponent.LogInfof("LedgerUpdate just found consumed mark:%s", iotago.EncodeHex(output.OutputId.Id))
-				consumedMark = append(consumedMark, mark)
+				consumedMark = append(consumedMark, markAndOutputId)
 			}
 			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output, CoreComponent.Logger())
 			if is {

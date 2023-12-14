@@ -293,8 +293,8 @@ type DataFromListenning struct {
 	ConsumedShared                             []*Message
 	ConsumedNft                                []*NFT
 	CreatedPublicKeyOutputIdHexAndAddressPairs []*OutputIdHexAndAddressPair
-	CreatedMark                                []*iotago.BasicOutput
-	ConsumedMark                               []*iotago.BasicOutput
+	CreatedMark                                []*OutputAndOutputId
+	ConsumedMark                               []*OutputAndOutputId
 	CreatedMute                                []*iotago.BasicOutput
 	ConsumedMute                               []*iotago.BasicOutput
 	CreatedVote                                []*iotago.BasicOutput
