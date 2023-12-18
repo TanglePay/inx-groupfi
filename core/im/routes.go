@@ -433,7 +433,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		if err != nil {
 			return err
 		}
-		addresses, err := deps.IMManager.GetGroupMembers(groupId32)
+		addresses, err := deps.IMManager.GetGroupMemberAddressesFromGroupId(groupId32, nil)
 		if err != nil {
 			return err
 		}
