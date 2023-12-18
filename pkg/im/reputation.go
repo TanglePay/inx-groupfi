@@ -3,6 +3,7 @@ package im
 import (
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
+	"github.com/pkg/errors"
 )
 
 type UserGroupRepuation struct {
@@ -137,6 +138,9 @@ func (im *Manager) GetUserGroupReputation(groupId [GroupIdLen]byte, address stri
 	key := im.UserGroupReputationKey(userGroupReputation)
 	value, err := im.imStore.Get(key)
 	if err != nil {
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return im.UserGroupReputationKeyAndValue(key, value), nil
