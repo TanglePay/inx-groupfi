@@ -554,16 +554,17 @@ func getUserGroupReputation(c echo.Context) (*GroupUserReputationResponse, error
 	if err != nil {
 		return nil, err
 	}
+
 	var score float32
 	score = 100
 	if reputation != nil {
 		score = reputation.Reputation
 	}
-
-	CoreComponent.LogInfof("get user group reputation from groupId:%s,address:%s,found reputation:%f", iotago.EncodeHex(groupId), address, reputation)
+	addressSha256Hash := im.Sha256Hash(address)
+	CoreComponent.LogInfof("get user group reputation from groupId:%s,address:%s,score is:%f", iotago.EncodeHex(groupId), address, score)
 	resp := &GroupUserReputationResponse{
-		GroupId:           iotago.EncodeHex(reputation.GroupId[:]),
-		AddressSha256Hash: iotago.EncodeHex(reputation.AddrSha256Hash[:]),
+		GroupId:           iotago.EncodeHex(groupId),
+		AddressSha256Hash: iotago.EncodeHex(addressSha256Hash),
 		Reputation:        score,
 	}
 	return resp, nil
