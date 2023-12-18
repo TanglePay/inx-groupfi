@@ -49,6 +49,14 @@ type GroupUserReputationResponse struct {
 	Reputation        float32 `json:"reputation"`
 }
 
+// test repuation response
+type TestReputationResponse struct {
+	// muted count
+	MutedCount uint16 `json:"mutedCount"`
+	// group member count
+	GroupMemberCount int `json:"groupMemberCount"`
+}
+
 // enum for output type created or consumed
 const (
 	ImOutputTypeCreated = iota

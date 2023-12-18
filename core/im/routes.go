@@ -72,6 +72,9 @@ const (
 	// get user group reputation
 	RouteUserGroupReputation = "/usergroupreputation"
 
+	// test repuation
+	RouteTestReputation = "/testreputation"
+
 	// get address balance
 	RouteAddressBalance = "/addressbalance"
 )
@@ -406,6 +409,40 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		resp, err := getUserGroupReputation(c)
 		if err != nil {
 			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// test reputation
+	e.GET(RouteTestReputation, func(c echo.Context) error {
+		address, err := parseAddressQueryParam(c)
+		if err != nil {
+			return err
+		}
+		// get group id
+		groupId, err := parseGroupIdQueryParam(c)
+		if err != nil {
+			return err
+		}
+		addressSha256Hash := im.Sha256Hash(address)
+		var groupId32 [32]byte
+		copy(groupId32[:], groupId)
+		var addressSha256Hash32 [32]byte
+		copy(addressSha256Hash32[:], addressSha256Hash)
+		mutedTimes, err := deps.IMManager.CountMutedTimes(groupId32, addressSha256Hash32)
+		if err != nil {
+			return err
+		}
+		addresses, err := deps.IMManager.GetGroupMemberAddressesFromGroupId(groupId32, nil)
+		if err != nil {
+			return err
+		}
+		groupMemberCount := len(addresses)
+		// log address and group id and muted times and group member count
+		CoreComponent.Logger().Infof("address:%s, groupId:%s, mutedTimes:%d, groupMemberCount:%d", address, iotago.EncodeHex(groupId[:]), mutedTimes, groupMemberCount)
+		resp := &TestReputationResponse{
+			MutedCount:       mutedTimes,
+			GroupMemberCount: groupMemberCount,
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
