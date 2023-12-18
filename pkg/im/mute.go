@@ -146,7 +146,7 @@ func (im *Manager) CalculateReputationScore(groupId [GroupIdLen]byte, mutedAddrS
 	if err != nil {
 		return 0, err
 	}
-	addresses, err := im.GetGroupMemberAddressesFromGroupId(groupId, nil)
+	addresses, err := im.GetGroupMembers(groupId)
 	if err != nil {
 		return 0, err
 	}
