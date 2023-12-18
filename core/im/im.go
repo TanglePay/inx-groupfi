@@ -554,6 +554,11 @@ func getUserGroupReputation(c echo.Context) (*GroupUserReputationResponse, error
 	if err != nil {
 		return nil, err
 	}
+	// log reputation is nil
+	if reputation == nil {
+		CoreComponent.LogInfof("get user group reputation from groupId:%s,address:%s,found reputation is nil", iotago.EncodeHex(groupId), address)
+	}
+
 	var score float32
 	score = 100
 	if reputation != nil {
