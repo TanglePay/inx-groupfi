@@ -66,6 +66,9 @@ const (
 	// get address member groups
 	RouteAddressMemberGroups = "/addressmembergroups"
 
+	// get address mark groups
+	RouteAddressMarkGroups = "/addressmarkgroups"
+
 	// get group user reputation
 	RouteGroupUserReputation = "/groupuserreputation"
 
@@ -378,6 +381,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			return err
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// get address mark groups
+	e.GET(RouteAddressMarkGroups, func(c echo.Context) error {
+		groupIds, err := getAddressMarkGroups(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, groupIds)
 	})
 
 	// get public key of one address

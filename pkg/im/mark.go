@@ -43,9 +43,23 @@ func (im *Manager) MarkKey(mark *Mark) []byte {
 	return key
 }
 
+// address mark key
+// key = prefix + addressSha256Hash + groupid. value = timestamp + address
+func (im *Manager) AddressMarkKey(mark *Mark) []byte {
+	key := make([]byte, 1+Sha256HashLen+GroupIdLen)
+	index := 0
+	key[index] = ImStoreKeyPrefixAddressMark
+	index++
+	copy(key[index:], Sha256Hash(mark.Address))
+	index += Sha256HashLen
+	copy(key[index:], mark.GroupId[:])
+	return key
+}
+
 // store mark value = timestamp + address
 func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.Logger) error {
 	key := im.MarkKey(mark)
+	addressKey := im.AddressMarkKey(mark)
 	value := make([]byte, 4+len(mark.Address))
 	index := 0
 	binary.LittleEndian.PutUint32(value[index:], binary.LittleEndian.Uint32(mark.Timestamp[:]))
@@ -57,6 +71,11 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 	if err != nil {
 		return err
 	}
+	err = im.imStore.Set(addressKey, value)
+	if err != nil {
+		return err
+	}
+
 	// check if group qualification exists, if so, store group member
 	exists, err := im.GroupQualificationExists(mark.GroupId, mark.Address)
 	if err != nil {
@@ -85,9 +104,14 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 // delete mark
 func (im *Manager) DeleteMark(mark *Mark, isActuallyUnmarked bool, logger *logger.Logger) error {
 	key := im.MarkKey(mark)
+	addressKey := im.AddressMarkKey(mark)
 	// log mark key
 	logger.Infof("DeleteMark,key:%s", iotago.EncodeHex(key))
 	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	err = im.imStore.Delete(addressKey)
 	if err != nil {
 		return err
 	}
@@ -124,10 +148,31 @@ func (im *Manager) MarkKeyPrefix(groupId [GroupIdLen]byte) []byte {
 	return key
 }
 
+// address mark key prefix
+func (im *Manager) AddressMarkKeyPrefix(address string) []byte {
+	key := make([]byte, 1+Sha256HashLen)
+	index := 0
+	key[index] = ImStoreKeyPrefixAddressMark
+	index++
+	copy(key[index:], Sha256Hash(address))
+	return key
+}
+
 // MarkKeyToMark, key = prefix + groupid + addressSha256Hash. value = timestamp + address
 func (im *Manager) MarkKeyAndValueToMark(key kvstore.Key, value kvstore.Value) *Mark {
 	var groupId [GroupIdLen]byte
 	copy(groupId[:], key[1:1+GroupIdLen])
+	var timestamp [TimestampLen]byte
+	copy(timestamp[:], value[:TimestampLen])
+	address := string(value[TimestampLen:])
+	return NewMark(address, groupId, timestamp)
+}
+
+// address mark key to mark
+func (im *Manager) AddressMarkKeyAndValueToMark(key kvstore.Key, value kvstore.Value) *Mark {
+	// key is prefix + addressSha256Hash + groupid
+	var groupId [GroupIdLen]byte
+	copy(groupId[:], key[1+Sha256HashLen:])
 	var timestamp [TimestampLen]byte
 	copy(timestamp[:], value[:TimestampLen])
 	address := string(value[TimestampLen:])
@@ -144,6 +189,22 @@ func (im *Manager) GetMarksFromGroupId(groupId [GroupIdLen]byte, logger *logger.
 		// log found mark with key and value
 		logger.Infof("Found mark,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
 		mark := im.MarkKeyAndValueToMark(key, value)
+		marks = append(marks, mark)
+		return true
+	})
+	return marks, err
+}
+
+// get marks from address
+func (im *Manager) GetMarksFromAddress(address string, logger *logger.Logger) ([]*Mark, error) {
+	prefix := im.AddressMarkKeyPrefix(address)
+	// log address and prefix
+	logger.Infof("GetMarksFromAddress,address:%s,prefix:%s", address, iotago.EncodeHex(prefix))
+	marks := make([]*Mark, 0)
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		// log found mark with key and value
+		logger.Infof("Found mark,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
+		mark := im.AddressMarkKeyAndValueToMark(key, value)
 		marks = append(marks, mark)
 		return true
 	})
