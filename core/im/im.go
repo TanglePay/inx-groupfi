@@ -510,6 +510,23 @@ func getAddressMemberGroups(c echo.Context) ([]string, error) {
 	CoreComponent.LogInfof("get address member groups from address:%s,found groupIds:%d", address, len(groupIds))
 	return groupIds, nil
 }
+func getAddressMarkGroups(c echo.Context) ([]string, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address mark groups from address:%s", address)
+	marks, err := deps.IMManager.GetMarksFromAddress(address, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	groupIds := make([]string, len(marks))
+	for i, mark := range marks {
+		groupIds[i] = iotago.EncodeHex(mark.GroupId[:])
+	}
+	CoreComponent.LogInfof("get address mark groups from address:%s,found groupIds:%d", address, len(groupIds))
+	return groupIds, nil
+}
 
 // getGroupUserReputation
 func getGroupUserReputation(c echo.Context) ([]*GroupUserReputationResponse, error) {

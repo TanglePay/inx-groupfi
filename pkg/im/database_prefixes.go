@@ -57,4 +57,6 @@ const (
 	ImStoreKeyPrefixGroupUserReputation byte = 29
 
 	ImStoreKeyPrefixUserGroupReputation byte = 30
+
+	ImStoreKeyPrefixAddressMark byte = 31
 )
