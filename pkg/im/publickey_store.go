@@ -90,7 +90,7 @@ func GetTransactionIdsFromTransactionHistory(ctx context.Context, node IotaNodeI
 		return nil, err
 	}
 
-	var transactionIdsHash map[string]bool
+	transactionIdsHash := make(map[string]bool)
 	for _, item := range resp.Items {
 		if !item.IsSpent {
 			outputIdHex := item.OutputID
