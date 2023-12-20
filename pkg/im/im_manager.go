@@ -263,7 +263,8 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 				logger.Infof("ApplyNewLedgerUpdate, iotago.OutputIDFromHex error:%s", err.Error())
 				continue
 			}
-			im.GetAddressPublicKeyFromOutputId(ListeningCtx, NodeHTTPAPIClient, outputId, outputIdHexAndAddressPair.Address, logger)
+			transactionIdHex := outputId.TransactionID().ToHex()
+			im.GetAddressPublicKeyFromTransactionId(ListeningCtx, NodeHTTPAPIClient, transactionIdHex, outputIdHexAndAddressPair.Address, logger)
 		}
 	}
 	return nil

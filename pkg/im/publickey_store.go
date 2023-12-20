@@ -22,6 +22,12 @@ func (im *Manager) StoreOnePublickKey(bech32Address string, publicKey []byte) er
 	return im.imStore.Set(key, publicKey)
 }
 
+// delete one public key
+func (im *Manager) DeleteOnePublicKey(bech32Address string) error {
+	key := keyFromAddressPublicKey(bech32Address)
+	return im.imStore.Delete(key)
+}
+
 func (im *Manager) ReadOnePublicKey(bech32Address string) ([]byte, error) {
 	key := keyFromAddressPublicKey(bech32Address)
 	publicKey, err := im.imStore.Get(key)
@@ -72,7 +78,7 @@ var (
 	}
 )
 
-func GetTransactionHistory(ctx context.Context, node IotaNodeInfo, bech32Address string, logger *logger.Logger) (string, error) {
+func GetTransactionIdsFromTransactionHistory(ctx context.Context, node IotaNodeInfo, bech32Address string, logger *logger.Logger) ([]string, error) {
 	url := fmt.Sprintf("%s/transactionhistory/%s/%s", node.ExplorerApiUrl, node.ExplorerApiNetwork, bech32Address)
 	params := map[string]string{
 		"pageSize": "1000",
@@ -81,16 +87,26 @@ func GetTransactionHistory(ctx context.Context, node IotaNodeInfo, bech32Address
 
 	var resp TransactionHistoryResponse
 	if err := PerformGetRequest(ctx, url, params, &resp); err != nil {
-		return "", err
+		return nil, err
 	}
 
+	transactionIdsHash := make(map[string]bool)
 	for _, item := range resp.Items {
-		if item.IsSpent {
-			return item.OutputID, nil
+		if !item.IsSpent {
+			outputIdHex := item.OutputID
+			outputId, err := iotago.OutputIDFromHex(outputIdHex)
+			if err != nil {
+				return nil, err
+			}
+			transactionIdHex := outputId.TransactionID().ToHex()
+			transactionIdsHash[transactionIdHex] = true
 		}
 	}
-
-	return "", nil
+	var transactionIds []string
+	for transactionId := range transactionIdsHash {
+		transactionIds = append(transactionIds, transactionId)
+	}
+	return transactionIds, nil
 }
 
 type Unlock struct {
@@ -108,7 +124,7 @@ type TransactionResponse struct {
 	} `json:"block"`
 }
 
-func GetPublicKeyViaTransactionId(ctx context.Context, client *nodeclient.Client, transactionId string) (string, error) {
+func GetPublicKeyViaTransactionId(ctx context.Context, client *nodeclient.Client, transactionId string, assumingBech32Address string) (string, error) {
 
 	/*
 		url := fmt.Sprintf("%s/transaction/%s/%s", node.ExplorerApiUrl, node.ExplorerApiNetwork, transactionId)
@@ -129,7 +145,29 @@ func GetPublicKeyViaTransactionId(ctx context.Context, client *nodeclient.Client
 	if err != nil {
 		return "", err
 	}
-	for _, unlock := range block.Payload.(*iotago.Transaction).Unlocks {
+	transaction := block.Payload.(*iotago.Transaction)
+	// check if input is empty, if not get first input
+	if len(transaction.Essence.Inputs) == 0 {
+		return "", nil
+	}
+	firstInput := transaction.Essence.Inputs[0]
+	if firstInput.Type() != iotago.InputUTXO {
+		return "", nil
+	}
+	utxoInput := firstInput.(*iotago.UTXOInput)
+	outputId := utxoInput.ID()
+	output, err := client.OutputByID(ctx, outputId)
+	if err != nil {
+		return "", err
+	}
+	// find unlock address, in bech32 format
+	address := output.UnlockConditionSet().Address()
+	bech32Address := address.Address.Bech32(iotago.NetworkPrefix(HornetChainName))
+	if bech32Address != assumingBech32Address {
+		return "", nil
+	}
+
+	for _, unlock := range transaction.Unlocks {
 		if unlock.Type() == iotago.UnlockSignature {
 			sigUnlock := unlock.(*iotago.SignatureUnlock)
 			if sigUnlock.Signature.Type() == iotago.SignatureEd25519 {
@@ -157,20 +195,23 @@ func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.C
 	}
 
 	// if not found, get from http request
-	outputIdHex, err := GetTransactionHistory(ctx, CurrentNetwork, address, logger)
+	transactionIds, err := GetTransactionIdsFromTransactionHistory(ctx, CurrentNetwork, address, logger)
 	if err != nil {
 		return nil, err
 	}
-	if outputIdHex == "" {
+	if transactionIds == nil {
 		return nil, nil
 	}
-	// log output id
-	logger.Infof("GetAddressPublicKey, address:%s, TransactionoutputIdHex:%s", address, outputIdHex)
-	outputId, err := iotago.OutputIDFromHex(outputIdHex)
-	if err != nil {
-		return nil, err
+	for _, transactionId := range transactionIds {
+		publicKey, err := im.GetAddressPublicKeyFromTransactionId(ctx, client, transactionId, address, logger)
+		if err != nil {
+			return nil, err
+		}
+		if publicKey != nil {
+			return publicKey, nil
+		}
 	}
-	return im.GetAddressPublicKeyFromOutputId(ctx, client, outputId, address, logger)
+	return nil, nil
 }
 
 type OutputIdHexAndAddressPair struct {
@@ -178,15 +219,11 @@ type OutputIdHexAndAddressPair struct {
 	Address     string
 }
 
-func (im *Manager) GetAddressPublicKeyFromOutputId(ctx context.Context, client *nodeclient.Client, outputId iotago.OutputID, address string, logger *logger.Logger) ([]byte, error) {
-	metaResponse, err := client.OutputMetadataByID(ctx, outputId)
-	if err != nil {
-		return nil, err
-	}
-	transactionId := metaResponse.TransactionID
+func (im *Manager) GetAddressPublicKeyFromTransactionId(ctx context.Context, client *nodeclient.Client, transactionId string, address string, logger *logger.Logger) ([]byte, error) {
+
 	// log transaction id
 	logger.Infof("GetAddressPublicKey, address:%s, transactionId:%s", address, transactionId)
-	publicKey, err := GetPublicKeyViaTransactionId(ctx, client, transactionId)
+	publicKey, err := GetPublicKeyViaTransactionId(ctx, client, transactionId, address)
 	if err != nil {
 		return nil, err
 	}

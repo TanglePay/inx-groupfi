@@ -407,6 +407,19 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, publicKey)
 	})
 
+	// delete public key of one address
+	e.GET("/deleteaddresspublickey", func(c echo.Context) error {
+		address, err := parseAddressQueryParam(c)
+		if err != nil {
+			return err
+		}
+		CoreComponent.LogInfof("delete address public key from address:%s", address)
+		err = deps.IMManager.DeleteOnePublicKey(address)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, "ok")
+	})
 	// get group user reputation
 	e.GET(RouteGroupUserReputation, func(c echo.Context) error {
 		resp, err := getGroupUserReputation(c)
