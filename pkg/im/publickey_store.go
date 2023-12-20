@@ -208,7 +208,9 @@ func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.C
 	for _, transactionId := range transactionIds {
 		publicKey, err := im.GetAddressPublicKeyFromTransactionId(ctx, client, transactionId, address, logger)
 		if err != nil {
-			return nil, err
+			// log error then continue
+			logger.Warnf("GetAddressPublicKeyFromTransactionId failed:%s", err)
+			continue
 		}
 		if publicKey != nil {
 			return publicKey, nil
