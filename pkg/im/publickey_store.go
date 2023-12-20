@@ -162,6 +162,9 @@ func GetPublicKeyViaTransactionId(ctx context.Context, client *nodeclient.Client
 	}
 	// find unlock address, in bech32 format
 	address := output.UnlockConditionSet().Address()
+	if address == nil || address.Address == nil {
+		return "", nil
+	}
 	bech32Address := address.Address.Bech32(iotago.NetworkPrefix(HornetChainName))
 	if bech32Address != assumingBech32Address {
 		return "", nil
