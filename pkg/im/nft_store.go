@@ -115,16 +115,18 @@ func (im *Manager) NFTExists(groupId []byte, nftId []byte) (bool, error) {
 func (im *Manager) storeNewNFTsDeleteConsumedNfts(createdNfts []*NFT, consumedNfts []*NFT, logger *logger.Logger) error {
 	// hash set store all groupId, groupId is []byte
 	groupIdSet := make(map[string]bool)
-	defer func() {
-		for groupId := range groupIdSet {
-			groupIdBytes, err := iotago.DecodeHex(groupId)
-			if err != nil {
-				logger.Errorf("failed to decode groupId %s", groupId)
-				continue
+	/*
+		defer func() {
+			for groupId := range groupIdSet {
+				groupIdBytes, err := iotago.DecodeHex(groupId)
+				if err != nil {
+					logger.Errorf("failed to decode groupId %s", groupId)
+					continue
+				}
+				im.CalculateNumberOfGroupMembersWithPublicKey(groupIdBytes, logger)
 			}
-			im.CalculateNumberOfGroupMembersWithPublicKey(groupIdBytes, logger)
-		}
-	}()
+		}()
+	*/
 	for _, nft := range createdNfts {
 		if err := im.storeSingleNFT(nft, logger); err != nil {
 			return err
