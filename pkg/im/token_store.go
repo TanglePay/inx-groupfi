@@ -224,7 +224,8 @@ func (im *Manager) SetWhaleEligibility(tokenType uint16, address string, isEligi
 	groupName := im.GetGroupNameFromTokenType(tokenType)
 	groupId := im.GroupNameToGroupId(groupName)
 	tokenThreshold := im.GetThresholdFromTokenType(tokenType)
-	nft := NewNFTForToken(groupId, address, NftIdPadding, groupName, tokenType, tokenThreshold)
+	addressSha256 := Sha256Hash(address)
+	nft := NewNFTForToken(groupId, address, addressSha256, groupName, tokenType, tokenThreshold)
 	if isEligible {
 		return im.storeSingleNFT(nft, logger)
 	} else {
