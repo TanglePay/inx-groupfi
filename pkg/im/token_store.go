@@ -2,11 +2,11 @@ package im
 
 import (
 	"encoding/binary"
-	"fmt"
 	"math/big"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 func (im *Manager) TokenKeyFromToken(token *TokenStat) []byte {
@@ -201,7 +201,18 @@ func (im *Manager) GetGroupNameFromTokenType(tokenType uint16) string {
 // token type to threshold in string format
 func (im *Manager) GetThresholdFromTokenType(tokenType uint16) string {
 	if tokenType == ImTokenTypeSMR {
-		return fmt.Sprintf("%e", ImSMRWhaleThreshold)
+		groupId := im.GroupNameToGroupId("smr-whale")
+		// return "" if group not found
+		if groupId == nil {
+			return "0"
+		}
+		groupIdHex := iotago.EncodeHex(groupId)
+		groupConfig := im.GroupIdToGroupConfig(groupIdHex)
+		if groupConfig == nil {
+			return "0"
+		}
+		thresTxt := groupConfig.TokenThres
+		return thresTxt
 	}
 	return "??"
 }
@@ -213,7 +224,8 @@ func (im *Manager) SetWhaleEligibility(tokenType uint16, address string, isEligi
 	groupName := im.GetGroupNameFromTokenType(tokenType)
 	groupId := im.GroupNameToGroupId(groupName)
 	tokenThreshold := im.GetThresholdFromTokenType(tokenType)
-	nft := NewNFTForToken(groupId, address, NftIdPadding, groupName, tokenType, tokenThreshold)
+	addressSha256 := Sha256Hash(address)
+	nft := NewNFTForToken(groupId, address, addressSha256, groupName, tokenType, tokenThreshold)
 	if isEligible {
 		return im.storeSingleNFT(nft, logger)
 	} else {

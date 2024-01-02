@@ -298,6 +298,8 @@ func getThresholdFromTokenType(tokenType uint16) *big.Float {
 	return nil
 }
 func handleTokenWhaleEligibilityFromAddressGivenTotalAmount(tokenType uint16, address string, totalAmount *big.Int, manager *im.Manager, logger *logger.Logger) error {
+	// log enter
+	//CoreComponent.LogInfof("handleTokenWhaleEligibilityFromAddressGivenTotalAmount,tokenType:%d,address:%s,totalAmount:%s", tokenType, address, totalAmount.Text(10))
 	balance, err := manager.GetBalanceOfOneAddress(tokenType, address)
 	if err != nil {
 		return err
@@ -310,6 +312,18 @@ func handleTokenWhaleEligibilityFromAddressGivenTotalAmount(tokenType uint16, ad
 		return nil
 	}
 	isEligible := percentage.Cmp(threshold) >= 0
+	// log
+	/*
+		CoreComponent.LogInfof("handleTokenWhaleEligibilityFromAddressGivenTotalAmount,tokenType:%d,address:%s,totalAmount:%s,balance:%s,percentage:%s,threshold:%s,isEligible:%t",
+			tokenType,
+			address,
+			totalAmount.Text(10),
+			balance.Text(10),
+			percentage.Text('f', 10),
+			threshold.Text('f', 10),
+			isEligible,
+		)
+	*/
 	return manager.SetWhaleEligibility(tokenType, address, isEligible, logger)
 }
 
