@@ -139,6 +139,8 @@ func (im *Manager) HandleGroupConfigRawContent(contentRaw []byte, logger *logger
 	var messageGroupMetaList []MessageGroupMetaJSON
 	err := json.Unmarshal(contentRaw, &messageGroupMetaList)
 	if err != nil {
+		// log
+		logger.Infof("HandleGroupNFTOutputCreated ... json.Unmarshal failed:%s", err)
 		return err
 	}
 	// store all group config
