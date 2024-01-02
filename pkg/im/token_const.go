@@ -8,7 +8,7 @@ const (
 	// token status
 	ImTokenStatusCreated  byte    = 1
 	ImTokenStatusConsumed byte    = 2
-	ImSMRWhaleThreshold   float64 = 0.00000001
+	ImSMRWhaleThreshold   float64 = 0.0000000001
 )
 
 // token type to token name

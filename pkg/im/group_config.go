@@ -135,8 +135,6 @@ func (im *Manager) HandleGroupNFTOutputCreated(nftOutput *iotago.NFTOutput, logg
 	return im.HandleGroupConfigRawContent(contentRaw, logger)
 }
 func (im *Manager) HandleGroupConfigRawContent(contentRaw []byte, logger *logger.Logger) error {
-	// log enter
-	logger.Infof("HandleGroupNFTOutputCreated ... contentRaw:%s", contentRaw)
 	// unmarshal content(json) to MessageGroupMetaJSON[]
 	var messageGroupMetaList []MessageGroupMetaJSON
 	err := json.Unmarshal(contentRaw, &messageGroupMetaList)
@@ -147,14 +145,6 @@ func (im *Manager) HandleGroupConfigRawContent(contentRaw []byte, logger *logger
 	}
 	// store all group config
 	for _, messageGroupMeta := range messageGroupMetaList {
-		// log messageGroupMeta
-		jsonStr, err := json.Marshal(messageGroupMeta)
-		if err != nil {
-			// log error then continue
-			logger.Infof("HandleGroupNFTOutputCreated ... json.Marshal failed:%s", err)
-			continue
-		}
-		logger.Infof("HandleGroupNFTOutputCreated ... messageGroupMeta:%s", jsonStr)
 		// clone messageGroupMeta
 		messageGroupMetaClone := messageGroupMeta
 		err = im.StoreOneGroupConfig(&messageGroupMetaClone)
