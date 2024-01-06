@@ -199,19 +199,8 @@ func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Lo
 			addressSha256Hash := Sha256Hash(groupMember.Address)
 			addressSha256HashFixed := [Sha256HashLen]byte{}
 			copy(addressSha256HashFixed[:], addressSha256Hash[:])
-			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp, false, groupMember.Address)
-			// store group member changed event to inbox
-			/*
-				for _, address := range addresses {
-					addressSha256Hash := Sha256Hash(address)
-					im.PushInbox(groupMemberChangedEvent.ToPushTopic(), groupMemberChangedEvent.ToPushPayload(), logger)
-					err = im.StoreGroupMemberChangedEventToInbox(addressSha256Hash, groupMemberChangedEvent, logger)
-					if err != nil {
-						logger.Errorf("GroupMemberChangedEvent, debouncer.Debounce, err:%s", err)
-						return
-					}
-				}
-			*/
+			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp, false, addressSha256HashFixed)
+			im.PushInbox(groupMemberChangedEvent.ToPushTopic(), groupMemberChangedEvent.ToPushPayload(), logger)
 		})
 	}
 	return isActuallyDeleted, nil
