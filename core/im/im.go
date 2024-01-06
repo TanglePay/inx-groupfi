@@ -197,7 +197,10 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 		return nil, err
 	}
 	if shared == nil {
-		return nil, nil
+		resp := &SharedResponse{
+			OutputId: "",
+		}
+		return resp, nil
 	}
 	CoreComponent.LogInfof("get shared from groupId:%s,found shared with outputid:%s", groupId, iotago.EncodeHex(shared.OutputId))
 	resp := &SharedResponse{
