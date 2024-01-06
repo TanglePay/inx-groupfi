@@ -35,10 +35,10 @@ func (g *GroupMemberChangedEvent) SetEventType(eventType byte) {
 }
 func (g *GroupMemberChangedEvent) Jsonable() InboxItemJson {
 	json := &GroupMemberChangedEventJson{
-		GroupID:           iotago.EncodeHex(g.GroupID[:]),
-		Timestamp:         g.MilestoneTimestamp,
-		IsNewMember:       g.IsNewMember,
-		AddressSha256Hash: iotago.EncodeHex(g.AddressSha256Hash[:]),
+		GroupID:     iotago.EncodeHex(g.GroupID[:]),
+		Timestamp:   g.MilestoneTimestamp,
+		IsNewMember: g.IsNewMember,
+		Address:     g.Address,
 	}
 	json.SetEventType(g.EventType)
 	return json

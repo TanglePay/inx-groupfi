@@ -196,10 +196,7 @@ func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Lo
 			}
 
 			// create group member changed event
-			addressSha256Hash := Sha256Hash(groupMember.Address)
-			addressSha256HashFixed := [Sha256HashLen]byte{}
-			copy(addressSha256HashFixed[:], addressSha256Hash[:])
-			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp, false, addressSha256HashFixed)
+			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp, false, groupMember.Address)
 			im.PushInbox(groupMemberChangedEvent.ToPushTopic(), groupMemberChangedEvent.ToPushPayload(), logger)
 		})
 	}
