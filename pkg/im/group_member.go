@@ -113,30 +113,33 @@ func (im *Manager) StoreGroupMember(groupMember *GroupMember, logger *logger.Log
 			addressSha256Hash := Sha256Hash(groupMember.Address)
 			addressSha256HashFixed := [Sha256HashLen]byte{}
 			copy(addressSha256HashFixed[:], addressSha256Hash[:])
-			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp, true, addressSha256HashFixed)
+			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp, true, groupMember.Address)
 
 			im.PushInbox(groupMemberChangedEvent.ToPushTopic(), groupMemberChangedEvent.ToPushPayload(), logger)
-			// get group qualifications
-			groupQualifications, err := im.GetAllGroupQualificationsFromGroupId(groupMember.GroupId, logger)
-			if err != nil {
-				logger.Errorf("GroupMemberChangedEvent, debouncer.Debounce, err:%s", err)
-				return
-			}
-			// get group member addresses
-			addresses := make([]string, len(groupQualifications))
-			for i, groupQualification := range groupQualifications {
-				addresses[i] = groupQualification.Address
-			}
-
-			// store group member changed event to inbox
-			for _, address := range addresses {
-				addressSha256Hash := Sha256Hash(address)
-				err = im.StoreGroupMemberChangedEventToInbox(addressSha256Hash, groupMemberChangedEvent, logger)
+			/*
+				// get group qualifications
+				groupQualifications, err := im.GetAllGroupQualificationsFromGroupId(groupMember.GroupId, logger)
 				if err != nil {
 					logger.Errorf("GroupMemberChangedEvent, debouncer.Debounce, err:%s", err)
 					return
 				}
-			}
+				// get group member addresses
+				addresses := make([]string, len(groupQualifications))
+				for i, groupQualification := range groupQualifications {
+					addresses[i] = groupQualification.Address
+				}
+			*/
+			// store group member changed event to inbox
+			/*
+				for _, address := range addresses {
+					addressSha256Hash := Sha256Hash(address)
+					err = im.StoreGroupMemberChangedEventToInbox(addressSha256Hash, groupMemberChangedEvent, logger)
+					if err != nil {
+						logger.Errorf("GroupMemberChangedEvent, debouncer.Debounce, err:%s", err)
+						return
+					}
+				}
+			*/
 		})
 	}
 	return isActuallyStored, nil
@@ -193,10 +196,7 @@ func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Lo
 			}
 
 			// create group member changed event
-			addressSha256Hash := Sha256Hash(groupMember.Address)
-			addressSha256HashFixed := [Sha256HashLen]byte{}
-			copy(addressSha256HashFixed[:], addressSha256Hash[:])
-			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp, false, addressSha256HashFixed)
+			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp, false, groupMember.Address)
 			im.PushInbox(groupMemberChangedEvent.ToPushTopic(), groupMemberChangedEvent.ToPushPayload(), logger)
 		})
 	}
