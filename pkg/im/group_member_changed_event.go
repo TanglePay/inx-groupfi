@@ -10,7 +10,7 @@ type GroupMemberChangedEvent struct {
 	// groupID
 	GroupID [GroupIdLen]byte
 
-	AddressSha256Hash [Sha256HashLen]byte
+	Address string
 
 	IsNewMember bool
 
@@ -55,10 +55,10 @@ func (g *GroupMemberChangedEvent) ToPushPayload() []byte {
 
 type GroupMemberChangedEventJson struct {
 	EventJsonCommonFields
-	GroupID           string `json:"groupId"`
-	Timestamp         uint32 `json:"timestamp"`
-	IsNewMember       bool   `json:"isNewMember"`
-	AddressSha256Hash string `json:"addressSha256Hash"`
+	GroupID     string `json:"groupId"`
+	Timestamp   uint32 `json:"timestamp"`
+	IsNewMember bool   `json:"isNewMember"`
+	Address     string `json:"address"`
 }
 
 // implements InboxItemJson
@@ -67,13 +67,13 @@ func (g *GroupMemberChangedEventJson) SetEventType(eventType byte) {
 }
 
 // newGroupMemberChangedEvent creates a new GroupMemberChangedEvent.
-func NewGroupMemberChangedEvent(groupID [GroupIdLen]byte, mileStoneIndex uint32, mileStoneTimestamp uint32, isNewMember bool, addressSha256Hash [Sha256HashLen]byte) *GroupMemberChangedEvent {
+func NewGroupMemberChangedEvent(groupID [GroupIdLen]byte, mileStoneIndex uint32, mileStoneTimestamp uint32, isNewMember bool, address string) *GroupMemberChangedEvent {
 	return &GroupMemberChangedEvent{
 		GroupID:            groupID,
 		MilestoneIndex:     mileStoneIndex,
 		MilestoneTimestamp: mileStoneTimestamp,
 		IsNewMember:        isNewMember,
-		AddressSha256Hash:  addressSha256Hash,
+		Address:            address,
 	}
 }
 
@@ -93,7 +93,7 @@ func SerializeGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChange
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(groupMemberChangedEvent.MilestoneIndex), false)
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(groupMemberChangedEvent.MilestoneTimestamp), false)
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{BoolToByte(groupMemberChangedEvent.IsNewMember)}, false)
-	AppendBytesWithUint16Len(&bytes, &idx, groupMemberChangedEvent.AddressSha256Hash[:], false)
+	AppendBytesWithUint16Len(&bytes, &idx, []byte(groupMemberChangedEvent.Address), true)
 	return bytes
 }
 
@@ -121,13 +121,12 @@ func (im *Manager) UnserializeGroupMemberChangedEvent(bytes []byte) (*GroupMembe
 		return nil, err
 	}
 	isNewMember := BytesToBool(isNewMemberBytes)
-	addressSha256HashBytes, err := ReadBytesWithUint16Len(bytes, &idx, Sha256HashLen)
+	addressBytes, err := ReadBytesWithUint16Len(bytes, &idx)
 	if err != nil {
 		return nil, err
 	}
-	addressSha256HashBytesFixed := [Sha256HashLen]byte{}
-	copy(addressSha256HashBytesFixed[:], addressSha256HashBytes)
-	return NewGroupMemberChangedEvent(groupID, milestoneIndex, milestoneTimestamp, isNewMember, addressSha256HashBytesFixed), nil
+	address := string(addressBytes)
+	return NewGroupMemberChangedEvent(groupID, milestoneIndex, milestoneTimestamp, isNewMember, address), nil
 }
 
 // store group member changed event to inbox
