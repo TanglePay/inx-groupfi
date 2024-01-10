@@ -59,7 +59,6 @@ func (im *Manager) StoreUserMuteGroupMember(userMuteGroupMember *UserMuteGroupMe
 	if !exists {
 		return errors.New("user has no group member")
 	}
-	// log
 	logger.Infof("StoreUserMuteGroupMember: groupId=%s, mutedAddrSha256Hash=%s, muteAddrSha256Hash=%s",
 		iotago.EncodeHex(userMuteGroupMember.GroupId[:]),
 		iotago.EncodeHex(userMuteGroupMember.MutedAddrSha256Hash[:]),
