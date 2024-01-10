@@ -51,7 +51,7 @@ func (im *Manager) UserHasGroupMember(userMuteGroupMember *UserMuteGroupMember) 
 }
 
 // store user mute group member, check if user has group member, if not, return error
-func (im *Manager) StoreUserMuteGroupMember(userMuteGroupMember *UserMuteGroupMember) error {
+func (im *Manager) StoreUserMuteGroupMember(userMuteGroupMember *UserMuteGroupMember, logger *logger.Logger) error {
 	exists, err := im.UserHasGroupMember(userMuteGroupMember)
 	if err != nil {
 		return err
@@ -59,6 +59,11 @@ func (im *Manager) StoreUserMuteGroupMember(userMuteGroupMember *UserMuteGroupMe
 	if !exists {
 		return errors.New("user has no group member")
 	}
+	// log 
+	logger.Infof("StoreUserMuteGroupMember: groupId=%s, mutedAddrSha256Hash=%s, muteAddrSha256Hash=%s",
+		iotago.EncodeHex(userMuteGroupMember.GroupId[:]), iotago.EncodeHex(userMuteGroupMember.MutedAddrSha256Hash[:]), iotago.EncodeHex(userMuteGroupMember.MuteAddrSha256Hash[:])
+	)
+
 	key := im.UserMuteGroupMemberKey(userMuteGroupMember)
 	value := []byte{}
 	err = im.imStore.Set(key, value)
@@ -209,13 +214,13 @@ func (im *Manager) GetUserMuteGroupMembersFromBasicOutput(output *iotago.BasicOu
 }
 
 // handle user mute group member basic output created
-func (im *Manager) HandleUserMuteGroupMemberBasicOutputCreated(output *iotago.BasicOutput) {
+func (im *Manager) HandleUserMuteGroupMemberBasicOutputCreated(output *iotago.BasicOutput, logger *logger.Logger) {
 	userMuteGroupMembers := im.GetUserMuteGroupMembersFromBasicOutput(output)
 	if len(userMuteGroupMembers) == 0 {
 		return
 	}
 	for _, userMuteGroupMember := range userMuteGroupMembers {
-		err := im.StoreUserMuteGroupMember(userMuteGroupMember)
+		err := im.StoreUserMuteGroupMember(userMuteGroupMember,logger)
 		if err != nil {
 			return
 		}
