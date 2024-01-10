@@ -31,6 +31,6 @@ func makeItemDrainerForMuteInit(ctx context.Context, nodeHTTPAPIClient *nodeclie
 			CoreComponent.LogWarnf("LedgerInit ... FilterVoteOutput failed")
 			return
 		}
-		deps.IMManager.HandleUserMuteGroupMemberBasicOutputCreated(basicOutput)
+		deps.IMManager.HandleUserMuteGroupMemberBasicOutputCreated(basicOutput, CoreComponent.Logger())
 	}, 100, 10, 200)
 }
