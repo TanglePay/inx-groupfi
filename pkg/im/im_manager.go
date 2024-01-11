@@ -242,7 +242,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	}
 	if len(createdMute) > 0 {
 		for _, mute := range createdMute {
-			im.HandleUserMuteGroupMemberBasicOutputCreated(mute)
+			im.HandleUserMuteGroupMemberBasicOutputCreated(mute, logger)
 		}
 	}
 	if len(consumedVote) > 0 {
