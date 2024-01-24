@@ -24,6 +24,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 	return deps.NodeBridge.ListenToLedgerUpdates(ctx, startIndex, endIndex, func(update *nodebridge.LedgerUpdate) error {
 		index := update.MilestoneIndex
 		im.CurrentMilestoneIndex = index
+		im.LastTimeReceiveEventFromHornet = im.GetCurrentEpochTimestamp()
 		// log
 		CoreComponent.LogInfof("LedgerUpdate start:%d, end::%d, milestoneIndex:%d", startIndex, endIndex, index)
 		var createdMessage []*im.Message
