@@ -16,18 +16,18 @@ const (
 )
 
 var (
-	ErrParticipationCorruptedStorage               = errors.New("the participation database was not shutdown properly")
-	ErrParticipationEventStartedBeforePruningIndex = errors.New("the given participation event started before the pruning index of this node")
-	ErrParticipationEventBallotCanOverflow         = errors.New("the given participation duration in combination with the maximum voting weight can overflow uint64")
-	ErrParticipationEventStakingCanOverflow        = errors.New("the given participation staking nominator and denominator in combination with the duration can overflow uint64")
-	ErrParticipationEventAlreadyExists             = errors.New("the given participation event already exists")
+	ErrParticipationCorruptedStorage               = errors.New("the groupfi database was not shutdown properly")
+	ErrParticipationEventStartedBeforePruningIndex = errors.New("the given groupfi event started before the pruning index of this node")
+	ErrParticipationEventBallotCanOverflow         = errors.New("the given groupfi duration in combination with the maximum voting weight can overflow uint64")
+	ErrParticipationEventStakingCanOverflow        = errors.New("the given groupfi staking nominator and denominator in combination with the duration can overflow uint64")
+	ErrParticipationEventAlreadyExists             = errors.New("the given groupfi event already exists")
 )
 
 type ProtocolParametersProvider func() *iotago.ProtocolParameters
 type NodeStatusProvider func(ctx context.Context) (confirmedIndex iotago.MilestoneIndex, pruningIndex iotago.MilestoneIndex)
 type LedgerUpdatesProvider func(ctx context.Context, startIndex iotago.MilestoneIndex, endIndex iotago.MilestoneIndex, handler func(index iotago.MilestoneIndex, dataFromListenning *DataFromListenning) error) error
 
-// Manager is used to track the outcome of participation in the tangle.
+// Manager is used to track the outcome of groupfi in the tangle.
 type Manager struct {
 	// lock used to secure the state of the Manager.
 	syncutils.RWMutex
@@ -50,7 +50,7 @@ type Manager struct {
 
 // the default options applied to the Manager.
 var defaultOptions = []Option{
-	WithTagMessage("IOTACAT"),
+	WithTagMessage("GROUPFI"),
 }
 
 // Options define options for the Manager.

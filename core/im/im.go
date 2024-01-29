@@ -243,12 +243,13 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 	return groupIdStrArr, nil
 }
 
-type IncludeData struct {
+type GroupData struct {
 	GroupName string `json:"groupName"`
 }
 
 type GroupParam struct {
-	Includes []IncludeData `json:"includes"`
+	Includes []GroupData `json:"includes"`
+	Excludes []GroupData `json:"excludes"`
 }
 
 // getQualifiedGroupConfigsFromAddress
@@ -283,6 +284,7 @@ func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMeta
 			includeGroupNameMap[include.GroupName] = true
 		}
 	}
+	// exclude
 
 	// loop groupIdHexList
 	var groupConfigs []*im.MessageGroupMetaJSON

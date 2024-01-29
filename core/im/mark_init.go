@@ -16,7 +16,7 @@ func handleMarkInit(ctx context.Context, client *nodeclient.Client, indexerClien
 	handleTypeInit(ctx, client, indexerClient, drainer, im.MarkType, im.MarkTagStr)
 }
 
-func handleTypeInit(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, drainer *im.ItemDrainer, itemType im.IndexerItemType, tag string) {
+func handleTypeInit(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, drainer *im.ItemDrainer, itemType string, tag string) {
 
 	isInitializationFinished, err := deps.IMManager.IsInitFinished(itemType, tag)
 	if err != nil {

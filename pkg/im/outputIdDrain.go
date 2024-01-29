@@ -6,6 +6,7 @@ type ItemDrainer struct {
 	itemInput chan interface{}
 	consume   func(item interface{})
 	FetchSize int
+	ctx       context.Context
 }
 
 func NewItemDrainer(ctx context.Context, consume func(item interface{}), concurrency int, chanSpace int, fetchSize int) *ItemDrainer {
@@ -13,6 +14,7 @@ func NewItemDrainer(ctx context.Context, consume func(item interface{}), concurr
 		itemInput: make(chan interface{}, chanSpace),
 		consume:   consume,
 		FetchSize: fetchSize,
+		ctx:       ctx,
 	}
 	for i := 0; i < concurrency; i++ {
 		go func() {
@@ -33,6 +35,11 @@ func NewItemDrainer(ctx context.Context, consume func(item interface{}), concurr
 // Drain items and push to channel
 func (drainer *ItemDrainer) Drain(items []interface{}) {
 	for _, item := range items {
-		drainer.itemInput <- item
+		select {
+		case <-drainer.ctx.Done():
+			return
+		default:
+			drainer.itemInput <- item
+		}
 	}
 }

@@ -122,23 +122,25 @@ func (im *Manager) StoreGroupQualification(groupQualification *GroupQualificatio
 	if err != nil {
 		return err
 	}
-	// check if mark exists, if so, store group member
-	mark := NewMark(groupQualification.Address, groupQualification.GroupId, [4]byte{0, 0, 0, 0})
-	exists, err := im.MarkExists(mark.GroupId, mark.Address)
-	if err != nil {
-		return err
-	}
-	if exists {
-		groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
-		isActuallyStored, err := im.StoreGroupMember(groupMember, logger)
+	if !IsIniting {
+		// check if mark exists, if so, store group member
+		mark := NewMark(groupQualification.Address, groupQualification.GroupId, [4]byte{0, 0, 0, 0})
+		exists, err := im.MarkExists(mark.GroupId, mark.Address)
 		if err != nil {
 			return err
 		}
-		// delete group shared if previous group member is actually stored
-		if isActuallyStored {
-			err = im.DeleteSharedFromGroupId(groupQualification.GroupId[:])
+		if exists {
+			groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
+			isActuallyStored, err := im.StoreGroupMember(groupMember, logger)
 			if err != nil {
 				return err
+			}
+			// delete group shared if previous group member is actually stored
+			if isActuallyStored {
+				err = im.DeleteSharedFromGroupId(groupQualification.GroupId[:])
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -154,22 +156,24 @@ func (im *Manager) DeleteGroupQualification(groupQualification *GroupQualificati
 	if err != nil {
 		return err
 	}
-	isQualify, err := im.GroupQualificationExists(groupQualification.GroupId, groupQualification.Address)
-	if err != nil {
-		return err
-	}
-	if !isQualify {
-		// delete group member as well
-		groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
-		isActuallyDeleted, err := im.DeleteGroupMember(groupMember, logger)
+	if !IsIniting {
+		isQualify, err := im.GroupQualificationExists(groupQualification.GroupId, groupQualification.Address)
 		if err != nil {
 			return err
 		}
-		// delete group shared when previous group member is actually deleted
-		if isActuallyDeleted {
-			err = im.DeleteSharedFromGroupId(groupQualification.GroupId[:])
+		if !isQualify {
+			// delete group member as well
+			groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
+			isActuallyDeleted, err := im.DeleteGroupMember(groupMember, logger)
 			if err != nil {
 				return err
+			}
+			// delete group shared when previous group member is actually deleted
+			if isActuallyDeleted {
+				err = im.DeleteSharedFromGroupId(groupQualification.GroupId[:])
+				if err != nil {
+					return err
+				}
 			}
 		}
 	}
