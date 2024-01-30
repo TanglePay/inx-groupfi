@@ -410,7 +410,7 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
 	senderAddressSha256 := im.Sha256Hash(senderAddressStr)
-	CoreComponent.LogInfof("Found IOTACAT output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d，senderAddress:%s",
+	CoreComponent.LogInfof("Found GROUPFI Message output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d，senderAddress:%s",
 		len(metaPayload),
 		len(groupId),
 		iotago.EncodeHex(groupId),

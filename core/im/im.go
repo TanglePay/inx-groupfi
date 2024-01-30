@@ -32,6 +32,18 @@ func parseAddressQueryParam(c echo.Context) (string, error) {
 	return address, nil
 }
 
+// parse tokenId from query param
+func parseTokenIdQueryParam(c echo.Context) ([]byte, error) {
+	tokenIdParams := c.QueryParams()["tokenId"]
+	if len(tokenIdParams) == 0 {
+		return nil, nil
+	}
+	tokenId, err := iotago.DecodeHex(tokenIdParams[0])
+	if err != nil {
+		return nil, err
+	}
+	return tokenId, nil
+}
 func parseGroupIdQueryParam(c echo.Context) ([]byte, error) {
 	groupIdParams := c.QueryParams()["groupId"]
 	if len(groupIdParams) == 0 {

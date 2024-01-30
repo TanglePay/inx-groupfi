@@ -199,9 +199,12 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		if err != nil {
 			return err
 		}
-		tokenId := im.SmrTokenId
+		tokenId, err := parseTokenQueryParam(c)
+		if tokenId == nil {
+			tokenId = im.SmrTokenId
+		}
 		tokenIdFixed := [im.Sha256HashLen]byte{}
-		copy(tokenIdFixed[:], tokenId)
+		copy(tokenIdFixed[:], im.Sha256HashBytes(tokenId))
 		balance, err := deps.IMManager.GetBalanceOfOneAddress(tokenId, address)
 		if err != nil {
 			return err
