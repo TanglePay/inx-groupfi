@@ -30,7 +30,7 @@ var (
 	*/
 	CONFIG_IN_TEXT = fmt.Sprintf(`[
 			{"groupName":"soon","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.00000001","tokenId":"0x0884298fe9b82504d26ddb873dbd234a344c120da3a4317d8063dbcf96d356aa9d0100000000"},
-			{"groupName":"smr-whale","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.00000001"."tokenId":"%s"},
+			{"groupName":"smr-whale","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.00000001","tokenId":"%s"},
 		    {"groupName":"staff-marketing","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x3070481ff0e0d96b1b7f6cbf8c2a484c9e7304295b44cd6ff9afe1ecbc4efca9"]},
 		    {"groupName":"staff-developer","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0xdc6c3b0167af767652567523b9240c86095241c622c37cb726efeeb5e102a93c"]},
 		    {"groupName":"alpha-test","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x23e5f8500132f9dfa8698e3d352f0d57bd79cf57533f273e87e31b6cd0e0a5ef"]},
