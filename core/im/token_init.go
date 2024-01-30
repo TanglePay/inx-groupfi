@@ -83,10 +83,11 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 				if isAddressDifferent {
 					// case total address
 					if isPreviousAddressTotalAddress {
-						// log tokenId, currentTotalAddress, currentTokenTotal
-						CoreComponent.LogInfof("tokenId:%s,currentTotalAddress:%s,currentTokenTotal:%d", iotago.EncodeHex(currentTokenId), currentTotalAddress, currentAddressTotal)
-						GetTokenTotal(currentTokenIdHash).Add(currentAddressTotal)
 						currentTokenTotal = currentAddressTotal
+						// log tokenId, currentTotalAddress, currentTokenTotal
+						CoreComponent.LogInfof("tokenId:%s,currentTotalAddress:%s,currentTokenTotal:%d", iotago.EncodeHex(currentTokenId), currentTotalAddress, currentTokenTotal)
+						GetTokenTotal(currentTokenIdHash).Add(currentAddressTotal)
+
 					} else {
 						//case normal address
 						err = handleTokenWhaleEligibilityFromAddressGivenTotalAmount(
