@@ -58,7 +58,7 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 
 				var isTokenIdDifferent bool
 				var isAddressDifferent bool
-				if currentTokenId == nil || bytes.Equal(currentTokenId, tokenStat.TokenId) {
+				if currentTokenId == nil || !bytes.Equal(currentTokenId, tokenStat.TokenId) {
 					isTokenIdDifferent = true
 					// set currentTokenIdHash, update isCurrentAddressTotalAddress
 					currentTokenId = tokenStat.TokenId
@@ -66,7 +66,7 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 					CoreComponent.LogInfof("start with tokenId:%s", iotago.EncodeHex(currentTokenId))
 					currentTokenIdHash = tokenStat.TokenIdHash
 				}
-				if currentAddress == "" || currentAddress == tokenStat.Address {
+				if currentAddress == "" || currentAddress != tokenStat.Address {
 					isAddressDifferent = true
 					// set currentAddress
 					currentAddress = tokenStat.Address
@@ -116,8 +116,11 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 				}
 				if tokenStat.Status == im.ImTokenStatusCreated {
 					currentAddressTotal.Add(currentAddressTotal, amount)
-				} else {
+				} else if tokenStat.Status == im.ImTokenStatusConsumed {
 					currentAddressTotal.Sub(currentAddressTotal, amount)
+				} else {
+					// log error
+					CoreComponent.LogWarnf("LedgerInit ... tokenStat.Status is not created or consumed:%s", tokenStat.Status)
 				}
 
 				isPreviousAddressTotalAddress = currentTotalAddress == currentAddress

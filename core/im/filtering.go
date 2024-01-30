@@ -339,7 +339,7 @@ func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.Nati
 	// loop through all token based group
 	if im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName] != nil && im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] != nil {
 		// log token type is not nul
-		CoreComponent.LogInfof("handleTokenFromOutputType, token type is not nul")
+		CoreComponent.LogInfof("handleTokenFromOutputType, token type is not null")
 		for _, groupId := range im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] {
 			// log enter loop
 			CoreComponent.LogInfof("handleTokenFromOutputType, enter loop")
