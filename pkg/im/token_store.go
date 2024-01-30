@@ -143,20 +143,29 @@ func (im *Manager) TokenStateFromKeyAndValue(key kvstore.Key, value kvstore.Valu
 	}
 	address := string(addressBytes)
 
-	index = 1
+	index = 0
 	// key = prefix + tokenidHash + addressHash + instanceIdHash + status
+	// prefix
 	_, err = ReadBytesWithUint16Len(key, &index, 1)
 	if err != nil {
 		return nil, err
 	}
+	// tokenidHash
 	_, err = ReadBytesWithUint16Len(key, &index, Sha256HashLen)
 	if err != nil {
 		return nil, err
 	}
+	// addressHash
+	_, err = ReadBytesWithUint16Len(key, &index, Sha256HashLen)
+	if err != nil {
+		return nil, err
+	}
+	// instanceIdHash
 	instanceIdHash, err := ReadBytesWithUint16Len(key, &index, Sha256HashLen)
 	if err != nil {
 		return nil, err
 	}
+	// status
 	statusBytes, err := ReadBytesWithUint16Len(key, &index, 1)
 	if err != nil {
 		return nil, err
