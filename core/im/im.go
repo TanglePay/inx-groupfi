@@ -243,12 +243,13 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 	return groupIdStrArr, nil
 }
 
-type IncludeData struct {
+type GroupData struct {
 	GroupName string `json:"groupName"`
 }
 
 type GroupParam struct {
-	Includes []IncludeData `json:"includes"`
+	Includes []GroupData `json:"includes"`
+	Excludes []GroupData `json:"excludes"`
 }
 
 // getQualifiedGroupConfigsFromAddress
@@ -283,7 +284,12 @@ func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMeta
 			includeGroupNameMap[include.GroupName] = true
 		}
 	}
-
+	excludeGroupNameMap := map[string]bool{}
+	if hasGroupParam && (len(groupParam.Excludes) > 0) {
+		for _, exclude := range groupParam.Excludes {
+			excludeGroupNameMap[exclude.GroupName] = true
+		}
+	}
 	// loop groupIdHexList
 	var groupConfigs []*im.MessageGroupMetaJSON
 	for _, groupIdHex := range groupIdHexList {
@@ -293,6 +299,9 @@ func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMeta
 			continue
 		}
 		if (len(includeGroupNameMap) > 0) && (!includeGroupNameMap[config.GroupName]) {
+			continue
+		}
+		if (len(excludeGroupNameMap) > 0) && (excludeGroupNameMap[config.GroupName]) {
 			continue
 		}
 		// if config is not nil, append to groupConfigs

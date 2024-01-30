@@ -21,7 +21,6 @@ var (
 			"rms1zqga89r0vaqea6hljnkcxms3m9ld2zvg0zcd4q00e0ej6ttwztzpy2lnys8",
 		}
 	*/
-
 	CONFIG_IN_TEXT = `[
 			{"groupName":"smr-whale","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.00000001"},
 		    {"groupName":"staff-marketing","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x3070481ff0e0d96b1b7f6cbf8c2a484c9e7304295b44cd6ff9afe1ecbc4efca9"]},
@@ -36,9 +35,10 @@ var (
 		   	{"groupName":"iceberg-7","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0xcf0f598ff3ee378b03906af4de48030bc6082831dfcf67730be780a317d98265"]},
 		   	{"groupName":"iceberg-8","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x592b20d610ee4618949dd4f969db7ffc81d93486bfe1ab63b9201618b6be3a48"]}]`
 
-	/*
-		CONFIG_IN_TEXT = `[
-		{"groupName":"test-1","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"rms","collectionIds":["0x23aa45318688bf254512f2b6784da8288355aa3f716fa7f506ba397517683921"]},
-		{"groupName":"test-2","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"rms","collectionIds":["0x11d3946f67419eeaff94ed836e11d97ed5098878b0da81efcbf32d2d6e12c412"]}]`
-	*/
+/*
+CONFIG_IN_TEXT = `[
+{"groupName":"test-1","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"rms","collectionIds":["0x23aa45318688bf254512f2b6784da8288355aa3f716fa7f506ba397517683921"]},
+{"groupName":"test-2","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"rms","collectionIds":["0x11d3946f67419eeaff94ed836e11d97ed5098878b0da81efcbf32d2d6e12c412"]}]`
+*/
+
 )

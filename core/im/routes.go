@@ -39,6 +39,9 @@ const (
 	// consolidation for shared
 	RouteImConsolidationForShared = "/consolidation/shared"
 
+	// health check
+	RouteHealthCheck = "/healthcheck"
+
 	// group configs for renter
 	RouteGroupConfigs = "/groupconfigs"
 
@@ -356,6 +359,28 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
+	// RouteHealthCheck
+	e.GET(RouteHealthCheck, func(c echo.Context) error {
+		bootTime := im.BootTime
+		isIniting := im.IsIniting
+		lastTimeReceiveEventFromHornet := im.LastTimeReceiveEventFromHornet
+		currentTime := im.GetCurrentEpochTimestamp()
+		// if isIniting is true, then if timeelapsed since boot time is more than 1 hour, then return 503 service unavailable
+		// if isIniting is false, then if timeelapsed since last time receive event from hornet is more than 5 minutes, then return 503 service unavailable
+		// otherwise return 200 ok
+		if isIniting {
+			timeElapsed := currentTime - bootTime
+			if timeElapsed > 5*60 {
+				return c.String(http.StatusServiceUnavailable, "503 service unavailable")
+			}
+		} else {
+			timeElapsed := currentTime - lastTimeReceiveEventFromHornet
+			if timeElapsed > 5*60 {
+				return c.String(http.StatusServiceUnavailable, "503 service unavailable")
+			}
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, "ok")
+	})
 	// get group votes count
 	e.GET(RouteGroupVotesCount, func(c echo.Context) error {
 		resp, err := getGroupVotesCount(c)

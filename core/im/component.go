@@ -252,6 +252,7 @@ func startListeningToLedgerUpdate() {
 
 func run() error {
 	im.IsIniting = true
+	im.BootTime = im.GetCurrentEpochTimestamp()
 	// load .groupfi-env file
 	godotenv.Load(".groupfi-env")
 	apiUrl := os.Getenv("SHIMMER_API_URL")
