@@ -14,6 +14,7 @@ var (
 		"smr1zqc8qjql7rsdj6cm0aktlrp2fpxfuucy99d5fnt0lxh7rm9ufm72jmlnz9e",
 		"smr1zrwxcwcpv7hhvajj2e6j8wfypjrqj5jpcc3vxl9hymh7ad0pq25nc462rvv",
 	}
+
 	/*
 		NFT_ISSUER_LIST = []string{
 			"rms1zq3653f3s6yt7f29ztetv7zd4q5gx4d28acklfl4q6arjaghdqujzdqlzs5",
@@ -39,4 +40,5 @@ CONFIG_IN_TEXT = `[
 {"groupName":"test-1","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"rms","collectionIds":["0x23aa45318688bf254512f2b6784da8288355aa3f716fa7f506ba397517683921"]},
 {"groupName":"test-2","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"rms","collectionIds":["0x11d3946f67419eeaff94ed836e11d97ed5098878b0da81efcbf32d2d6e12c412"]}]`
 */
+
 )
