@@ -355,7 +355,7 @@ func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.Nati
 				continue
 			} else {
 				// log json str
-				CoreComponent.LogInfof("handleTokenFromOutputType, jsonStr:%s", jsonStr)
+				CoreComponent.LogInfof("handleTokenFromOutputType, jsonStr:%s", string(jsonStr))
 			}
 			// log groupConfig json str
 
@@ -391,7 +391,7 @@ func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.Nati
 			}
 			// tokenThres := groupConfig.TokenThres
 
-			err := handleTokenAmount(amount, tokenIdBytes, output, outputId, outputStatus, isUpdateGlobalAmount)
+			err = handleTokenAmount(amount, tokenIdBytes, output, outputId, outputStatus, isUpdateGlobalAmount)
 			if err != nil {
 				return err
 			}
