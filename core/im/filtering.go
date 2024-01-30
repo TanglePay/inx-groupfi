@@ -338,11 +338,27 @@ func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.Nati
 
 	// loop through all token based group
 	if im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName] != nil && im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] != nil {
+		// log token type is not nul
+		CoreComponent.LogInfof("handleTokenFromOutputType, token type is not nul")
 		for _, groupId := range im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] {
+			// log enter loop
+			CoreComponent.LogInfof("handleTokenFromOutputType, enter loop")
 			groupConfig := im.ConfigStoreGroupIdToGroupConfig[groupId]
 			if groupConfig == nil {
 				continue
 			}
+			// marshal groupConfig to json str
+			jsonStr, err := json.Marshal(groupConfig)
+			if err != nil {
+				// log error
+				CoreComponent.LogWarnf("handleTokenFromOutputType, json.Marshal failed:%s", err)
+				continue
+			} else {
+				// log json str
+				CoreComponent.LogInfof("handleTokenFromOutputType, jsonStr:%s", jsonStr)
+			}
+			// log groupConfig json str
+
 			tokenIdStr := iotago.EncodeHex(im.SmrTokenId)
 			tokenIdBytes := im.SmrTokenId
 			amount := new(big.Int).SetUint64(basicTokenAmount)
