@@ -33,7 +33,7 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 	//TODO remove
-	isWhaleEligibilityFinished = false
+	//isWhaleEligibilityFinished = false
 	if !isWhaleEligibilityFinished {
 		tokenPrefix := deps.IMManager.TokenKeyPrefixForAll()
 		var currentTokenId []byte

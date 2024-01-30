@@ -258,6 +258,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		if address != "" {
 			addressSha256 = im.Sha256Hash(address)
 		}
+		totalAmount := big.NewInt(0)
 		keyPrefix := deps.IMManager.TokenKeyPrefixFromTokenIdAndAddress(tokenId, addressSha256)
 		deps.IMManager.GetImStore().Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 			tokenStat, err := deps.IMManager.TokenStateFromKeyAndValue(key, value)
@@ -274,10 +275,13 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 				CoreComponent.Logger().Errorf("SetString failed:%s", err)
 				return true
 			}
+			totalAmount.Add(totalAmount, amount)
 			tokenIdHex := iotago.EncodeHex(tokenStat.TokenId)
 			CoreComponent.Logger().Infof("tokenId:%s, address:%s, amount:%s, status:%d", tokenIdHex, address, amount.Text(10), tokenStat.Status)
 			return true
 		})
+		// log totalAmount
+		CoreComponent.Logger().Infof("totalAmount:%s", totalAmount.Text(10))
 		return httpserver.JSONResponse(c, http.StatusOK, "ok")
 	})
 
