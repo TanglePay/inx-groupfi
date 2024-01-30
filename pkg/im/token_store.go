@@ -115,6 +115,15 @@ func (im *Manager) TokenValuePayloadFromTokenState(state *TokenStat) []byte {
 	AppendBytesWithUint16Len(&valuePayload, &index, []byte(state.Address), true)
 	return valuePayload
 }
+func (im *Manager) TokenTotalValuePayloadFromTokenState(state *TokenStat) []byte {
+	// value payload = tokenId + amount + address
+	valuePayload := make([]byte, 0)
+	index := 0
+	AppendBytesWithUint16Len(&valuePayload, &index, state.TokenId, true)
+	AppendBytesWithUint16Len(&valuePayload, &index, []byte(state.Amount), true)
+	AppendBytesWithUint16Len(&valuePayload, &index, []byte("total"), true)
+	return valuePayload
+}
 
 // valuepaylod(amountLen,amount,addressLen,address) -> (amountStr,addressStr)
 func (im *Manager) TokenStateFromKeyAndValue(key kvstore.Key, value kvstore.Value) (*TokenStat, error) {
@@ -160,7 +169,8 @@ func (im *Manager) StoreOneToken(token *TokenStat) error {
 	key := im.TokenKeyFromToken(token)
 	valuePayload := im.TokenValuePayloadFromTokenState(token)
 	totalKey := im.TotalTokenKeyFromToken(token)
-	err := im.imStore.Set(totalKey, valuePayload)
+	totalValuePayload := im.TokenTotalValuePayloadFromTokenState(token)
+	err := im.imStore.Set(totalKey, totalValuePayload)
 	if err != nil {
 		return err
 	}

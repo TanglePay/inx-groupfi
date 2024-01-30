@@ -31,6 +31,14 @@ func parseAddressQueryParam(c echo.Context) (string, error) {
 	address := addressParams[0]
 	return address, nil
 }
+func parseAddressQueryParamWithNil(c echo.Context) (string, error) {
+	addressParams := c.QueryParams()["address"]
+	if len(addressParams) == 0 {
+		return "", nil
+	}
+	address := addressParams[0]
+	return address, nil
+}
 
 // parse tokenId from query param
 func parseTokenIdQueryParam(c echo.Context) ([]byte, error) {

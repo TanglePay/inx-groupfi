@@ -32,6 +32,8 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 	if err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
+	//TODO remove
+	isWhaleEligibilityFinished = false
 	if !isWhaleEligibilityFinished {
 		tokenPrefix := deps.IMManager.TokenKeyPrefixForAll()
 		var currentTokenId []byte
@@ -60,6 +62,8 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 					isTokenIdDifferent = true
 					// set currentTokenIdHash, update isCurrentAddressTotalAddress
 					currentTokenId = tokenStat.TokenId
+					// log currentTokenId
+					CoreComponent.LogInfof("start with tokenId:%s", iotago.EncodeHex(currentTokenId))
 					currentTokenIdHash = tokenStat.TokenIdHash
 				}
 				if currentAddress == "" || currentAddress == tokenStat.Address {
@@ -70,6 +74,8 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 				// if tokenId is different, then first address is total address
 				if isTokenIdDifferent {
 					currentTotalAddress = currentAddress
+					// log currentTotalAddress
+					CoreComponent.LogInfof("start with total address:%s", currentTotalAddress)
 				}
 				// if previous address is total address, and current address is not total address, then current total is token total
 
@@ -103,7 +109,11 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 					// log error
 					CoreComponent.LogWarnf("LedgerInit ... SetString failed:%s", err)
 				}
-				currentTokenTotal.Add(currentTokenTotal, amount)
+				if tokenStat.Status == im.ImTokenStatusCreated {
+					currentTokenTotal.Add(currentTokenTotal, amount)
+				} else {
+					currentTokenTotal.Sub(currentTokenTotal, amount)
+				}
 
 				isPreviousAddressTotalAddress = currentTotalAddress == currentAddress
 

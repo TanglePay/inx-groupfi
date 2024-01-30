@@ -195,18 +195,20 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, iotago.EncodeHex(groupId))
 	})
 	e.GET("/testtoken", func(c echo.Context) error {
-		address, err := parseAddressQueryParam(c)
+		address, err := parseAddressQueryParamWithNil(c)
 		if err != nil {
 			return err
 		}
+		if 
 		tokenId, err := parseTokenQueryParam(c)
 		if err != nil {
 			return err
 		}
-		tokenIdFixed := [im.Sha256HashLen]byte{}
-		if tokenId != nil {
-			copy(tokenIdFixed[:], im.Sha256HashBytes(tokenId))
+		if tokenId == nil {
+			tokenId = im.SmrTokenId
 		}
+		tokenIdFixed := [im.Sha256HashLen]byte{}
+		copy(tokenIdFixed[:], im.Sha256HashBytes(tokenId))
 		balance, err := deps.IMManager.GetBalanceOfOneAddress(tokenId, address)
 		if err != nil {
 			return err
