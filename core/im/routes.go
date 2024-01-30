@@ -274,7 +274,8 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 				CoreComponent.Logger().Errorf("SetString failed:%s", err)
 				return true
 			}
-			CoreComponent.Logger().Infof("tokenStat:%+v, amount:%s, address:%s, status:%d", tokenStat, amount.Text(10), address, tokenStat.Status)
+			tokenIdHex := iotago.EncodeHex(tokenStat.TokenId)
+			CoreComponent.Logger().Infof("tokenId:%s, address:%s, amount:%s, status:%d", tokenIdHex, address, amount.Text(10), tokenStat.Status)
 			return true
 		})
 		return httpserver.JSONResponse(c, http.StatusOK, "ok")
