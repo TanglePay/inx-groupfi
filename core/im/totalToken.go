@@ -9,8 +9,9 @@ import (
 )
 
 var (
-	lock     sync.Mutex
-	totalMap map[string]*TokenTotal
+	totalMapOnce sync.Once
+	lock         sync.Mutex
+	totalMap     map[string]*TokenTotal
 )
 
 type TokenTotal struct {
@@ -34,6 +35,10 @@ func (tt *TokenTotal) Sub(amount *big.Int) {
 
 // TokenTotal.Get
 func (tt *TokenTotal) Get() *big.Int {
+	// init totalMap using once
+	totalMapOnce.Do(func() {
+		totalMap = make(map[string]*TokenTotal)
+	})
 	tt.rwLock.RLock()
 	defer tt.rwLock.RUnlock()
 	return tt.totalAmount
