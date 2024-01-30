@@ -140,6 +140,8 @@ func (im *Manager) HandleGroupNFTOutputCreated(nftOutput *iotago.NFTOutput, logg
 	return im.HandleGroupConfigRawContent(contentRaw, logger)
 }
 func (im *Manager) HandleGroupConfigRawContent(contentRaw []byte, logger *logger.Logger) error {
+	// log enter function
+	logger.Infof("HandleGroupNFTOutputCreated ... contentRaw:%s", contentRaw)
 	// unmarshal content(json) to MessageGroupMetaJSON[]
 	var messageGroupMetaList []MessageGroupMetaJSON
 	err := json.Unmarshal(contentRaw, &messageGroupMetaList)
