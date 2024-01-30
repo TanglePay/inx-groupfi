@@ -273,6 +273,14 @@ func handleTokenAmount(amount *big.Int, tokenId []byte, iotaOutput iotago.Output
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
 
+	amountText := amount.Text(10)
+	tokenStat := deps.IMManager.NewTokenStat(tokenId, outputId, ownerAddress, tokenStatus, amountText)
+	err := deps.IMManager.StoreOneToken(tokenStat)
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("LedgerInit ... StoreOneToken failed:%s", err)
+		return err
+	}
 	if isUpdateGlobalAmount {
 		total := GetTokenTotal(tokenIdHashFixed)
 		if tokenStatus == im.ImTokenStatusCreated {
@@ -280,13 +288,21 @@ func handleTokenAmount(amount *big.Int, tokenId []byte, iotaOutput iotago.Output
 		} else if tokenStatus == im.ImTokenStatusConsumed {
 			total.Sub(amount)
 		}
+		addressTotal, err := deps.IMManager.GetBalanceOfOneAddress(tokenId, ownerAddress)
+		if err != nil {
+			// log error
+			CoreComponent.LogWarnf("LedgerInit ... GetBalanceOfOneAddress failed:%s", err)
+			return err
+		}
 		// handle whale eligibility
-		defer handleTokenWhaleEligibilityFromAddressGivenTotalAmount(tokenId, tokenIdHashFixed, ownerAddress, total.Get(), deps.IMManager, CoreComponent.Logger())
+		err = handleTokenWhaleEligibilityFromAddressGivenTotalAmount(tokenId, tokenIdHashFixed, ownerAddress, addressTotal, deps.IMManager, CoreComponent.Logger())
+		if err != nil {
+			// log error
+			CoreComponent.LogWarnf("LedgerInit ... handleTokenWhaleEligibilityFromAddressGivenTotalAmount failed:%s", err)
+			return err
+		}
 	}
-
-	amountText := amount.Text(10)
-	tokenStat := deps.IMManager.NewTokenStat(tokenId, outputId, ownerAddress, tokenStatus, amountText)
-	return deps.IMManager.StoreOneToken(tokenStat)
+	return nil
 }
 
 func handleTokenWhaleEligibilityFromAddressGivenTotalAmount(tokenId []byte, tokenIdHash [im.Sha256HashLen]byte, address string, addressTotalAmount *big.Int, manager *im.Manager, logger *logger.Logger) error {
