@@ -333,6 +333,9 @@ func handleTokenFromNFTOutput(iotaOutput *iotago.NFTOutput, outputId []byte, out
 	return handleTokenFromOutputType(amount, nativeTokens, iotaOutput, outputId, outputStatus, isUpdateGlobalAmount)
 }
 func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.NativeTokens, output iotago.Output, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
+	// log enter handleTokenFromOutputType
+	CoreComponent.LogInfof("handleTokenFromOutputType, basicTokenAmount:%d", basicTokenAmount)
+
 	// loop through all token based group
 	if im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName] != nil && im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] != nil {
 		for _, groupId := range im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] {
