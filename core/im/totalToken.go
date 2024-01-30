@@ -35,16 +35,16 @@ func (tt *TokenTotal) Sub(amount *big.Int) {
 
 // TokenTotal.Get
 func (tt *TokenTotal) Get() *big.Int {
-	// init totalMap using once
-	totalMapOnce.Do(func() {
-		totalMap = make(map[string]*TokenTotal)
-	})
 	tt.rwLock.RLock()
 	defer tt.rwLock.RUnlock()
 	return tt.totalAmount
 }
 
 func GetTokenTotal(tokenIdHash [im.Sha256HashLen]byte) *TokenTotal {
+	// init totalMap using once
+	totalMapOnce.Do(func() {
+		totalMap = make(map[string]*TokenTotal)
+	})
 	key := iotago.EncodeHex(tokenIdHash[:])
 	lock.Lock()
 	defer lock.Unlock()
