@@ -103,6 +103,8 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 						}
 
 					}
+					// log tokenId, currentAddress, currentAddressTotal
+					CoreComponent.LogInfof("tokenId:%s,currentAddress:%s,currentAddressTotal:%d", iotago.EncodeHex(currentTokenId), currentAddress, currentAddressTotal)
 					currentAddressTotal = big.NewInt(0)
 				}
 				// add amount to current total
