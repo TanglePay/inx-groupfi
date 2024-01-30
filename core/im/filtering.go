@@ -354,6 +354,8 @@ func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.Nati
 				for _, nativeToken := range nativeTokens {
 					curTokenId := nativeToken.ID.ToHex()
 					if curTokenId == tokenIdStr {
+						// log found soon
+						CoreComponent.LogInfof("handleTokenFromOutputType,found token soon")
 						tokenIdBytes, _ = iotago.DecodeHex(curTokenId)
 						amount = nativeToken.Amount
 						foundToken = true
@@ -364,6 +366,9 @@ func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.Nati
 				if !foundToken {
 					continue
 				}
+			} else {
+				// log handle smr
+				CoreComponent.LogInfof("handleTokenFromOutputType,handle smr")
 			}
 			// tokenThres := groupConfig.TokenThres
 

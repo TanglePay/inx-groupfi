@@ -200,6 +200,9 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			return err
 		}
 		tokenId, err := parseTokenQueryParam(c)
+		if err != nil {
+			return err
+		}
 		if tokenId == nil {
 			tokenId = im.SmrTokenId
 		}
