@@ -242,7 +242,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	})
 	// log address tokenstat
 	e.GET("/logaddresstokenstat", func(c echo.Context) error {
-		address, err := parseAddressQueryParam(c)
+		address, err := parseAddressQueryParamWithNil(c)
 		if err != nil {
 			return err
 		}
@@ -253,7 +253,11 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		if tokenId == nil {
 			tokenId = im.SmrTokenId
 		}
-		addressSha256 := im.Sha256Hash(address)
+		allZero := [im.Sha256HashLen]byte{}
+		addressSha256 := []byte(allZero[:])
+		if address != "" {
+			addressSha256 = im.Sha256Hash(address)
+		}
 		keyPrefix := deps.IMManager.TokenKeyPrefixFromTokenIdAndAddress(tokenId, addressSha256)
 		deps.IMManager.GetImStore().Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 			tokenStat, err := deps.IMManager.TokenStateFromKeyAndValue(key, value)
