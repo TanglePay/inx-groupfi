@@ -199,7 +199,6 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		if err != nil {
 			return err
 		}
-		if 
 		tokenId, err := parseTokenQueryParam(c)
 		if err != nil {
 			return err

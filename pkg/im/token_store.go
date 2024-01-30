@@ -178,7 +178,11 @@ func (im *Manager) StoreOneToken(token *TokenStat) error {
 	return err
 }
 func (im *Manager) GetBalanceOfOneAddress(tokenId []byte, address string) (*big.Int, error) {
-	addressSha256 := Sha256Hash(address)
+	allZero := [Sha256HashLen]byte{}
+	addressSha256 := []byte(allZero[:])
+	if address != "" {
+		addressSha256 = Sha256Hash(address)
+	}
 	return im.GetBalanceOfOneAddressSha256(tokenId, addressSha256)
 }
 func (im *Manager) GetBalanceOfOneAddressSha256(tokenId []byte, addressSha256 []byte) (*big.Int, error) {
