@@ -293,26 +293,26 @@ func run() error {
 		handleGroupConfigInit(ctx, nodeHTTPAPIClient, indexerClient)
 
 		// handle nft init
-		//handleNFTInit(ctx, nodeHTTPAPIClient, indexerClient)
+		handleNFTInit(ctx, nodeHTTPAPIClient, indexerClient)
 
 		// handle token init
 		handleTokenInit(ctx, nodeHTTPAPIClient, indexerClient)
-		/*
-			// handle mark init
-			handleMarkInit(ctx, nodeHTTPAPIClient, indexerClient)
 
-			// handle mute init
-			handleMuteInit(ctx, nodeHTTPAPIClient, indexerClient)
+		// handle mark init
+		handleMarkInit(ctx, nodeHTTPAPIClient, indexerClient)
 
-			// handle vote init
-			handleVoteInit(ctx, nodeHTTPAPIClient, indexerClient)
+		// handle mute init
+		handleMuteInit(ctx, nodeHTTPAPIClient, indexerClient)
 
-			// handle messsages init
-			handleMessageInit(ctx, nodeHTTPAPIClient, indexerClient)
+		// handle vote init
+		handleVoteInit(ctx, nodeHTTPAPIClient, indexerClient)
 
-			// shared init
-			handleSharedInit(ctx, nodeHTTPAPIClient, indexerClient)
-		*/
+		// handle messsages init
+		handleMessageInit(ctx, nodeHTTPAPIClient, indexerClient)
+
+		// shared init
+		handleSharedInit(ctx, nodeHTTPAPIClient, indexerClient)
+
 		CoreComponent.LogInfo("Finishing LedgerInit ... done")
 		startListeningToLedgerUpdate()
 	}, daemon.PriorityStopIM); err != nil {
