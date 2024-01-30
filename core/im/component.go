@@ -296,7 +296,7 @@ func run() error {
 		//handleNFTInit(ctx, nodeHTTPAPIClient, indexerClient)
 
 		// handle token init
-		//handleTokenInit(ctx, nodeHTTPAPIClient, indexerClient)
+		handleTokenInit(ctx, nodeHTTPAPIClient, indexerClient)
 		/*
 			// handle mark init
 			handleMarkInit(ctx, nodeHTTPAPIClient, indexerClient)
