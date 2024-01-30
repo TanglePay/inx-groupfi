@@ -106,7 +106,7 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 							CoreComponent.LogWarnf("LedgerInit ... handleTokenWhaleEligibilityFromAddressGivenTotalAmount failed:%s", err)
 						}
 						// log tokenId, currentAddress, currentAddressTotal
-						CoreComponent.LogInfof("tokenId:%s,currentAddress:%s,currentAddressTotal:%d", iotago.EncodeHex(currentTokenId), previousAddress, currentAddressTotal)
+						CoreComponent.LogInfof("tokenId:%s,currentAddress:%s,currentAddressTotal:%d, currentTokenTotal:%d", iotago.EncodeHex(currentTokenId), previousAddress, currentAddressTotal, currentTokenTotal)
 					}
 					currentAddressTotal = big.NewInt(0)
 				}
