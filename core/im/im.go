@@ -11,7 +11,7 @@ import (
 )
 
 func parseTokenQueryParam(c echo.Context) ([]byte, error) {
-	tokenParams := c.QueryParams()["token"]
+	tokenParams := c.QueryParams()["tokenId"]
 	if len(tokenParams) == 0 {
 		return nil, nil
 	}

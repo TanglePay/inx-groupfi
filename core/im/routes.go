@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/big"
 	"net/http"
 
 	"github.com/TanglePay/inx-groupfi/pkg/im"
+	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/inx-app/pkg/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
@@ -225,12 +227,55 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		if err != nil {
 			return err
 		}
-		balance, err := deps.IMManager.GetBalanceOfOneAddress(im.SmrTokenId, address)
+		tokenId, err := parseTokenQueryParam(c)
+		if err != nil {
+			return err
+		}
+		if tokenId == nil {
+			tokenId = im.SmrTokenId
+		}
+		balance, err := deps.IMManager.GetBalanceOfOneAddress(tokenId, address)
 		if err != nil {
 			return err
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, balance.Text(10))
 	})
+	// log address tokenstat
+	e.GET("/logaddresstokenstat", func(c echo.Context) error {
+		address, err := parseAddressQueryParam(c)
+		if err != nil {
+			return err
+		}
+		tokenId, err := parseTokenQueryParam(c)
+		if err != nil {
+			return err
+		}
+		if tokenId == nil {
+			tokenId = im.SmrTokenId
+		}
+		addressSha256 := im.Sha256Hash(address)
+		keyPrefix := deps.IMManager.TokenKeyPrefixFromTokenIdAndAddress(tokenId, addressSha256)
+		deps.IMManager.GetImStore().Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
+			tokenStat, err := deps.IMManager.TokenStateFromKeyAndValue(key, value)
+			if err != nil {
+				// log error then continue
+				CoreComponent.Logger().Errorf("TokenStateFromKeyAndValue failed:%s", err)
+				return true
+			}
+			// log tokenStat, amount, address, status
+			amountStr := tokenStat.Amount
+			amount, ok := new(big.Int).SetString(amountStr, 10)
+			if !ok {
+				// log error then continue
+				CoreComponent.Logger().Errorf("SetString failed:%s", err)
+				return true
+			}
+			CoreComponent.Logger().Infof("tokenStat:%+v, amount:%s, address:%s, status:%d", tokenStat, amount.Text(10), address, tokenStat.Status)
+			return true
+		})
+		return httpserver.JSONResponse(c, http.StatusOK, "ok")
+	})
+
 	// testmeta
 	e.GET("/testnftmeta", func(c echo.Context) error {
 		outputIdHex, err := parseAttrNameQueryParam(c, "outputId")
