@@ -102,7 +102,7 @@ func makeAddressGroupDetailsResponse(addressGroup *im.AddressGroup) *AddressGrou
 		GroupName:        addressGroup.GroupName,
 		GroupQualifyType: addressGroup.GroupQualifyType,
 		IpfsLink:         addressGroup.NftLink,
-		TokenName:        im.GetTokenNameFromType(addressGroup.TokenType),
+		TokenId:          iotago.EncodeHex(addressGroup.TokenId),
 		TokenThres:       addressGroup.TokenThres,
 	}
 }

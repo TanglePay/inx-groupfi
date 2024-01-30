@@ -199,11 +199,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		if err != nil {
 			return err
 		}
-		balance, err := deps.IMManager.GetBalanceOfOneAddress(im.ImTokenTypeSMR, address)
+		tokenId := im.SmrTokenId
+		tokenIdFixed := [im.Sha256HashLen]byte{}
+		copy(tokenIdFixed[:], tokenId)
+		balance, err := deps.IMManager.GetBalanceOfOneAddress(tokenId, address)
 		if err != nil {
 			return err
 		}
-		totalBalance := GetSmrTokenTotal().Get()
+		totalBalance := GetTokenTotal(tokenIdFixed).Get()
 		resp := &TokenBalanceResponse{
 			TokenType:    im.ImTokenTypeSMR,
 			Balance:      balance.Text(10),
@@ -217,7 +220,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		if err != nil {
 			return err
 		}
-		balance, err := deps.IMManager.GetBalanceOfOneAddress(im.ImTokenTypeSMR, address)
+		balance, err := deps.IMManager.GetBalanceOfOneAddress(im.SmrTokenId, address)
 		if err != nil {
 			return err
 		}
