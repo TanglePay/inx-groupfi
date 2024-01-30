@@ -37,8 +37,11 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 	if !isWhaleEligibilityFinished {
 		tokenPrefix := deps.IMManager.TokenKeyPrefixForAll()
 		var currentTokenId []byte
+		var previousTokenId []byte
 		var currentTokenIdHash [im.Sha256HashLen]byte
+		var previousTokenIdHash [im.Sha256HashLen]byte
 		var currentAddress string
+		var previousAddress string
 		var currentTotalAddress string
 		isPreviousAddressTotalAddress := false
 		currentTokenTotal := big.NewInt(0)
@@ -85,15 +88,15 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 					if isPreviousAddressTotalAddress {
 						currentTokenTotal = currentAddressTotal
 						// log tokenId, currentTotalAddress, currentTokenTotal
-						CoreComponent.LogInfof("tokenId:%s,currentTotalAddress:%s,currentTokenTotal:%d", iotago.EncodeHex(currentTokenId), currentTotalAddress, currentTokenTotal)
-						GetTokenTotal(currentTokenIdHash).Add(currentAddressTotal)
+						CoreComponent.LogInfof("tokenId:%s,currentTotalAddress:%s,currentTokenTotal:%d", iotago.EncodeHex(previousTokenId), currentTotalAddress, currentTokenTotal)
+						GetTokenTotal(previousTokenIdHash).Add(currentAddressTotal)
 
 					} else {
 						//case normal address
 						err = handleTokenWhaleEligibilityFromAddressGivenTotalAmount(
 							currentTokenId,
 							currentTokenIdHash,
-							currentAddress,
+							previousAddress,
 							currentAddressTotal,
 							deps.IMManager,
 							CoreComponent.Logger(),
@@ -102,10 +105,9 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 							// log error
 							CoreComponent.LogWarnf("LedgerInit ... handleTokenWhaleEligibilityFromAddressGivenTotalAmount failed:%s", err)
 						}
-
+						// log tokenId, currentAddress, currentAddressTotal
+						CoreComponent.LogInfof("tokenId:%s,currentAddress:%s,currentAddressTotal:%d", iotago.EncodeHex(currentTokenId), previousAddress, currentAddressTotal)
 					}
-					// log tokenId, currentAddress, currentAddressTotal
-					CoreComponent.LogInfof("tokenId:%s,currentAddress:%s,currentAddressTotal:%d", iotago.EncodeHex(currentTokenId), currentAddress, currentAddressTotal)
 					currentAddressTotal = big.NewInt(0)
 				}
 				// add amount to current total
@@ -124,7 +126,9 @@ func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 				}
 
 				isPreviousAddressTotalAddress = currentTotalAddress == currentAddress
-
+				previousAddress = currentAddress
+				previousTokenIdHash = currentTokenIdHash
+				previousTokenId = currentTokenId
 			}
 			return true
 		})
