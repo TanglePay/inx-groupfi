@@ -142,6 +142,8 @@ func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) e
 			logger.Errorf("ReadNFTsFromGroupId error %v", err)
 		}
 		for _, address := range addresses {
+			// log address
+			logger.Infof("storeInbox : address %s", string(address))
 			//log nft
 			err := im.storeInboxMessage([]byte(address), message, valuePayload, logger)
 			if err != nil {
