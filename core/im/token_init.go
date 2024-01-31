@@ -1,6 +1,7 @@
 package im
 
 import (
+	"bytes"
 	"context"
 	"math/big"
 	"time"
@@ -22,18 +23,9 @@ func handleTokenInit(ctx context.Context, client *nodeclient.Client, indexerClie
 	handleNftTokenInit(ctx, client, indexerClient, ItemDrainer)
 
 	//handle total smr
-	handleTotalSmrInit(ctx, client, indexerClient, ItemDrainer)
+	handleTotalInit(ctx, client, indexerClient, ItemDrainer)
 }
-func handleTotalSmrInit(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, ItemDrainer *im.ItemDrainer) {
-	smrTotalAddress := deps.IMManager.GetTotalAddressFromType(im.ImTokenTypeSMR)
-
-	smrTotalValue, err := deps.IMManager.GetBalanceOfOneAddress(im.ImTokenTypeSMR, smrTotalAddress)
-
-	if err != nil {
-		CoreComponent.LogPanicf("failed to start worker: %s", err)
-	}
-	smrTotal := GetSmrTokenTotal()
-	smrTotal.Add(smrTotalValue)
+func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, ItemDrainer *im.ItemDrainer) {
 
 	//handle whale eligibility
 	isWhaleEligibilityFinished, err := deps.IMManager.IsInitFinished(im.WhaleEligibility, "")
@@ -41,19 +33,83 @@ func handleTotalSmrInit(ctx context.Context, client *nodeclient.Client, indexerC
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 	if !isWhaleEligibilityFinished {
-		smrTokenPrefix := deps.IMManager.TokenKeyPrefixFromTokenType(im.ImTokenTypeSMR)
-
+		tokenPrefix := deps.IMManager.TokenKeyPrefixForAll()
+		var currentTokenId []byte
+		var currentTokenIdHash [im.Sha256HashLen]byte
+		var currentAddress string
+		var currentTotalAddress string
+		isPreviousAddressTotalAddress := false
+		currentTokenTotal := big.NewInt(0)
+		currentAddressTotal := big.NewInt(0)
 		// hash set for address
-		addressSet := make(map[string]struct{})
-		deps.IMManager.GetImStore().Iterate(smrTokenPrefix, func(key kvstore.Key, value kvstore.Value) bool {
-			_, address := deps.IMManager.AmountAndAddressFromTokenValuePayload(value)
-			addressSet[address] = struct{}{}
+		deps.IMManager.GetImStore().Iterate(tokenPrefix, func(key kvstore.Key, value kvstore.Value) bool {
+			tokenStat, err := deps.IMManager.TokenStateFromKeyAndValue(key, value)
+			if err != nil {
+				// log error then continue
+				CoreComponent.LogWarnf("LedgerInit ... TokenStateFromKeyAndValue failed:%s", err)
+				return true
+			}
+
+			// if address is different, then current total is address total, if address is total address, then current total is token total
+			// when get token total, update it, when get address total, call handle
+			if tokenStat != nil && tokenStat.TokenId != nil && tokenStat.Address != "" && tokenStat.Amount != "" {
+
+				var isTokenIdDifferent bool
+				var isAddressDifferent bool
+				if currentTokenId == nil || bytes.Equal(currentTokenId, tokenStat.TokenId) {
+					isTokenIdDifferent = true
+					// set currentTokenIdHash, update isCurrentAddressTotalAddress
+					currentTokenId = tokenStat.TokenId
+					currentTokenIdHash = tokenStat.TokenIdHash
+				}
+				if currentAddress == "" || currentAddress == tokenStat.Address {
+					isAddressDifferent = true
+					// set currentAddress
+					currentAddress = tokenStat.Address
+				}
+				// if tokenId is different, then first address is total address
+				if isTokenIdDifferent {
+					currentTotalAddress = currentAddress
+				}
+				// if previous address is total address, and current address is not total address, then current total is token total
+
+				// handle address total
+				if isAddressDifferent {
+					// case total address
+					if isPreviousAddressTotalAddress {
+						GetTokenTotal(currentTokenIdHash).Add(currentTokenTotal)
+						currentTokenTotal = big.NewInt(0)
+					} else {
+						//case normal address
+						err = handleTokenWhaleEligibilityFromAddressGivenTotalAmount(
+							currentTokenId,
+							currentTokenIdHash,
+							currentAddress,
+							currentAddressTotal,
+							deps.IMManager,
+							CoreComponent.Logger(),
+						)
+						if err != nil {
+							// log error
+							CoreComponent.LogWarnf("LedgerInit ... handleTokenWhaleEligibilityFromAddressGivenTotalAmount failed:%s", err)
+						}
+
+					}
+					currentAddressTotal = big.NewInt(0)
+				}
+				// add amount to current total
+				amount, ok := new(big.Int).SetString(tokenStat.Amount, 10)
+				if !ok {
+					// log error
+					CoreComponent.LogWarnf("LedgerInit ... SetString failed:%s", err)
+				}
+				currentTokenTotal.Add(currentTokenTotal, amount)
+
+				isPreviousAddressTotalAddress = currentTotalAddress == currentAddress
+
+			}
 			return true
 		})
-		// loop addressSet
-		for address := range addressSet {
-			handleTokenWhaleEligibilityFromAddressGivenTotalAmount(im.ImTokenTypeSMR, address, smrTotal.Get(), deps.IMManager, CoreComponent.Logger())
-		}
 		err = deps.IMManager.MarkInitFinished(im.WhaleEligibility, "")
 		if err != nil {
 			CoreComponent.LogPanicf("LedgerInit ... MarkInitFinished failed:%s", err)
@@ -107,27 +163,18 @@ func handleTokenBasicInit(ctx context.Context, client *nodeclient.Client, indexe
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 
-	totalBasicOutputProcessed := big.NewInt(0)
-	startTimeBasic := time.Now()
 	for !isTokenBasicFinished {
 		select {
 		case <-ctx.Done():
 			CoreComponent.LogInfo("LedgerInit ... ctx.Done()")
 			return
 		default:
-			ct, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, client, indexerClient, ItemDrainer)
+			_, isHasMore, err := processInitializationForTokenForBasicOutput(ctx, client, indexerClient, ItemDrainer)
 			if err != nil {
 				// log error then continue
 				CoreComponent.LogWarnf("LedgerInit ... processInitializationForTokenForBasicOutput failed:%s", err)
 				continue
 			}
-			// totalBasicOutputProcessed = totalBasicOutputProcessed + ct
-			totalBasicOutputProcessed.Add(totalBasicOutputProcessed, big.NewInt(int64(ct)))
-			timeElapsed := time.Since(startTimeBasic)
-			averageProcessedPerSecond := big.NewInt(0)
-			averageProcessedPerSecond.Div(totalBasicOutputProcessed, big.NewInt(int64(timeElapsed.Seconds())+1))
-			// log totalBasicOutputProcessed and timeElapsed and averageProcessedPerSecond
-			CoreComponent.LogInfof("LedgerInit ... totalBasicOutputProcessed:%d,timeElapsed:%s,averageProcessedPerSecond:%d", totalBasicOutputProcessed, timeElapsed, averageProcessedPerSecond)
 			if !isHasMore {
 				err = deps.IMManager.MarkInitFinished(im.TokenBasicType, "")
 				if err != nil {

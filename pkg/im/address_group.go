@@ -1,8 +1,6 @@
 package im
 
 import (
-	"encoding/binary"
-
 	"github.com/iotaledger/hive.go/core/kvstore"
 )
 
@@ -18,7 +16,7 @@ type AddressGroup struct {
 	GroupName        string
 	GroupQualifyType int
 	NftLink          string
-	TokenType        uint16
+	TokenId          []byte
 	TokenThres       string
 }
 
@@ -42,13 +40,13 @@ func NewAddressGroupNft(address []byte, groupId []byte, nftLink string, groupNam
 }
 
 // new address group from address in bytes not hashed yet and group id, plus fact that group qualify type is GroupQualifyTypeToken, and token type and token threshold is provided
-func NewAddressGroupToken(address []byte, groupId []byte, tokenType uint16, tokenThres string, groupName string) *AddressGroup {
+func NewAddressGroupToken(address []byte, groupId []byte, tokenId []byte, tokenThres string, groupName string) *AddressGroup {
 	return &AddressGroup{
 		GroupId:          groupId,
 		GroupName:        groupName,
 		AddressSha256:    Sha256HashBytes(address),
 		GroupQualifyType: GroupQualifyTypeToken,
-		TokenType:        tokenType,
+		TokenId:          tokenId,
 		TokenThres:       tokenThres,
 	}
 }
@@ -63,8 +61,7 @@ func (im *Manager) GetAddressGroupValue(addressGroup *AddressGroup) []byte {
 	if addressGroup.GroupQualifyType == GroupQualifyTypeNft {
 		AppendBytesWithUint16Len(&bytes, &idx, []byte(addressGroup.NftLink), true)
 	} else if addressGroup.GroupQualifyType == GroupQualifyTypeToken {
-		tokenTypeBytes := Uint16ToBytes(addressGroup.TokenType)
-		AppendBytesWithUint16Len(&bytes, &idx, tokenTypeBytes, false)
+		AppendBytesWithUint16Len(&bytes, &idx, addressGroup.TokenId, true)
 		AppendBytesWithUint16Len(&bytes, &idx, []byte(addressGroup.TokenThres), true)
 	}
 	return bytes
@@ -93,12 +90,11 @@ func (im *Manager) ParseAddressGroupValue(bytes []byte) (*AddressGroup, error) {
 		}
 		addressGroup.NftLink = string(nftLink)
 	} else if addressGroup.GroupQualifyType == GroupQualifyTypeToken {
-		TokenTypeBytes, err := ReadBytesWithUint16Len(bytes, &idx, 2)
+		TokenId, err := ReadBytesWithUint16Len(bytes, &idx)
 		if err != nil {
 			return nil, err
 		}
-		tokenType := binary.BigEndian.Uint16(TokenTypeBytes)
-		addressGroup.TokenType = tokenType
+		addressGroup.TokenId = TokenId
 		tokenThres, err := ReadBytesWithUint16Len(bytes, &idx)
 		if err != nil {
 			return nil, err

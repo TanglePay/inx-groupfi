@@ -261,77 +261,118 @@ func outputStatusToTokenStatus(outputStatus int) byte {
 }
 
 func handleTokenFromBasicOutput(iotaOutput *iotago.BasicOutput, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
-	// handle smr e.g basic coin
-	smrAmount := iotaOutput.Amount
-	err := handleSmrAmount(smrAmount, iotaOutput, outputId, outputStatus, isUpdateGlobalAmount)
-	if err != nil {
-		return err
-	}
-	return nil
+	amount := iotaOutput.Amount
+	nativeTokens := iotaOutput.NativeTokens
+	return handleTokenFromOutputType(amount, nativeTokens, iotaOutput, outputId, outputStatus, isUpdateGlobalAmount)
 }
-func handleSmrAmount(smrAmount uint64, iotaOutput iotago.Output, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
-	smrAmountBig := new(big.Int).SetUint64(smrAmount)
+func handleTokenAmount(amount *big.Int, tokenId []byte, iotaOutput iotago.Output, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
+	tokenIdHash := im.Sha256HashBytes(tokenId)
+	tokenIdHashFixed := [im.Sha256HashLen]byte{}
+	copy(tokenIdHashFixed[:], tokenIdHash)
 	tokenStatus := outputStatusToTokenStatus(outputStatus)
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
 
 	if isUpdateGlobalAmount {
-		smrTotal := GetSmrTokenTotal()
+		total := GetTokenTotal(tokenIdHashFixed)
 		if tokenStatus == im.ImTokenStatusCreated {
-			smrTotal.Add(smrAmountBig)
+			total.Add(amount)
 		} else if tokenStatus == im.ImTokenStatusConsumed {
-			smrTotal.Sub(smrAmountBig)
+			total.Sub(amount)
 		}
 		// handle whale eligibility
-		defer handleTokenWhaleEligibilityFromAddressGivenTotalAmount(im.ImTokenTypeSMR, ownerAddress, smrTotal.Get(), deps.IMManager, CoreComponent.Logger())
+		defer handleTokenWhaleEligibilityFromAddressGivenTotalAmount(tokenId, tokenIdHashFixed, ownerAddress, total.Get(), deps.IMManager, CoreComponent.Logger())
 	}
 
-	smrAmountText := smrAmountBig.Text(10)
-	tokenId := im.Sha256HashBytes(outputId)
-	tokenStat := deps.IMManager.NewTokenStat(im.ImTokenTypeSMR, tokenId, ownerAddress, tokenStatus, smrAmountText)
+	amountText := amount.Text(10)
+	tokenStat := deps.IMManager.NewTokenStat(tokenId, outputId, ownerAddress, tokenStatus, amountText)
 	return deps.IMManager.StoreOneToken(tokenStat)
 }
-func getThresholdFromTokenType(tokenType uint16) *big.Float {
-	if tokenType == im.ImTokenTypeSMR {
-		return big.NewFloat(im.ImSMRWhaleThreshold)
+
+func handleTokenWhaleEligibilityFromAddressGivenTotalAmount(tokenId []byte, tokenIdHash [im.Sha256HashLen]byte, address string, addressTotalAmount *big.Int, manager *im.Manager, logger *logger.Logger) error {
+	// log enter
+	//CoreComponent.LogInfof("handleTokenWhaleEligibilityFromAddressGivenTotalAmount,tokenType:%d,address:%s,totalAmount:%s", tokenType, address, totalAmount.Text(10))
+	tokenTotalAmount := GetTokenTotal(tokenIdHash).Get()
+	// total = total + 1 to prevent divide zero
+	tokenTotalAmountFixed := new(big.Int).Add(tokenTotalAmount, big.NewInt(1))
+	percentage := new(big.Float).Quo(new(big.Float).SetInt(addressTotalAmount), new(big.Float).SetInt(tokenTotalAmountFixed))
+	// loop through all token based group
+	if im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName] != nil && im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] != nil {
+		for _, groupId := range im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] {
+			groupConfig := im.ConfigStoreGroupIdToGroupConfig[groupId]
+			if groupConfig == nil {
+				continue
+			}
+			groupTokenIdStr := groupConfig.TokenId
+			groupTokenIdBytes, _ := iotago.DecodeHex(groupTokenIdStr)
+			if !bytes.Equal(tokenId, groupTokenIdBytes) {
+				continue
+			}
+			tokenThresStr := groupConfig.TokenThres
+			tokenThres, ok := new(big.Float).SetString(tokenThresStr)
+			if !ok {
+				// log error
+				CoreComponent.LogWarnf("handleTokenWhaleEligibilityFromAddressGivenTotalAmount ... SetString failed")
+				continue
+			}
+
+			isEligible := percentage.Cmp(tokenThres) >= 0
+			err := manager.SetWhaleEligibility(tokenId, groupConfig.GroupName, tokenThresStr, address, isEligible, logger)
+			if err != nil {
+				// log error
+				CoreComponent.LogWarnf("handleTokenWhaleEligibilityFromAddressGivenTotalAmount ... SetWhaleEligibility failed:%s", err)
+			}
+		}
 	}
 	return nil
 }
-func handleTokenWhaleEligibilityFromAddressGivenTotalAmount(tokenType uint16, address string, totalAmount *big.Int, manager *im.Manager, logger *logger.Logger) error {
-	// log enter
-	//CoreComponent.LogInfof("handleTokenWhaleEligibilityFromAddressGivenTotalAmount,tokenType:%d,address:%s,totalAmount:%s", tokenType, address, totalAmount.Text(10))
-	balance, err := manager.GetBalanceOfOneAddress(tokenType, address)
-	if err != nil {
-		return err
-	}
-	// total = total + 1 to prevent divide zero
-	totalAmount = new(big.Int).Add(totalAmount, big.NewInt(1))
-	percentage := new(big.Float).Quo(new(big.Float).SetInt(balance), new(big.Float).SetInt(totalAmount))
-	threshold := getThresholdFromTokenType(tokenType)
-	if threshold == nil {
-		return nil
-	}
-	isEligible := percentage.Cmp(threshold) >= 0
-	// log
-	/*
-		CoreComponent.LogInfof("handleTokenWhaleEligibilityFromAddressGivenTotalAmount,tokenType:%d,address:%s,totalAmount:%s,balance:%s,percentage:%s,threshold:%s,isEligible:%t",
-			tokenType,
-			address,
-			totalAmount.Text(10),
-			balance.Text(10),
-			percentage.Text('f', 10),
-			threshold.Text('f', 10),
-			isEligible,
-		)
-	*/
-	return manager.SetWhaleEligibility(tokenType, address, isEligible, logger)
-}
 
 func handleTokenFromNFTOutput(iotaOutput *iotago.NFTOutput, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
-	smrAmount := iotaOutput.Amount
-	err := handleSmrAmount(smrAmount, iotaOutput, outputId, outputStatus, isUpdateGlobalAmount)
-	if err != nil {
-		return err
+	amount := iotaOutput.Amount
+	nativeTokens := iotaOutput.NativeTokens
+	return handleTokenFromOutputType(amount, nativeTokens, iotaOutput, outputId, outputStatus, isUpdateGlobalAmount)
+}
+func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.NativeTokens, output iotago.Output, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
+	// loop through all token based group
+	if im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName] != nil && im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] != nil {
+		for _, groupId := range im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] {
+			groupConfig := im.ConfigStoreGroupIdToGroupConfig[groupId]
+			if groupConfig == nil {
+				continue
+			}
+			tokenIdStr := iotago.EncodeHex(im.SmrTokenId)
+			tokenIdBytes := im.SmrTokenId
+			amount := new(big.Int).SetUint64(basicTokenAmount)
+			if groupConfig.TokenId != tokenIdStr {
+				tokenIdStr = groupConfig.TokenId
+				// case no native token, continue
+				if nativeTokens == nil {
+					continue
+				}
+				// loop then find based on tokenId
+				foundToken := false
+				for _, nativeToken := range nativeTokens {
+					curTokenId := nativeToken.ID.ToHex()
+					if curTokenId == tokenIdStr {
+						tokenIdBytes, _ = iotago.DecodeHex(curTokenId)
+						amount = nativeToken.Amount
+						foundToken = true
+						break
+					}
+				}
+				// if not found, continue
+				if !foundToken {
+					continue
+				}
+			}
+			// tokenThres := groupConfig.TokenThres
+
+			err := handleTokenAmount(amount, tokenIdBytes, output, outputId, outputStatus, isUpdateGlobalAmount)
+			if err != nil {
+				return err
+			}
+
+		}
 	}
 	return nil
 }
