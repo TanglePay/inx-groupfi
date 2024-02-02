@@ -155,7 +155,7 @@ func (im *Manager) HandleUserVoteGroupBasicOutputCreated(output *iotago.BasicOut
 		if err != nil {
 			// log error
 			logger.Infof("HandleUserVoteGroupBasicOutputCreated ... err:%s", err.Error())
-			return
+			continue
 		}
 	}
 }
