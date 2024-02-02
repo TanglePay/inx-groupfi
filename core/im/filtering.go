@@ -33,7 +33,6 @@ func nftFromINXLedgerOutput(output *inx.LedgerOutput, log *logger.Logger) []*im.
 func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint32, milestoneTimestamp uint32, log *logger.Logger) []*im.NFT {
 
 	// log enter nftFromINXOutput, outputId:%s
-	CoreComponent.LogInfof("nftFromINXOutput, outputId:%s", iotago.EncodeHex(outputId))
 	if iotaOutput.Type() != iotago.OutputNFT {
 		return nil
 	}
@@ -349,29 +348,23 @@ func handleTokenFromNFTOutput(iotaOutput *iotago.NFTOutput, outputId []byte, out
 	return handleTokenFromOutputType(amount, nativeTokens, iotaOutput, outputId, outputStatus, isUpdateGlobalAmount)
 }
 func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.NativeTokens, output iotago.Output, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
-	// log enter handleTokenFromOutputType
-	CoreComponent.LogInfof("handleTokenFromOutputType, basicTokenAmount:%d", basicTokenAmount)
 
 	// loop through all token based group
 	if im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName] != nil && im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] != nil {
-		// log token type is not nul
-		CoreComponent.LogInfof("handleTokenFromOutputType, token type is not null")
 		for _, groupId := range im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] {
-			// log enter loop
-			CoreComponent.LogInfof("handleTokenFromOutputType, enter loop")
 			groupConfig := im.ConfigStoreGroupIdToGroupConfig[groupId]
 			if groupConfig == nil {
 				continue
 			}
 			// marshal groupConfig to json str
-			jsonStr, err := json.Marshal(groupConfig)
+			_, err := json.Marshal(groupConfig)
 			if err != nil {
 				// log error
 				CoreComponent.LogWarnf("handleTokenFromOutputType, json.Marshal failed:%s", err)
 				continue
 			} else {
 				// log json str
-				CoreComponent.LogInfof("handleTokenFromOutputType, jsonStr:%s", string(jsonStr))
+				//CoreComponent.LogInfof("handleTokenFromOutputType, jsonStr:%s", string(jsonStr))
 			}
 			// log groupConfig json str
 
@@ -390,7 +383,7 @@ func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.Nati
 					curTokenId := nativeToken.ID.ToHex()
 					if curTokenId == tokenIdStr {
 						// log found soon
-						CoreComponent.LogInfof("handleTokenFromOutputType,found token soon")
+						//CoreComponent.LogInfof("handleTokenFromOutputType,found token soon")
 						tokenIdBytes, _ = iotago.DecodeHex(curTokenId)
 						amount = nativeToken.Amount
 						foundToken = true
@@ -403,7 +396,7 @@ func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.Nati
 				}
 			} else {
 				// log handle smr
-				CoreComponent.LogInfof("handleTokenFromOutputType,handle smr")
+				//CoreComponent.LogInfof("handleTokenFromOutputType,handle smr")
 			}
 			// tokenThres := groupConfig.TokenThres
 
