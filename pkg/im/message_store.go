@@ -180,7 +180,9 @@ func (im *Manager) deleteSingleMessage(message *Message, logger *logger.Logger) 
 }
 func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, isPush bool) error {
 	// log is push
-	logger.Infof("storeNewMessages : isPush %v", isPush)
+	if len(messages) > 0 {
+		logger.Infof("storeNewMessages : isPush %v", isPush)
+	}
 	for _, message := range messages {
 
 		/*
