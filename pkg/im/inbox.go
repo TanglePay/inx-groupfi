@@ -6,7 +6,6 @@ import (
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // inbox event types
@@ -84,8 +83,6 @@ func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte,
 	ct := 0
 	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		if skiping {
-			// log key startPoint
-			logger.Infof("ReadInbox : key %s, startPoint %s", iotago.EncodeHex(key), iotago.EncodeHex(startPoint))
 			if bytes.Equal(key, startPoint) {
 				skiping = false
 			}

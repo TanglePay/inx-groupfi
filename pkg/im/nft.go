@@ -15,7 +15,7 @@ type NFT struct {
 	GroupName          string
 	IpfsLink           string
 	GroupQualifyType   int
-	TokenType          uint16
+	TokenId            []byte
 	TokenThres         string
 }
 
@@ -34,7 +34,7 @@ func NewNFT(groupId []byte, ownerAddress string, nftId []byte, groupName string,
 		MileStoneTimestamp: mileStoneTimestamp,
 	}
 }
-func NewNFTForToken(groupId []byte, ownerAddress string, nftId []byte, groupName string, tokenType uint16, tokenThres string) *NFT {
+func NewNFTForToken(groupId []byte, ownerAddress string, nftId []byte, groupName string, tokenId []byte, tokenThres string) *NFT {
 	ownerAddressBytes := []byte(ownerAddress)
 
 	return &NFT{
@@ -43,7 +43,7 @@ func NewNFTForToken(groupId []byte, ownerAddress string, nftId []byte, groupName
 		GroupQualifyType: GroupQualifyTypeToken,
 		OwnerAddress:     ownerAddressBytes,
 		NFTId:            nftId,
-		TokenType:        tokenType,
+		TokenId:          tokenId,
 		TokenThres:       tokenThres,
 	}
 }

@@ -160,6 +160,11 @@ func GetPublicKeyViaTransactionId(ctx context.Context, client *nodeclient.Client
 	if err != nil {
 		return "", err
 	}
+	// if has expiration unlock condition, return nil
+	expiration := output.UnlockConditionSet().Expiration()
+	if expiration != nil {
+		return "", nil
+	}
 	// find unlock address, in bech32 format
 	address := output.UnlockConditionSet().Address()
 	if address == nil || address.Address == nil {

@@ -3,11 +3,15 @@ package im
 import (
 	"math/big"
 	"sync"
+
+	"github.com/TanglePay/inx-groupfi/pkg/im"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 var (
-	smrOnce sync.Once
-	smr     *TokenTotal
+	totalMapOnce sync.Once
+	lock         sync.Mutex
+	totalMap     map[string]*TokenTotal
 )
 
 type TokenTotal struct {
@@ -36,11 +40,20 @@ func (tt *TokenTotal) Get() *big.Int {
 	return tt.totalAmount
 }
 
-func GetSmrTokenTotal() *TokenTotal {
-	smrOnce.Do(func() {
-		smr = NewTokenTotal()
+func GetTokenTotal(tokenIdHash [im.Sha256HashLen]byte) *TokenTotal {
+	// init totalMap using once
+	totalMapOnce.Do(func() {
+		totalMap = make(map[string]*TokenTotal)
 	})
-	return smr
+	key := iotago.EncodeHex(tokenIdHash[:])
+	lock.Lock()
+	defer lock.Unlock()
+	total, ok := totalMap[key]
+	if !ok {
+		total = NewTokenTotal()
+		totalMap[key] = total
+	}
+	return total
 }
 
 // new token total

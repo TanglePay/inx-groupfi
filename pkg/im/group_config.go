@@ -59,6 +59,10 @@ func sortAndSha256Map(m map[string]string) []byte {
 	sort.Strings(keys)
 	sortedMap := make(map[string]string)
 	for _, k := range keys {
+		// if value is empty, skip
+		if m[k] == "" {
+			continue
+		}
 		sortedMap[k] = m[k]
 	}
 	b, _ := json.Marshal(sortedMap)
@@ -117,6 +121,7 @@ type MessageGroupMetaJSON struct {
 	AuthScheme    int      `json:"authScheme"`
 	QualifyType   string   `json:"qualifyType"`
 	CollectionIds []string `json:"collectionIds"`
+	TokenId       string   `json:"tokenId"`
 	TokenThres    string   `json:"tokenThres"`
 }
 
@@ -135,6 +140,8 @@ func (im *Manager) HandleGroupNFTOutputCreated(nftOutput *iotago.NFTOutput, logg
 	return im.HandleGroupConfigRawContent(contentRaw, logger)
 }
 func (im *Manager) HandleGroupConfigRawContent(contentRaw []byte, logger *logger.Logger) error {
+	// log enter function
+	logger.Infof("HandleGroupNFTOutputCreated ... contentRaw:%s", contentRaw)
 	// unmarshal content(json) to MessageGroupMetaJSON[]
 	var messageGroupMetaList []MessageGroupMetaJSON
 	err := json.Unmarshal(contentRaw, &messageGroupMetaList)
@@ -221,6 +228,7 @@ func (im *Manager) StoreOneGroupConfig(messageGroupMeta *MessageGroupMetaJSON) e
 		"messageType":   fmt.Sprintf("%d", messageGroupMeta.MessageType),
 		"authScheme":    fmt.Sprintf("%d", messageGroupMeta.AuthScheme),
 		"qualifyType":   qualifyType,
+		"tokenId":       messageGroupMeta.TokenId,
 		"tokenThres":    messageGroupMeta.TokenThres,
 		"collectionIds": collectionIdsStr,
 	}

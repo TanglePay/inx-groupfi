@@ -13,7 +13,7 @@ type AddressGroupDetailsResponse struct {
 	GroupName        string `json:"groupName"`
 	GroupQualifyType int    `json:"groupQualifyType"`
 	IpfsLink         string `json:"ipfsLink"`
-	TokenName        string `json:"tokenName"`
+	TokenId          string `json:"tokenId"`
 	TokenThres       string `json:"tokenThres"`
 }
 
