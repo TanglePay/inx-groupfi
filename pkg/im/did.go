@@ -180,7 +180,10 @@ func (im *Manager) FilterNftOutputForDid(output *iotago.NFTOutput, outputId iota
 		return nil, nil
 	}
 	// check if property is groupfi-name
-	propertyStr := metaMap["property"].(string)
+	var propertyStr string
+	if metaMap["property"] != nil {
+		propertyStr = metaMap["property"].(string)
+	}
 	if propertyStr != "groupfi-name" {
 		return nil, nil
 	}
