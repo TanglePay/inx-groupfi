@@ -85,6 +85,9 @@ const (
 
 	// get address balance
 	RouteAddressBalance = "/addressbalance"
+
+	// get address did
+	RouteAddressDid = "/addressdid"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -555,6 +558,19 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		resp := &TestReputationResponse{
 			MutedCount:       mutedTimes,
 			GroupMemberCount: groupMemberCount,
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// get addresses dids, using post
+	e.POST(RouteAddressDid, func(c echo.Context) error {
+		addresses, err := parseAddressesFromBody(c)
+		if err != nil {
+			return err
+		}
+		resp, err := getAddressesDids(addresses)
+		if err != nil {
+			return err
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})

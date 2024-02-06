@@ -40,6 +40,8 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		var consumedVote []*iotago.BasicOutput
 		var createdMute []*iotago.BasicOutput
 		var consumedMute []*iotago.BasicOutput
+		var consumedDid []*im.Did
+		var createdDid []*im.Did
 		for _, output := range update.Created {
 			// im.CurrentMilestoneTimestamp = max(im.CurrentMilestoneTimestamp, output.MilestoneTimestampBooked)
 			if output.MilestoneTimestampBooked > im.CurrentMilestoneTimestamp {
@@ -85,6 +87,14 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if is {
 				createdVote = append(createdVote, vote)
 			}
+			did, err := deps.IMManager.FilterLedgerOutputForDid(output)
+			if err != nil {
+				// log error
+				CoreComponent.LogErrorf("LedgerUpdate FilterLedgerOutputForDid error:%s", err.Error())
+			}
+			if did != nil {
+				createdDid = append(createdDid, did)
+			}
 		}
 		for _, spent := range update.Consumed {
 			output := spent.GetOutput()
@@ -122,6 +132,14 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if is {
 				consumedVote = append(consumedVote, vote)
 			}
+			did, err := deps.IMManager.FilterLedgerOutputForDid(output)
+			if err != nil {
+				// log error
+				CoreComponent.LogErrorf("LedgerUpdate FilterLedgerOutputForDid error:%s", err.Error())
+			}
+			if did != nil {
+				consumedDid = append(consumedDid, did)
+			}
 		}
 		dataFromListenning := &im.DataFromListenning{
 			CreatedMessage: createdMessage,
@@ -137,6 +155,8 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			ConsumedVote:    consumedVote,
 			CreatedMute:     createdMute,
 			ConsumedMute:    consumedMute,
+			CreatedDid:      createdDid,
+			ConsumedDid:     consumedDid,
 		}
 		return handler(index, dataFromListenning)
 	})

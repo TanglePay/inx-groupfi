@@ -57,6 +57,13 @@ type TestReputationResponse struct {
 	GroupMemberCount int `json:"groupMemberCount"`
 }
 
+// did address response
+type DidAddressResponse struct {
+	Address string `json:"address"`
+	Name    string `json:"name"`
+	Picture string `json:"picture"`
+}
+
 // enum for output type created or consumed
 const (
 	ImOutputTypeCreated = iota

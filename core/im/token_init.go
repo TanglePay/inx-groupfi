@@ -227,6 +227,23 @@ func makeTokenInitDrainer(ctx context.Context, client *nodeclient.Client, indexe
 			CoreComponent.LogWarnf("LedgerInit ... handleTokenFromINXOutput failed:%s", err)
 
 		}
+		//TODO
+		outputIdIota, err := iotago.OutputIDFromHex(outputId)
+		if err != nil {
+			// log error
+			CoreComponent.LogWarnf("LedgerInit ... OutputIDFromHex failed:%s", err)
+
+		}
+		did, err := deps.IMManager.FilterOutputForDid(output, outputIdIota)
+		if err != nil {
+			// log error
+			CoreComponent.LogWarnf("LedgerInit ... FilterOutputForDid failed:%s", err)
+		}
+		if did != nil {
+			// handle did
+			createdDid := []*im.Did{did}
+			deps.IMManager.HandleDidConsumedAndCreated(nil, createdDid, CoreComponent.Logger())
+		}
 		// handle group config
 	}, 1000, 100, 2000)
 	return ItemDrainer
