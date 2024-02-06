@@ -201,6 +201,10 @@ func (im *Manager) FilterNftOutputForDid(output *iotago.NFTOutput, outputId iota
 	if isHasStorageDepositReturn {
 		return nil, nil
 	}
+	isHasExpirationReturn := output.UnlockConditionSet().HasExpirationCondition()
+	if isHasExpirationReturn {
+		return nil, nil
+	}
 	// create did
 	return NewDid(bech32Address, nameStr, pictureStr, outputId[:]), nil
 }
