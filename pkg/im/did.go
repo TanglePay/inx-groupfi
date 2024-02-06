@@ -196,6 +196,11 @@ func (im *Manager) FilterNftOutputForDid(output *iotago.NFTOutput, outputId iota
 		return nil, nil
 	}
 	bech32Address := address.Address.Bech32(iotago.NetworkPrefix(HornetChainName))
+	// expiration return address unlock
+	isHasStorageDepositReturn := output.UnlockConditionSet().HasStorageDepositReturnCondition()
+	if isHasStorageDepositReturn {
+		return nil, nil
+	}
 	// create did
 	return NewDid(bech32Address, nameStr, pictureStr, outputId[:]), nil
 }
