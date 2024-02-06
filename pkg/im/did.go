@@ -167,8 +167,14 @@ func (im *Manager) FilterNftOutputForDid(output *iotago.NFTOutput, outputId iota
 	if err != nil {
 		return nil, err
 	}
-	nameStr := metaMap["name"].(string)
-	pictureStr := metaMap["picture"].(string)
+	var nameStr string
+	if metaMap["name"] != nil {
+		nameStr = metaMap["name"].(string)
+	}
+	var pictureStr string
+	if metaMap["picture"] != nil {
+		pictureStr = metaMap["picture"].(string)
+	}
 	// check nil
 	if nameStr == "" || pictureStr == "" {
 		return nil, nil
