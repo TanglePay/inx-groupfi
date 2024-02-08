@@ -175,8 +175,14 @@ func (im *Manager) FilterNftOutputForDid(output *iotago.NFTOutput, outputId iota
 	if metaMap["picture"] != nil {
 		pictureStr = metaMap["picture"].(string)
 	}
+	// if pictureStr still nil, check uri
+	if pictureStr == "" {
+		if metaMap["uri"] != nil {
+			pictureStr = metaMap["uri"].(string)
+		}
+	}
 	// check nil
-	if nameStr == "" || pictureStr == "" {
+	if nameStr == "" {
 		return nil, nil
 	}
 	// check if property is groupfi-name
