@@ -31,6 +31,16 @@ func parseAddressQueryParam(c echo.Context) (string, error) {
 	address := addressParams[0]
 	return address, nil
 }
+
+// parse addresses from body
+func parseAddressesFromBody(c echo.Context) ([]string, error) {
+	var addresses []string
+	err := c.Bind(&addresses)
+	if err != nil {
+		return nil, err
+	}
+	return addresses, nil
+}
 func parseAddressQueryParamWithNil(c echo.Context) (string, error) {
 	addressParams := c.QueryParams()["address"]
 	if len(addressParams) == 0 {
@@ -661,4 +671,39 @@ func getInboxList(c echo.Context) (*InboxItemsResponse, error) {
 	// make inbox message response
 	inboxItemsResponse := makeInboxItemsResponse(inboxItems)
 	return inboxItemsResponse, nil
+}
+
+// getAddressesDids given addresses
+func getAddressesDids(addresses []string) ([]*DidAddressResponse, error) {
+	respList := make([]*DidAddressResponse, len(addresses))
+	for i, address := range addresses {
+		dids, err := deps.IMManager.GetDidsFromAddress(address)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("get addresses dids from addresses:%s failed:%s", addresses, err)
+			continue
+		}
+		// find one with earliest timestamp, then append to respList
+		var earliestDid *im.Did
+		for _, did := range dids {
+			if earliestDid == nil {
+				earliestDid = did
+				continue
+			}
+			if did.Timestamp < earliestDid.Timestamp {
+				earliestDid = did
+			}
+		}
+		if earliestDid == nil {
+			// log error then continue
+			CoreComponent.LogWarnf("get addresses dids from addresses:%s failed:earliestDid is nil", addresses)
+			continue
+		}
+		respList[i] = &DidAddressResponse{
+			Address: address,
+			Name:    earliestDid.Name,
+			Picture: earliestDid.Picture,
+		}
+	}
+	return respList, nil
 }
