@@ -98,8 +98,6 @@ func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte,
 				// get mileStoneIndex and mileStoneTimestamp from key
 				mileStoneIndex := binary.BigEndian.Uint32(key[1+Sha256HashLen : 1+Sha256HashLen+4])
 				mileStoneTimestamp := binary.BigEndian.Uint32(key[1+Sha256HashLen+4 : 1+Sha256HashLen+4+4])
-				// log start mileStoneIndex and startMileStoneTimestamp and compare with current mileStoneIndex and mileStoneTimestamp
-				logger.Infof("startMileStoneIndex %v startMileStoneTimestamp %v mileStoneIndex %v mileStoneTimestamp %v", startMileStoneIndex, startMileStoneTimestamp, mileStoneIndex, mileStoneTimestamp)
 				// check if key is strictly greater than start point
 				if mileStoneIndex > startMileStoneIndex || (mileStoneIndex == startMileStoneIndex && mileStoneTimestamp > startMileStoneTimestamp) {
 					skiping = false
