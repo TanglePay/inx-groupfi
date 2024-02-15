@@ -81,10 +81,27 @@ func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte,
 	skiping := len(coninueationToken) > 0
 	startPoint := ConcatByteSlices(keyPrefix, coninueationToken)
 	ct := 0
+	// key = prefix + addressSha256Hash + mileStoneIndex + mileStoneTimestamp + metaSha256 + event type
+	// get mileStoneIndex and mileStoneTimestamp from start point, notice prefix length is 1 byte
+	var startMileStoneIndex uint32
+	var startMileStoneTimestamp uint32
+	if len(coninueationToken) > 0 {
+		startMileStoneIndex = binary.BigEndian.Uint32(startPoint[1+Sha256HashLen : 1+Sha256HashLen+4])
+		startMileStoneTimestamp = binary.BigEndian.Uint32(startPoint[1+Sha256HashLen+4 : 1+Sha256HashLen+4+4])
+	}
+
 	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
 		if skiping {
 			if bytes.Equal(key, startPoint) {
 				skiping = false
+			} else {
+				// get mileStoneIndex and mileStoneTimestamp from key
+				mileStoneIndex := binary.BigEndian.Uint32(key[1+Sha256HashLen : 1+Sha256HashLen+4])
+				mileStoneTimestamp := binary.BigEndian.Uint32(key[1+Sha256HashLen+4 : 1+Sha256HashLen+4+4])
+				// check if key is strictly greater than start point
+				if mileStoneIndex > startMileStoneIndex || (mileStoneIndex == startMileStoneIndex && mileStoneTimestamp > startMileStoneTimestamp) {
+					skiping = false
+				}
 			}
 			return true
 		}
