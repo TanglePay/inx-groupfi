@@ -6,6 +6,7 @@ import (
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // inbox event types
@@ -76,6 +77,8 @@ func (im *Manager) InboxPrefixFromAddressHash(addressHash []byte) []byte {
 
 // read inbox for address, from given token, limit by size
 func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte, size int, logger *logger.Logger) ([]InboxItem, error) {
+	// log entering
+	logger.Infof("ReadInbox addressSha256Hash %v coninueationToken %v size %v", iotago.EncodeHex(addressSha256Hash), iotago.EncodeHex(coninueationToken), size)
 	keyPrefix := im.InboxPrefixFromAddressHash(addressSha256Hash)
 	var res []InboxItem
 	skiping := len(coninueationToken) > 0
