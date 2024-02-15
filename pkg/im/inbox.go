@@ -6,7 +6,6 @@ import (
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // inbox event types
@@ -77,8 +76,6 @@ func (im *Manager) InboxPrefixFromAddressHash(addressHash []byte) []byte {
 
 // read inbox for address, from given token, limit by size
 func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte, size int, logger *logger.Logger) ([]InboxItem, error) {
-	// log entering
-	logger.Infof("ReadInbox addressSha256Hash %v coninueationToken %v size %v", iotago.EncodeHex(addressSha256Hash), iotago.EncodeHex(coninueationToken), size)
 	keyPrefix := im.InboxPrefixFromAddressHash(addressSha256Hash)
 	var res []InboxItem
 	skiping := len(coninueationToken) > 0
@@ -89,8 +86,8 @@ func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte,
 	var startMileStoneIndex uint32
 	var startMileStoneTimestamp uint32
 	if len(coninueationToken) > 0 {
-		startMileStoneIndex = binary.BigEndian.Uint32(coninueationToken[1+Sha256HashLen : 1+Sha256HashLen+4])
-		startMileStoneTimestamp = binary.BigEndian.Uint32(coninueationToken[1+Sha256HashLen+4 : 1+Sha256HashLen+4+4])
+		startMileStoneIndex = binary.BigEndian.Uint32(startPoint[1+Sha256HashLen : 1+Sha256HashLen+4])
+		startMileStoneTimestamp = binary.BigEndian.Uint32(startPoint[1+Sha256HashLen+4 : 1+Sha256HashLen+4+4])
 	}
 
 	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
