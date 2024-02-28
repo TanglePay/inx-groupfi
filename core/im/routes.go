@@ -4,9 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"math/big"
 	"net/http"
 
 	"github.com/TanglePay/inx-groupfi/pkg/im"
+	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/inx-app/pkg/httpserver"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
@@ -83,6 +85,9 @@ const (
 
 	// get address balance
 	RouteAddressBalance = "/addressbalance"
+
+	// get address did
+	RouteAddressDid = "/addressdid"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -195,17 +200,25 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, iotago.EncodeHex(groupId))
 	})
 	e.GET("/testtoken", func(c echo.Context) error {
-		address, err := parseAddressQueryParam(c)
+		address, err := parseAddressQueryParamWithNil(c)
 		if err != nil {
 			return err
 		}
-		balance, err := deps.IMManager.GetBalanceOfOneAddress(im.ImTokenTypeSMR, address)
+		tokenId, err := parseTokenQueryParam(c)
 		if err != nil {
 			return err
 		}
-		totalBalance := GetSmrTokenTotal().Get()
+		if tokenId == nil {
+			tokenId = im.SmrTokenId
+		}
+		tokenIdFixed := [im.Sha256HashLen]byte{}
+		copy(tokenIdFixed[:], im.Sha256HashBytes(tokenId))
+		balance, err := deps.IMManager.GetBalanceOfOneAddress(tokenId, address)
+		if err != nil {
+			return err
+		}
+		totalBalance := GetTokenTotal(tokenIdFixed).Get()
 		resp := &TokenBalanceResponse{
-			TokenType:    im.ImTokenTypeSMR,
 			Balance:      balance.Text(10),
 			TotalBalance: totalBalance.Text(10),
 		}
@@ -217,12 +230,64 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		if err != nil {
 			return err
 		}
-		balance, err := deps.IMManager.GetBalanceOfOneAddress(im.ImTokenTypeSMR, address)
+		tokenId, err := parseTokenQueryParam(c)
+		if err != nil {
+			return err
+		}
+		if tokenId == nil {
+			tokenId = im.SmrTokenId
+		}
+		balance, err := deps.IMManager.GetBalanceOfOneAddress(tokenId, address)
 		if err != nil {
 			return err
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, balance.Text(10))
 	})
+	// log address tokenstat
+	e.GET("/logaddresstokenstat", func(c echo.Context) error {
+		address, err := parseAddressQueryParamWithNil(c)
+		if err != nil {
+			return err
+		}
+		tokenId, err := parseTokenQueryParam(c)
+		if err != nil {
+			return err
+		}
+		if tokenId == nil {
+			tokenId = im.SmrTokenId
+		}
+		allZero := [im.Sha256HashLen]byte{}
+		addressSha256 := []byte(allZero[:])
+		if address != "" {
+			addressSha256 = im.Sha256Hash(address)
+		}
+		totalAmount := big.NewInt(0)
+		keyPrefix := deps.IMManager.TokenKeyPrefixFromTokenIdAndAddress(tokenId, addressSha256)
+		deps.IMManager.GetImStore().Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
+			tokenStat, err := deps.IMManager.TokenStateFromKeyAndValue(key, value)
+			if err != nil {
+				// log error then continue
+				CoreComponent.Logger().Errorf("TokenStateFromKeyAndValue failed:%s", err)
+				return true
+			}
+			// log tokenStat, amount, address, status
+			amountStr := tokenStat.Amount
+			amount, ok := new(big.Int).SetString(amountStr, 10)
+			if !ok {
+				// log error then continue
+				CoreComponent.Logger().Errorf("SetString failed:%s", err)
+				return true
+			}
+			totalAmount.Add(totalAmount, amount)
+			tokenIdHex := iotago.EncodeHex(tokenStat.TokenId)
+			CoreComponent.Logger().Infof("tokenId:%s, address:%s, amount:%s, status:%d", tokenIdHex, address, amount.Text(10), tokenStat.Status)
+			return true
+		})
+		// log totalAmount
+		CoreComponent.Logger().Infof("totalAmount:%s", totalAmount.Text(10))
+		return httpserver.JSONResponse(c, http.StatusOK, "ok")
+	})
+
 	// testmeta
 	e.GET("/testnftmeta", func(c echo.Context) error {
 		outputIdHex, err := parseAttrNameQueryParam(c, "outputId")
@@ -493,6 +558,19 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		resp := &TestReputationResponse{
 			MutedCount:       mutedTimes,
 			GroupMemberCount: groupMemberCount,
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// get addresses dids, using post
+	e.POST(RouteAddressDid, func(c echo.Context) error {
+		addresses, err := parseAddressesFromBody(c)
+		if err != nil {
+			return err
+		}
+		resp, err := getAddressesDids(addresses)
+		if err != nil {
+			return err
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})

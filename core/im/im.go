@@ -32,6 +32,36 @@ func parseAddressQueryParam(c echo.Context) (string, error) {
 	return address, nil
 }
 
+// parse addresses from body
+func parseAddressesFromBody(c echo.Context) ([]string, error) {
+	var addresses []string
+	err := c.Bind(&addresses)
+	if err != nil {
+		return nil, err
+	}
+	return addresses, nil
+}
+func parseAddressQueryParamWithNil(c echo.Context) (string, error) {
+	addressParams := c.QueryParams()["address"]
+	if len(addressParams) == 0 {
+		return "", nil
+	}
+	address := addressParams[0]
+	return address, nil
+}
+
+// parse tokenId from query param
+func parseTokenIdQueryParam(c echo.Context) ([]byte, error) {
+	tokenIdParams := c.QueryParams()["tokenId"]
+	if len(tokenIdParams) == 0 {
+		return nil, nil
+	}
+	tokenId, err := iotago.DecodeHex(tokenIdParams[0])
+	if err != nil {
+		return nil, err
+	}
+	return tokenId, nil
+}
 func parseGroupIdQueryParam(c echo.Context) ([]byte, error) {
 	groupIdParams := c.QueryParams()["groupId"]
 	if len(groupIdParams) == 0 {
@@ -102,7 +132,7 @@ func makeAddressGroupDetailsResponse(addressGroup *im.AddressGroup) *AddressGrou
 		GroupName:        addressGroup.GroupName,
 		GroupQualifyType: addressGroup.GroupQualifyType,
 		IpfsLink:         addressGroup.NftLink,
-		TokenName:        im.GetTokenNameFromType(addressGroup.TokenType),
+		TokenId:          iotago.EncodeHex(addressGroup.TokenId),
 		TokenThres:       addressGroup.TokenThres,
 	}
 }
@@ -284,8 +314,12 @@ func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMeta
 			includeGroupNameMap[include.GroupName] = true
 		}
 	}
-	// exclude
-
+	excludeGroupNameMap := map[string]bool{}
+	if hasGroupParam && (len(groupParam.Excludes) > 0) {
+		for _, exclude := range groupParam.Excludes {
+			excludeGroupNameMap[exclude.GroupName] = true
+		}
+	}
 	// loop groupIdHexList
 	var groupConfigs []*im.MessageGroupMetaJSON
 	for _, groupIdHex := range groupIdHexList {
@@ -295,6 +329,9 @@ func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMeta
 			continue
 		}
 		if (len(includeGroupNameMap) > 0) && (!includeGroupNameMap[config.GroupName]) {
+			continue
+		}
+		if (len(excludeGroupNameMap) > 0) && (excludeGroupNameMap[config.GroupName]) {
 			continue
 		}
 		// if config is not nil, append to groupConfigs
@@ -634,4 +671,39 @@ func getInboxList(c echo.Context) (*InboxItemsResponse, error) {
 	// make inbox message response
 	inboxItemsResponse := makeInboxItemsResponse(inboxItems)
 	return inboxItemsResponse, nil
+}
+
+// getAddressesDids given addresses
+func getAddressesDids(addresses []string) ([]*DidAddressResponse, error) {
+	respList := make([]*DidAddressResponse, len(addresses))
+	for i, address := range addresses {
+		dids, err := deps.IMManager.GetDidsFromAddress(address)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("get addresses dids from addresses:%s failed:%s", addresses, err)
+			continue
+		}
+		// find one with earliest timestamp, then append to respList
+		var earliestDid *im.Did
+		for _, did := range dids {
+			if earliestDid == nil {
+				earliestDid = did
+				continue
+			}
+			if did.Timestamp < earliestDid.Timestamp {
+				earliestDid = did
+			}
+		}
+		if earliestDid == nil {
+			// log error then continue
+			CoreComponent.LogWarnf("get addresses dids from addresses:%s failed:earliestDid is nil", addresses)
+			continue
+		}
+		respList[i] = &DidAddressResponse{
+			Address: address,
+			Name:    earliestDid.Name,
+			Picture: earliestDid.Picture,
+		}
+	}
+	return respList, nil
 }

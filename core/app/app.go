@@ -10,7 +10,7 @@ import (
 
 var (
 	// Name of the app.
-	Name = "inx-iotacat"
+	Name = "inx-groupfi"
 
 	// Version of the app.
 	Version = "0.0.1"

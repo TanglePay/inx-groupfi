@@ -142,6 +142,8 @@ func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) e
 			logger.Errorf("ReadNFTsFromGroupId error %v", err)
 		}
 		for _, address := range addresses {
+			// log address
+			logger.Infof("storeInbox : address %s", string(address))
 			//log nft
 			err := im.storeInboxMessage([]byte(address), message, valuePayload, logger)
 			if err != nil {
@@ -178,7 +180,9 @@ func (im *Manager) deleteSingleMessage(message *Message, logger *logger.Logger) 
 }
 func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, isPush bool) error {
 	// log is push
-	logger.Infof("storeNewMessages : isPush %v", isPush)
+	if len(messages) > 0 {
+		logger.Infof("storeNewMessages : isPush %v", isPush)
+	}
 	for _, message := range messages {
 
 		/*

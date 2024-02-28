@@ -13,7 +13,7 @@ type AddressGroupDetailsResponse struct {
 	GroupName        string `json:"groupName"`
 	GroupQualifyType int    `json:"groupQualifyType"`
 	IpfsLink         string `json:"ipfsLink"`
-	TokenName        string `json:"tokenName"`
+	TokenId          string `json:"tokenId"`
 	TokenThres       string `json:"tokenThres"`
 }
 
@@ -55,6 +55,13 @@ type TestReputationResponse struct {
 	MutedCount uint16 `json:"mutedCount"`
 	// group member count
 	GroupMemberCount int `json:"groupMemberCount"`
+}
+
+// did address response
+type DidAddressResponse struct {
+	Address string `json:"address"`
+	Name    string `json:"name"`
+	Picture string `json:"picture"`
 }
 
 // enum for output type created or consumed

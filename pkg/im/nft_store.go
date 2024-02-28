@@ -59,7 +59,7 @@ func (im *Manager) storeSingleNFT(nft *NFT, logger *logger.Logger) error {
 	if nft.GroupQualifyType == GroupQualifyTypeNft {
 		addressGroup = NewAddressGroupNft(nft.OwnerAddress, nft.GroupId, nft.IpfsLink, nft.GroupName)
 	} else if nft.GroupQualifyType == GroupQualifyTypeToken {
-		addressGroup = NewAddressGroupToken(nft.OwnerAddress, nft.GroupId, nft.TokenType, nft.TokenThres, nft.GroupName)
+		addressGroup = NewAddressGroupToken(nft.OwnerAddress, nft.GroupId, nft.TokenId, nft.TokenThres, nft.GroupName)
 	} else {
 		return errors.New("invalid group qualify type")
 	}
