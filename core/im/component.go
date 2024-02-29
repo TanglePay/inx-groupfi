@@ -289,29 +289,29 @@ func run() error {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
 		im.NodeIndexerAPIClient = indexerClient
-		// handle group config init
-		handleGroupConfigInit(ctx, nodeHTTPAPIClient, indexerClient)
+		// // handle group config init
+		// handleGroupConfigInit(ctx, nodeHTTPAPIClient, indexerClient)
 
-		// handle nft init
-		handleNFTInit(ctx, nodeHTTPAPIClient, indexerClient)
+		// // handle nft init
+		// handleNFTInit(ctx, nodeHTTPAPIClient, indexerClient)
 
-		// handle token init
-		handleTokenInit(ctx, nodeHTTPAPIClient, indexerClient)
+		// // handle token init
+		// handleTokenInit(ctx, nodeHTTPAPIClient, indexerClient)
 
-		// handle mark init
-		handleMarkInit(ctx, nodeHTTPAPIClient, indexerClient)
+		// // handle mark init
+		// handleMarkInit(ctx, nodeHTTPAPIClient, indexerClient)
 
-		// handle mute init
-		handleMuteInit(ctx, nodeHTTPAPIClient, indexerClient)
+		// // handle mute init
+		// handleMuteInit(ctx, nodeHTTPAPIClient, indexerClient)
 
-		// handle vote init
-		handleVoteInit(ctx, nodeHTTPAPIClient, indexerClient)
+		// // handle vote init
+		// handleVoteInit(ctx, nodeHTTPAPIClient, indexerClient)
 
-		// handle messsages init
-		handleMessageInit(ctx, nodeHTTPAPIClient, indexerClient)
+		// // handle messsages init
+		// handleMessageInit(ctx, nodeHTTPAPIClient, indexerClient)
 
-		// shared init
-		handleSharedInit(ctx, nodeHTTPAPIClient, indexerClient)
+		// // shared init
+		// handleSharedInit(ctx, nodeHTTPAPIClient, indexerClient)
 
 		CoreComponent.LogInfo("Finishing LedgerInit ... done")
 		startListeningToLedgerUpdate()
