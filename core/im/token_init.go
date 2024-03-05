@@ -23,9 +23,9 @@ func handleTokenInit(ctx context.Context, client *nodeclient.Client, indexerClie
 	handleNftTokenInit(ctx, client, indexerClient, ItemDrainer)
 
 	//handle total smr
-	handleTotalInit(ctx, client, indexerClient, ItemDrainer)
+	HandleTotalInit(ctx, client, indexerClient, ItemDrainer)
 }
-func handleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, ItemDrainer *im.ItemDrainer) {
+func HandleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, ItemDrainer *im.ItemDrainer) {
 
 	//handle whale eligibility
 	isWhaleEligibilityFinished, err := deps.IMManager.IsInitFinished(im.WhaleEligibility, "")

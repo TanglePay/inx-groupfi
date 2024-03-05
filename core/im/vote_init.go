@@ -10,9 +10,9 @@ import (
 // handle vote init
 func handleVoteInit(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) {
 	// make drainer
-	drainer := makeItemDrainerForVoteInit(ctx, client, indexerClient)
+	// drainer := makeItemDrainerForVoteInit(ctx, client, indexerClient)
 	// handle vote init
-	handleTypeInit(ctx, client, indexerClient, drainer, im.VoteType, im.VoteTagStr)
+	// handleTypeInit(ctx, client, indexerClient, drainer, im.VoteType, im.VoteTagStr)
 }
 
 func makeItemDrainerForVoteInit(ctx context.Context, nodeHTTPAPIClient *nodeclient.Client, indexerClient nodeclient.IndexerClient) *im.ItemDrainer {
