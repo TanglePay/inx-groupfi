@@ -296,6 +296,7 @@ func run() error {
 			Ctx:           ctx,
 			Client:        nodeHTTPAPIClient,
 			IndexerClient: indexerClient,
+			Logger:        CoreComponent.Logger(),
 		}
 		// handle all nft first pass
 		ProcessAllNftFirstPass(initCtx)

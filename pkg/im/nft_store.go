@@ -164,19 +164,6 @@ func (im *Manager) FilterNftOutput(outputId []byte, output iotago.Output, mileSt
 		return nil, false, nil
 	}
 
-	//////////////
-	var nftIdHex string
-	if nftOutput.NFTID.Empty() {
-		outputIdHash := blake2b.Sum256(outputId)
-		nftIdHex = iotago.EncodeHex(outputIdHash[:])
-	} else {
-		nftIdHex = nftOutput.NFTID.ToHex()
-	}
-	nftId, err := iotago.DecodeHex(nftIdHex)
-	if err != nil {
-		log.Errorf("nftFromINXOutput failed:%s", err)
-		return nil, false, nil
-	}
 	featureSet, err := nftOutput.ImmutableFeatures.Set()
 	if err != nil {
 		return nil, false, nil
@@ -194,6 +181,20 @@ func (im *Manager) FilterNftOutput(outputId []byte, output iotago.Output, mileSt
 
 	pairs := ChainNameAndCollectionIdToGroupIdAndGroupNamePairs(HornetChainName, collectionId)
 	if len(pairs) == 0 {
+		return nil, false, nil
+	}
+
+	// ////////////
+	var nftIdHex string
+	if nftOutput.NFTID.Empty() {
+		outputIdHash := blake2b.Sum256(outputId)
+		nftIdHex = iotago.EncodeHex(outputIdHash[:])
+	} else {
+		nftIdHex = nftOutput.NFTID.ToHex()
+	}
+	nftId, err := iotago.DecodeHex(nftIdHex)
+	if err != nil {
+		log.Errorf("nftFromINXOutput failed:%s", err)
 		return nil, false, nil
 	}
 
