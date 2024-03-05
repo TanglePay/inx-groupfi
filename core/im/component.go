@@ -232,7 +232,7 @@ func startListeningToLedgerUpdate() {
 		}
 
 		CoreComponent.LogInfo("Stopping LedgerUpdates ... done")
-	}, daemon.PriorityStopIM); err != nil {
+	}, daemon.PriorityStopIMLedgerConfirmedUpdate); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 	// create another background worker that handles the im blocks
@@ -245,7 +245,7 @@ func startListeningToLedgerUpdate() {
 		}
 
 		CoreComponent.LogInfo("Stopping LedgerUpdateBlock ... done")
-	}, daemon.PriorityStopIM); err != nil {
+	}, daemon.PriorityStopIMLedgerBlockUpdate); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 }
@@ -312,7 +312,7 @@ func run() error {
 
 		CoreComponent.LogInfo("Finishing LedgerInit ... done")
 		startListeningToLedgerUpdate()
-	}, daemon.PriorityStopIM); err != nil {
+	}, daemon.PriorityStopIMInit); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 	// create a background worker that handles the API
