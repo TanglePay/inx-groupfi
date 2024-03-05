@@ -10,9 +10,9 @@ import (
 // handle mute init
 func handleMuteInit(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) {
 	// make drainer
-	drainer := makeItemDrainerForMuteInit(ctx, client, indexerClient)
+	// drainer := makeItemDrainerForMuteInit(ctx, client, indexerClient)
 	// handle mute init
-	handleTypeInit(ctx, client, indexerClient, drainer, im.MuteType, im.MuteTagStr)
+	// handleTypeInit(ctx, client, indexerClient, drainer, im.MuteType, im.MuteTagStr)
 }
 
 func makeItemDrainerForMuteInit(ctx context.Context, nodeHTTPAPIClient *nodeclient.Client, indexerClient nodeclient.IndexerClient) *im.ItemDrainer {

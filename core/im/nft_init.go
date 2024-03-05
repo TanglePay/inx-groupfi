@@ -3,9 +3,6 @@ package im
 import (
 	"context"
 
-	"github.com/TanglePay/inx-groupfi/pkg/im"
-	"github.com/iotaledger/hive.go/core/logger"
-	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
 
@@ -66,41 +63,43 @@ func handleNFTInit(ctx context.Context, client *nodeclient.Client, indexerClient
 			}
 		}
 	*/
-	topic := "nft_init"
-	// func(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, initOffset *string, logger *logger.Logger) ([]string, *string, error)
-	itemFetcher := func(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, initOffset *string, logger *logger.Logger) ([]string, *string, error) {
-		ids, nextOffset, err := deps.IMManager.QueryNFTIds(ctx, indexerClient, initOffset, 1000, logger)
-		if err != nil {
-			return nil, nil, err
+	/*
+		topic := "nft_init"
+		// func(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, initOffset *string, logger *logger.Logger) ([]string, *string, error)
+		itemFetcher := func(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, initOffset *string, logger *logger.Logger) ([]string, *string, error) {
+			ids, nextOffset, err := deps.IMManager.QueryNFTIds(ctx, indexerClient, initOffset, 1000, logger)
+			if err != nil {
+				return nil, nil, err
+			}
+			return ids, nextOffset, nil
 		}
-		return ids, nextOffset, nil
-	}
-	drainer := im.NewItemDrainer(ctx, func(outputIdUnwrapped interface{}) {
-		outputIdHex := outputIdUnwrapped.(string)
-		output, err := deps.IMManager.OutputIdToOutput(ctx, client, outputIdHex)
-		if err != nil {
-			// log error
-			CoreComponent.LogWarnf("LedgerInit ... OutputIdToOutput failed:%s", err)
-			return
-		}
+		drainer := im.NewItemDrainer(ctx, func(outputIdUnwrapped interface{}) {
+			outputIdHex := outputIdUnwrapped.(string)
+			output, err := deps.IMManager.OutputIdToOutput(ctx, client, outputIdHex)
+			if err != nil {
+				// log error
+				CoreComponent.LogWarnf("LedgerInit ... OutputIdToOutput failed:%s", err)
+				return
+			}
 
-		outputId, err := iotago.DecodeHex(outputIdHex)
-		if err != nil {
-			// log error
-			CoreComponent.LogWarnf("LedgerInit ... DecodeHex failed:%s", err)
-			return
-		}
+			outputId, err := iotago.DecodeHex(outputIdHex)
+			if err != nil {
+				// log error
+				CoreComponent.LogWarnf("LedgerInit ... DecodeHex failed:%s", err)
+				return
+			}
 
-		nfts, is, _ := deps.IMManager.FilterNftOutput(outputId, output, CoreComponent.Logger())
-		if !is {
-			return
-		}
+			nfts, is, _ := deps.IMManager.FilterNftOutput(outputId, output, CoreComponent.Logger())
+			if !is {
+				return
+			}
 
-		deps.IMManager.StoreNewNFTsDeleteConsumedNfts(nfts, nil, CoreComponent.Logger())
+			deps.IMManager.StoreNewNFTsDeleteConsumedNfts(nfts, nil, CoreComponent.Logger())
 
-	}, 100, 10, 200)
-	// postEffect func(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) error,
-	postEffect :=  func(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) error {
-		// 
-		HandleGenericInit(ctx, client, indexerClient, topic, itemFetcher, nil, drainer, CoreComponent.Logger())
+		}, 100, 10, 200)
+		// postEffect func(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) error,
+		postEffect :=  func(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) error {
+			//
+			HandleGenericInit(ctx, client, indexerClient, topic, itemFetcher, nil, drainer, CoreComponent.Logger())
+	*/
 }

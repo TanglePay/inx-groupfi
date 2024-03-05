@@ -154,7 +154,8 @@ func (im *Manager) ReadNFTsFromGroupId(groupId []byte) ([]*NFT, error) {
 }
 
 // filter out nft outputs by output type and collectionId
-func (im *Manager) FilterNftOutput(outputId []byte, output iotago.Output, logger *logger.Logger) ([]*NFT, bool, []*GroupIdAndGroupNamePair) {
+func (im *Manager) FilterNftOutput(outputId []byte, output iotago.Output, mileStoneIndex uint32, milestoneTimestamp uint32,
+	logger *logger.Logger) ([]*NFT, bool, []*GroupIdAndGroupNamePair) {
 	if output.Type() != iotago.OutputNFT {
 		return nil, false, nil
 	}
@@ -203,7 +204,7 @@ func (im *Manager) FilterNftOutput(outputId []byte, output iotago.Output, logger
 		groupId := pair.GroupId
 		groupName := pair.GroupName
 
-		nft := NewNFT(groupId, ownerAddress, nftId, groupName, "ipfsLink", milestone, milestoneTimestamp)
+		nft := NewNFT(groupId, ownerAddress, nftId, groupName, "ipfsLink", mileStoneIndex, milestoneTimestamp)
 		nfts = append(nfts, nft)
 	}
 	return nfts, true, pairs
