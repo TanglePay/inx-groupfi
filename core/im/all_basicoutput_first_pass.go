@@ -18,8 +18,6 @@ func ProcessAllBasicOutputFirstPass(initCtx *InitContext) {
 			// filter vote output
 			basicOutput, is := deps.IMManager.FilterVoteOutput(output, initCtx.Logger)
 			if !is {
-				// log error
-				initCtx.Logger.Warnf("LedgerInit ... FilterVoteOutput failed")
 				return nil
 			}
 			deps.IMManager.HandleUserVoteGroupBasicOutputCreated(basicOutput, initCtx.Logger)
@@ -30,8 +28,6 @@ func ProcessAllBasicOutputFirstPass(initCtx *InitContext) {
 			// filter vote output
 			basicOutput, is := deps.IMManager.FilterMuteOutput(output, initCtx.Logger)
 			if !is {
-				// log error
-				initCtx.Logger.Warnf("LedgerInit ... FilterVoteOutput failed")
 				return nil
 			}
 			deps.IMManager.HandleUserMuteGroupMemberBasicOutputCreated(basicOutput, initCtx.Logger)
