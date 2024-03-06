@@ -39,7 +39,7 @@ func ProcessAllBasicOutputFirstPass(initCtx *InitContext) {
 			shared := sharedOutputFromINXOutput(output, outputId, milestoneIndex, milestoneTimestamp)
 			if shared != nil {
 				DataFromListenning := &im.DataFromListenning{
-					CreatedShared: []*im.Message{shared},
+					CreatedShared: []*im.GroupShared{shared},
 				}
 
 				err := deps.IMManager.ApplyNewLedgerUpdate(0, DataFromListenning, initCtx.Logger, true)

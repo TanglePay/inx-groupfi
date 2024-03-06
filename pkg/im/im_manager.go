@@ -214,7 +214,10 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	}
 	if len(createdShared) > 0 {
 		shared := createdShared[0]
-		logger.Infof("store new shared: groupId:%s, outputId:%s, milestoneindex:%d, milestonetimestamp:%d", shared.GetGroupIdStr(), shared.GetOutputIdStr(), shared.MileStoneIndex, shared.MileStoneTimestamp)
+		groupIdStr := iotago.EncodeHex(shared.GroupId[:])
+		outputIdStr := iotago.EncodeHex(shared.OutputId[:])
+		address := shared.SenderBech32Address
+		logger.Infof("store new shared: groupId:%s, outputId:%s, address:%s", groupIdStr, outputIdStr, address)
 	}
 	if err := im.storeNewShareds(createdShared, logger); err != nil {
 		return err
@@ -295,8 +298,8 @@ type DataFromListenning struct {
 	CreatedMessage                             []*Message
 	ConsumedMessage                            []*Message
 	CreatedNft                                 []*NFT
-	CreatedShared                              []*Message
-	ConsumedShared                             []*Message
+	CreatedShared                              []*GroupShared
+	ConsumedShared                             []*GroupShared
 	ConsumedNft                                []*NFT
 	CreatedPublicKeyOutputIdHexAndAddressPairs []*OutputIdHexAndAddressPair
 	CreatedMark                                []*OutputAndOutputId
