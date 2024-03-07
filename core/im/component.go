@@ -299,16 +299,16 @@ func run() error {
 			Logger:        CoreComponent.Logger(),
 		}
 		// handle all nft first pass
-		ProcessAllNftFirstPass(initCtx)
+		// ProcessAllNftFirstPass(initCtx)
 
 		// handle all basic output first pass
 		ProcessAllBasicOutputFirstPass(initCtx)
 
 		// handle mark init
-		handleMarkInit(initCtx)
+		// handleMarkInit(initCtx)
 
 		// handle message init
-		handleMessageInit(initCtx)
+		// handleMessageInit(initCtx)
 
 		CoreComponent.LogInfo("Finishing LedgerInit ... done")
 		startListeningToLedgerUpdate()
