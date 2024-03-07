@@ -44,12 +44,14 @@ func (im *Manager) VoteKey(vote *Vote) []byte {
 
 // store vote, check if user has group member, if not, return error
 func (im *Manager) StoreVote(vote *Vote, logger *logger.Logger) error {
-	exists, err := im.GroupMemberExistsFromGroupIdAndAddressSha256Hash(vote.GroupId, vote.AddressSha256)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		return errors.New("user has no group member")
+	if !IsIniting {
+		exists, err := im.GroupMemberExistsFromGroupIdAndAddressSha256Hash(vote.GroupId, vote.AddressSha256)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			return errors.New("user has no group member")
+		}
 	}
 	key := im.VoteKey(vote)
 	value := []byte{vote.Vote}
