@@ -6,7 +6,9 @@ import (
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/labstack/gommon/log"
 	"github.com/pkg/errors"
+	"golang.org/x/crypto/blake2b"
 )
 
 func (im *Manager) NftKeyFromGroupIdAndNftId(groupId []byte, nftId []byte) []byte {
@@ -61,6 +63,7 @@ func (im *Manager) storeSingleNFT(nft *NFT, logger *logger.Logger) error {
 	} else {
 		return errors.New("invalid group qualify type")
 	}
+
 	qualification, err := im.GetQualificationFromNFT(nft)
 	if err != nil {
 		return err
@@ -70,6 +73,7 @@ func (im *Manager) storeSingleNFT(nft *NFT, logger *logger.Logger) error {
 	if err != nil {
 		return err
 	}
+
 	err = im.StoreAddressGroup(addressGroup)
 	return err
 }
@@ -112,32 +116,16 @@ func (im *Manager) NFTExists(groupId []byte, nftId []byte) (bool, error) {
 	key := im.NftKeyFromGroupIdAndNftId(groupId, nftId)
 	return im.imStore.Has(key)
 }
-func (im *Manager) storeNewNFTsDeleteConsumedNfts(createdNfts []*NFT, consumedNfts []*NFT, logger *logger.Logger) error {
-	// hash set store all groupId, groupId is []byte
-	groupIdSet := make(map[string]bool)
-	/*
-		defer func() {
-			for groupId := range groupIdSet {
-				groupIdBytes, err := iotago.DecodeHex(groupId)
-				if err != nil {
-					logger.Errorf("failed to decode groupId %s", groupId)
-					continue
-				}
-				im.CalculateNumberOfGroupMembersWithPublicKey(groupIdBytes, logger)
-			}
-		}()
-	*/
+func (im *Manager) StoreNewNFTsDeleteConsumedNfts(createdNfts []*NFT, consumedNfts []*NFT, logger *logger.Logger) error {
 	for _, nft := range createdNfts {
 		if err := im.storeSingleNFT(nft, logger); err != nil {
 			return err
 		}
-		groupIdSet[iotago.EncodeHex(nft.GroupId)] = true
 	}
 	for _, nft := range consumedNfts {
 		if err := im.DeleteNFT(nft, logger); err != nil {
 			return err
 		}
-		groupIdSet[iotago.EncodeHex(nft.GroupId)] = true
 	}
 	return nil
 }
@@ -163,4 +151,62 @@ func (im *Manager) ReadNFTFromPrefix(keyPrefix []byte) ([]*NFT, error) {
 // get all nfts from a group
 func (im *Manager) ReadNFTsFromGroupId(groupId []byte) ([]*NFT, error) {
 	return im.ReadNFTFromPrefix(im.NftKeyPrefixFromGroupId(groupId))
+}
+
+// filter out nft outputs by output type and collectionId
+func (im *Manager) FilterNftOutput(outputId []byte, output iotago.Output, mileStoneIndex uint32, milestoneTimestamp uint32,
+	logger *logger.Logger) ([]*NFT, bool, []*GroupIdAndGroupNamePair) {
+	if output.Type() != iotago.OutputNFT {
+		return nil, false, nil
+	}
+	nftOutput, ok := output.(*iotago.NFTOutput)
+	if !ok {
+		return nil, false, nil
+	}
+
+	featureSet, err := nftOutput.ImmutableFeatures.Set()
+	if err != nil {
+		return nil, false, nil
+	}
+	issuer := featureSet.IssuerFeature()
+	if issuer == nil {
+		return nil, false, nil
+	}
+
+	if issuer.Address.Type() != iotago.AddressNFT {
+		return nil, false, nil
+	}
+	nftAddress := issuer.Address.(*iotago.NFTAddress)
+	collectionId := nftAddress.NFTID().ToHex()
+
+	pairs := ChainNameAndCollectionIdToGroupIdAndGroupNamePairs(HornetChainName, collectionId)
+	if len(pairs) == 0 {
+		return nil, false, nil
+	}
+
+	// ////////////
+	var nftIdHex string
+	if nftOutput.NFTID.Empty() {
+		outputIdHash := blake2b.Sum256(outputId)
+		nftIdHex = iotago.EncodeHex(outputIdHash[:])
+	} else {
+		nftIdHex = nftOutput.NFTID.ToHex()
+	}
+	nftId, err := iotago.DecodeHex(nftIdHex)
+	if err != nil {
+		log.Errorf("nftFromINXOutput failed:%s", err)
+		return nil, false, nil
+	}
+
+	unlockConditionSet := nftOutput.UnlockConditionSet()
+	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
+	var nfts []*NFT
+	for _, pair := range pairs {
+		groupId := pair.GroupId
+		groupName := pair.GroupName
+
+		nft := NewNFT(groupId, ownerAddress, nftId, groupName, "ipfsLink", mileStoneIndex, milestoneTimestamp)
+		nfts = append(nfts, nft)
+	}
+	return nfts, true, pairs
 }

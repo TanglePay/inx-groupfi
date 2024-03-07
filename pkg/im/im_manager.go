@@ -209,7 +209,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	if err := im.storeNewMessages(createdMessage, logger, false); err != nil {
 		return err
 	}
-	if err := im.storeNewNFTsDeleteConsumedNfts(createdNft, consumedNft, logger); err != nil {
+	if err := im.StoreNewNFTsDeleteConsumedNfts(createdNft, consumedNft, logger); err != nil {
 		return err
 	}
 	if len(createdShared) > 0 {

@@ -232,7 +232,7 @@ func startListeningToLedgerUpdate() {
 		}
 
 		CoreComponent.LogInfo("Stopping LedgerUpdates ... done")
-	}, daemon.PriorityStopIM); err != nil {
+	}, daemon.PriorityStopIMLedgerConfirmedUpdate); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 	// create another background worker that handles the im blocks
@@ -245,7 +245,7 @@ func startListeningToLedgerUpdate() {
 		}
 
 		CoreComponent.LogInfo("Stopping LedgerUpdateBlock ... done")
-	}, daemon.PriorityStopIM); err != nil {
+	}, daemon.PriorityStopIMLedgerBlockUpdate); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 }
@@ -292,30 +292,27 @@ func run() error {
 		// handle group config init
 		handleGroupConfigInit(ctx, nodeHTTPAPIClient, indexerClient)
 
-		// handle nft init
-		handleNFTInit(ctx, nodeHTTPAPIClient, indexerClient)
+		initCtx := &InitContext{
+			Ctx:           ctx,
+			Client:        nodeHTTPAPIClient,
+			IndexerClient: indexerClient,
+			Logger:        CoreComponent.Logger(),
+		}
+		// handle all nft first pass
+		ProcessAllNftFirstPass(initCtx)
 
-		// handle token init
-		handleTokenInit(ctx, nodeHTTPAPIClient, indexerClient)
+		// handle all basic output first pass
+		ProcessAllBasicOutputFirstPass(initCtx)
 
 		// handle mark init
-		handleMarkInit(ctx, nodeHTTPAPIClient, indexerClient)
+		handleMarkInit(initCtx)
 
-		// handle mute init
-		handleMuteInit(ctx, nodeHTTPAPIClient, indexerClient)
-
-		// handle vote init
-		handleVoteInit(ctx, nodeHTTPAPIClient, indexerClient)
-
-		// handle messsages init
-		handleMessageInit(ctx, nodeHTTPAPIClient, indexerClient)
-
-		// shared init
-		handleSharedInit(ctx, nodeHTTPAPIClient, indexerClient)
+		// handle message init
+		handleMessageInit(initCtx)
 
 		CoreComponent.LogInfo("Finishing LedgerInit ... done")
 		startListeningToLedgerUpdate()
-	}, daemon.PriorityStopIM); err != nil {
+	}, daemon.PriorityStopIMInit); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
 	// create a background worker that handles the API

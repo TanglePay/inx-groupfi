@@ -13,44 +13,39 @@ import (
 type IndexerItemType int
 
 const (
-	MessageType IndexerItemType = iota
-	NFTType
-	SharedType
-	TokenBasicType
-	TokenNFTType
-	WhaleEligibility
-	MarkType
-	MuteType
-	VoteType
+	MessageType      string = "MessageType"
+	NFTType          string = "NFTType"
+	SharedType       string = "SharedType"
+	TokenBasicType   string = "TokenBasicType"
+	TokenNFTType     string = "TokenNFTType"
+	WhaleEligibility string = "WhaleEligibility"
+	MarkType         string = "MarkType"
+	MuteType         string = "MuteType"
+	VoteType         string = "VoteType"
 )
 
-func initFinishedStoreKeyFromType(indexerItemType IndexerItemType, extra string) []byte {
-	prefixBytes := []byte{ImStoreKeyPrefixInitStatus}
+// get key for init finished
+func initFinishedStoreKeyFromTopicAndExtra(topic string, extra string) []byte {
+	prefixBytes := []byte{ImStoreKeyPrefixInitStatusFinish}
+	topicBytes := Sha256Hash(topic)
 	extraBytes := Sha256Hash(extra)
-	switch indexerItemType {
-	case MessageType:
-		return ConcatByteSlices(prefixBytes, Sha256Hash("messageInitFinished"), extraBytes)
-	case NFTType:
-		return ConcatByteSlices(prefixBytes, Sha256Hash("nftInitFinished"), extraBytes)
-	case SharedType:
-		return ConcatByteSlices(prefixBytes, Sha256Hash("sharedInitFinished"), extraBytes)
-	case TokenBasicType:
-		return ConcatByteSlices(prefixBytes, Sha256Hash("tokenBasicInitFinished"), extraBytes)
-	case TokenNFTType:
-		return ConcatByteSlices(prefixBytes, Sha256Hash("tokenNFTInitFinished"), extraBytes)
-	case WhaleEligibility:
-		return ConcatByteSlices(prefixBytes, Sha256Hash("whaleEligibilityInitFinished"), extraBytes)
-	}
+	return ConcatByteSlices(prefixBytes, topicBytes, extraBytes)
+}
 
-	return nil
+// get key for init offset
+func initOffsetStoreKeyFromTopicAndExtra(topic string, extra string) []byte {
+	prefixBytes := []byte{ImStoreKeyPrefixInitStatusOffset}
+	topicBytes := Sha256Hash(topic)
+	extraBytes := Sha256Hash(extra)
+	return ConcatByteSlices(prefixBytes, topicBytes, extraBytes)
 }
 
 // is inited
-func (im *Manager) IsInitFinished(indexerItemType IndexerItemType, extra string) (bool, error) {
-	key := initFinishedStoreKeyFromType(indexerItemType, extra)
+func (im *Manager) IsInitFinished(topic string, extra string) (bool, error) {
+	key := initFinishedStoreKeyFromTopicAndExtra(topic, extra)
 	contains, err := im.imStore.Has(key)
 	if err != nil {
-		msg := "failed to read IsInitFinished status for " + string(indexerItemType)
+		msg := "failed to read IsInitFinished status for " + topic
 		return true, errors.New(msg)
 	}
 
@@ -58,44 +53,23 @@ func (im *Manager) IsInitFinished(indexerItemType IndexerItemType, extra string)
 }
 
 // mark inited
-func (im *Manager) MarkInitFinished(indexerItemType IndexerItemType, extra string) error {
-	key := initFinishedStoreKeyFromType(indexerItemType, extra)
+func (im *Manager) MarkInitFinished(topic string, extra string) error {
+	key := initFinishedStoreKeyFromTopicAndExtra(topic, extra)
 	if err := im.imStore.Set(key, []byte{}); err != nil {
-		return errors.New("failed to MarkInitFinished for " + string(indexerItemType))
+		return errors.New("failed to MarkInitFinished for " + topic)
 	}
 	return im.imStore.Flush()
 }
 
-func initCurrentOffsetKey(indexerItemType IndexerItemType, extra string) []byte {
-	prefixBytes := []byte{ImStoreKeyPrefixInitStatus}
-	extraBytes := Sha256Hash(extra)
-	switch indexerItemType {
-	case MessageType:
-		return ConcatByteSlices(prefixBytes, Sha256Hash("messageInitOffset"), extraBytes)
-	case NFTType:
-		return ConcatByteSlices(prefixBytes, Sha256Hash("nftInitOffset"), extraBytes)
-	case SharedType:
-		return ConcatByteSlices(prefixBytes, Sha256Hash("sharedInitOffset"), extraBytes)
-	case TokenBasicType:
-		return ConcatByteSlices(prefixBytes, Sha256Hash("tokenBasicInitOffset"), extraBytes)
-	case TokenNFTType:
-		return ConcatByteSlices(prefixBytes, Sha256Hash("tokenNFTInitOffset"), extraBytes)
-	case WhaleEligibility:
-		return ConcatByteSlices(prefixBytes, Sha256Hash("whaleEligibilityInitOffset"), extraBytes)
-	}
-
-	return nil
-}
-
 // store init start index
-func (im *Manager) StoreInitCurrentOffset(offset *string, indexerItemType IndexerItemType, extra string) error {
-	key := initCurrentOffsetKey(indexerItemType, extra)
+func (im *Manager) StoreInitCurrentOffset(offset *string, topic string, extra string) error {
+	key := initOffsetStoreKeyFromTopicAndExtra(topic, extra)
 	return im.imStore.Set(key, []byte(*offset))
 }
 
 // read init start index
-func (im *Manager) ReadInitCurrentOffset(indexerItemType IndexerItemType, extra string) (*string, error) {
-	key := initCurrentOffsetKey(indexerItemType, extra)
+func (im *Manager) ReadInitCurrentOffset(topic string, extra string) (*string, error) {
+	key := initOffsetStoreKeyFromTopicAndExtra(topic, extra)
 	v, err := im.imStore.Get(key)
 	if err != nil {
 		if errors.Is(err, kvstore.ErrKeyNotFound) {
@@ -207,6 +181,16 @@ func (im *Manager) QueryNFTOutputIds(ctx context.Context, client nodeclient.Inde
 func (im *Manager) QueryNFTIdsByIssuer(ctx context.Context, client nodeclient.IndexerClient, issuerBech32Address string, offset *string, pageSize int, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
 	query := &nodeclient.NFTsQuery{
 		IssuerBech32: issuerBech32Address,
+		IndexerCursorParas: nodeclient.IndexerCursorParas{
+			PageSize: pageSize,
+		},
+	}
+	return executeQuery(ctx, client, query, offset, logger)
+}
+
+// query nfts with offset, return outputIds and new offset
+func (im *Manager) QueryNFTIds(ctx context.Context, client nodeclient.IndexerClient, offset *string, pageSize int, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
+	query := &nodeclient.NFTsQuery{
 		IndexerCursorParas: nodeclient.IndexerCursorParas{
 			PageSize: pageSize,
 		},
