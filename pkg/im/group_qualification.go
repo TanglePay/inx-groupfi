@@ -137,7 +137,7 @@ func (im *Manager) StoreGroupQualification(groupQualification *GroupQualificatio
 			}
 			// delete group shared if previous group member is actually stored
 			if isActuallyStored {
-				err = im.DeleteSharedFromGroupId(groupQualification.GroupId[:])
+				err = im.DeleteSharedFromGroupId(groupQualification.GroupId)
 				if err != nil {
 					return err
 				}
@@ -170,7 +170,7 @@ func (im *Manager) DeleteGroupQualification(groupQualification *GroupQualificati
 			}
 			// delete group shared when previous group member is actually deleted
 			if isActuallyDeleted {
-				err = im.DeleteSharedFromGroupId(groupQualification.GroupId[:])
+				err = im.DeleteSharedFromGroupId(groupQualification.GroupId)
 				if err != nil {
 					return err
 				}

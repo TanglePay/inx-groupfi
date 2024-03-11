@@ -142,14 +142,14 @@ func filterNFTOutput(output iotago.Output) (isNFT bool, nft *iotago.NFTOutput) {
 	}
 	return true, nftOutput
 }
-func sharedOutputFromINXLedgerOutput(output *inx.LedgerOutput) *im.Message {
+func sharedOutputFromINXLedgerOutput(output *inx.LedgerOutput) *im.GroupShared {
 	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil
 	}
 	return sharedOutputFromINXOutput(iotaOutput, output.OutputId.Id, output.MilestoneIndexBooked, output.MilestoneTimestampBooked)
 }
-func sharedOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint32, milestoneTimestamp uint32) *im.Message {
+func sharedOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint32, milestoneTimestamp uint32) *im.GroupShared {
 
 	// Ignore anything other than BasicOutputs
 	if iotaOutput.Type() != iotago.OutputBasic {
@@ -170,10 +170,8 @@ func sharedOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte, milest
 	}
 	// groupid is GroupIdLen bytes of second byte of meta feature
 	groupId := metaPayload[1 : im.GroupIdLen+1]
-	metapayloadSha256 := im.Sha256HashBytes(metaPayload)
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
-	senderAddressSha256 := im.Sha256Hash(senderAddressStr)
 	CoreComponent.LogInfof("Found GROUPFISHARED output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d，senderAddress:%s",
 		len(metaPayload),
 		len(groupId),
@@ -183,7 +181,7 @@ func sharedOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte, milest
 		milestoneTimestamp,
 		senderAddressStr,
 	)
-	return im.NewMessage(groupId, outputId, milestone, milestoneTimestamp, senderAddressSha256, metapayloadSha256)
+	return im.NewGroupShared(groupId, outputId, senderAddressStr)
 }
 
 func handlePublicKeyOutputFromINXLedgerOutput(output *inx.LedgerOutput) (*im.OutputIdHexAndAddressPair, error) {
@@ -502,12 +500,12 @@ func fetchNextMessage(ctx context.Context, client *nodeclient.Client, indexerCli
 	return messages, offset, nil
 }
 
-func fetchNextShared(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) ([]*im.Message, *string, error) {
+func fetchNextShared(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient, offset *string, log *logger.Logger) ([]*im.GroupShared, *string, error) {
 	outputHexIds, offset, err := deps.IMManager.QueryOutputIdsByTag(ctx, indexerClient, iotacatsharedTagHex, offset, log)
 	if err != nil {
 		return nil, nil, err
 	}
-	var shareds []*im.Message
+	var shareds []*im.GroupShared
 	for _, outputHexId := range outputHexIds {
 		output, milestoneIndex, milestoneTimestamp, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(ctx, client, outputHexId)
 		if err != nil {

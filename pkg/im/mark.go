@@ -123,7 +123,7 @@ func (im *Manager) DeleteMark(mark *Mark, isActuallyUnmarked bool, logger *logge
 	}
 	// delete group shared when previous group member is actually deleted and is actually unmarked
 	if isActuallyDeleted && isActuallyUnmarked {
-		err = im.DeleteSharedFromGroupId(mark.GroupId[:])
+		err = im.DeleteSharedFromGroupId(mark.GroupId)
 		if err != nil {
 			return err
 		}

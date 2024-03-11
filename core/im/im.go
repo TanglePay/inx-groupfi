@@ -222,7 +222,9 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 	} else {
 		deps.IMManager.RemoveGroupIdFromPublicGroupIds(groupIdHex)
 	}
-	shared, err := deps.IMManager.ReadSharedFromGroupId(groupId)
+	groupIdFixed := [im.GroupIdLen]byte{}
+	copy(groupIdFixed[:], groupId)
+	shared, err := deps.IMManager.ReadSharedFromGroupId(groupIdFixed)
 	if err != nil {
 		return nil, err
 	}
@@ -232,9 +234,9 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 		}
 		return resp, nil
 	}
-	CoreComponent.LogInfof("get shared from groupId:%s,found shared with outputid:%s", groupId, iotago.EncodeHex(shared.OutputId))
+	CoreComponent.LogInfof("get shared from groupId:%s,found shared with outputid:%s", groupId, iotago.EncodeHex(shared.OutputId[:]))
 	resp := &SharedResponse{
-		OutputId: iotago.EncodeHex(shared.OutputId),
+		OutputId: iotago.EncodeHex(shared.OutputId[:]),
 	}
 	return resp, nil
 }
@@ -246,7 +248,9 @@ func deleteSharedFromGroupId(c echo.Context) error {
 		return err
 	}
 	CoreComponent.LogInfof("delete shared from group:%s", groupId)
-	err = deps.IMManager.DeleteSharedFromGroupId(groupId)
+	groupIdFixed := [im.GroupIdLen]byte{}
+	copy(groupIdFixed[:], groupId)
+	err = deps.IMManager.DeleteSharedFromGroupId(groupIdFixed)
 	if err != nil {
 		return err
 	}
@@ -372,23 +376,6 @@ func getMessageOutputIdsForConsolidation(c echo.Context) ([]string, error) {
 	// calculate timestamp DaysElapsedForConsolidation from now
 	thresMileStoneTimestamp := uint32(time.Now().AddDate(0, 0, -DaysElapsedForConsolidation).Unix())
 	outputIds, err := deps.IMManager.ReadMessageForConsolidation(address, thresMileStoneTimestamp, CoreComponent.Logger())
-	if err != nil {
-		return nil, err
-	}
-	CoreComponent.LogInfof("get outputids for consolidation from address:%s,found outputIds:%d", address, len(outputIds))
-	return outputIds, nil
-}
-
-// get outputids for consolidation, for shared
-func getSharedOutputIdsForConsolidation(c echo.Context) ([]string, error) {
-	address, err := parseAddressQueryParam(c)
-	if err != nil {
-		return nil, err
-	}
-	CoreComponent.LogInfof("get outputids for consolidation from address:%s", address)
-	// calculate timestamp DaysElapsedForConsolidation from now
-	thresMileStoneTimestamp := uint32(time.Now().AddDate(0, 0, -2*DaysElapsedForConsolidation).Unix())
-	outputIds, err := deps.IMManager.ReadSharedForConsolidation(address, thresMileStoneTimestamp, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
