@@ -311,6 +311,7 @@ func run() error {
 		handleMessageInit(initCtx)
 
 		CoreComponent.LogInfo("Finishing LedgerInit ... done")
+		im.IsIniting = false
 		startListeningToLedgerUpdate()
 	}, daemon.PriorityStopIMInit); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
@@ -410,8 +411,6 @@ func run() error {
 	}, daemon.PriorityStopIMMQTT); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
-
-	im.IsIniting = false
 	return nil
 }
 

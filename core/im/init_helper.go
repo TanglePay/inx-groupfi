@@ -55,7 +55,7 @@ func HandleGenericInit(initCtx *InitContext,
 				continue
 			}
 		}
-	}, 100, 10, 200)
+	}, 200, 100, 1000)
 	// check if finished
 	isFinished, err := deps.IMManager.IsInitFinished(topic, "")
 	if err != nil {

@@ -29,9 +29,9 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		CoreComponent.LogInfof("LedgerUpdate start:%d, end::%d, milestoneIndex:%d", startIndex, endIndex, index)
 		var createdMessage []*im.Message
 		var createdNft []*im.NFT
-		var createdShared []*im.Message
+		var createdShared []*im.GroupShared
 		var consumedMessage []*im.Message
-		var consumedShared []*im.Message
+		var consumedShared []*im.GroupShared
 		var createdPublicKeyOutputIdHexAndAddressPairs []*im.OutputIdHexAndAddressPair
 		var consumedNft []*im.NFT
 		var createdMark []*im.OutputAndOutputId

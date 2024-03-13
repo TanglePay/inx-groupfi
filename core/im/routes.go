@@ -38,8 +38,6 @@ const (
 
 	// consolidation for message
 	RouteImConsolidationForMessage = "/consolidation/message"
-	// consolidation for shared
-	RouteImConsolidationForShared = "/consolidation/shared"
 
 	// health check
 	RouteHealthCheck = "/healthcheck"
@@ -355,15 +353,6 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// consolidation for message
 	e.GET(RouteImConsolidationForMessage, func(c echo.Context) error {
 		outputIds, err := getMessageOutputIdsForConsolidation(c)
-		if err != nil {
-			return err
-		}
-		return httpserver.JSONResponse(c, http.StatusOK, outputIds)
-	})
-
-	// consolidation for shared
-	e.GET(RouteImConsolidationForShared, func(c echo.Context) error {
-		outputIds, err := getSharedOutputIdsForConsolidation(c)
 		if err != nil {
 			return err
 		}

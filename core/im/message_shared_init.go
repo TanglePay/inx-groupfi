@@ -51,7 +51,7 @@ func handleSharedInit(ctx context.Context, client *nodeclient.Client, indexerCli
 }
 
 // processInitializationForShared
-func processInitializationForShared(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) ([]*im.Message, bool, error) {
+func processInitializationForShared(ctx context.Context, client *nodeclient.Client, indexerClient nodeclient.IndexerClient) ([]*im.GroupShared, bool, error) {
 	// get init offset
 	itemType := im.SharedType
 	initOffset, err := deps.IMManager.ReadInitCurrentOffset(itemType, "")
