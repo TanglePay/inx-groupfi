@@ -320,10 +320,11 @@ func (im *Manager) HandleGroupNFTOutputConsumed(nftOutput *iotago.NFTOutput, log
 // calculate if group is public
 func (im *Manager) CalculateIfGroupIsPublic(groupId [GroupIdLen]byte, logger *logger.Logger) error {
 	groupIdHex := iotago.EncodeHex(groupId[:])
-	if ConfigStoreGroupIdToGroupConfig[groupIdHex].MessageType == MessageTypePublic {
-		return nil
-	}
-
+	/*
+		if ConfigStoreGroupIdToGroupConfig[groupIdHex].MessageType == MessageTypePublic {
+			return nil
+		}
+	*/
 	// get votes
 	publicCt, privateCt, err := im.CountVotesForGroup(groupId)
 	if err != nil {
