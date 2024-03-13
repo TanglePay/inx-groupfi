@@ -29,6 +29,7 @@ var (
 			"rms1zqga89r0vaqea6hljnkcxms3m9ld2zvg0zcd4q00e0ej6ttwztzpy2lnys8",
 		}
 	*/
+	//115a9fdca6a2110cc3e4cc7f92555101c3d80addf56984003e51e004ac4f9148
 	CONFIG_IN_TEXT = fmt.Sprintf(`[
 		    {"groupName":"soon-whale","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.0000002","tokenId":"0x0884298fe9b82504d26ddb873dbd234a344c120da3a4317d8063dbcf96d356aa9d0100000000"},
 			{"groupName":"soon","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.0000001","tokenId":"0x0884298fe9b82504d26ddb873dbd234a344c120da3a4317d8063dbcf96d356aa9d0100000000"},
@@ -36,7 +37,8 @@ var (
 		    {"groupName":"smr","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.000000005","tokenId":"%s"},
 		    {"groupName":"staff-marketing","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x3070481ff0e0d96b1b7f6cbf8c2a484c9e7304295b44cd6ff9afe1ecbc4efca9"]},
 		    {"groupName":"staff-developer","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0xdc6c3b0167af767652567523b9240c86095241c622c37cb726efeeb5e102a93c"]},
-		    {"groupName":"alpha-test","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x23e5f8500132f9dfa8698e3d352f0d57bd79cf57533f273e87e31b6cd0e0a5ef"]},
+		    {"groupName":"groupfi-official","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x115a9fdca6a2110cc3e4cc7f92555101c3d80addf56984003e51e004ac4f9148"]},
+			{"groupName":"alpha-test","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x23e5f8500132f9dfa8698e3d352f0d57bd79cf57533f273e87e31b6cd0e0a5ef"]},
 		   	{"groupName":"iceberg-1","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x064d0eaefb86a94eb326ff633c22cdf744decca954bb93b1572b449d324ae717"]},
 		   	{"groupName":"iceberg-2","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x451ac5e96cea2ddf399924ce22f0e56a4b485ca417aba1430e9e5ce582d605f2"]},
 		   	{"groupName":"iceberg-3","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x4136c04d4bc25011f5b03dc9d31f4082bc7c19233cfeb2803aef241b1bb29c92"]},
