@@ -6,6 +6,11 @@ type InboxItemsResponse struct {
 	Items []im.InboxItemJson `json:"items"`
 	Token string             `json:"token"`
 }
+type PublicItemsResponse struct {
+	Items      []im.InboxItemJson `json:"items"`
+	StartToken string             `json:"startToken"`
+	EndToken   string             `json:"endToken"`
+}
 
 // AddressGroupDetailsResponse
 type AddressGroupDetailsResponse struct {

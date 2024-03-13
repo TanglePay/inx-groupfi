@@ -307,6 +307,9 @@ func run() error {
 		// handle mark init
 		handleMarkInit(initCtx)
 
+		// calculate is group public for all group config
+		calculateIsGroupPublicForAllGroupConfig(initCtx)
+
 		// handle message init
 		handleMessageInit(initCtx)
 
