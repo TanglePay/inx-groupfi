@@ -31,10 +31,10 @@ var (
 	*/
 	//115a9fdca6a2110cc3e4cc7f92555101c3d80addf56984003e51e004ac4f9148
 	CONFIG_IN_TEXT = fmt.Sprintf(`[
-		    {"groupName":"soon-whale","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.0000002","tokenId":"0x0884298fe9b82504d26ddb873dbd234a344c120da3a4317d8063dbcf96d356aa9d0100000000"},
-			{"groupName":"soon","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.0000001","tokenId":"0x0884298fe9b82504d26ddb873dbd234a344c120da3a4317d8063dbcf96d356aa9d0100000000"},
-			{"groupName":"smr-whale","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.00000001","tokenId":"%s"},
-		    {"groupName":"smr","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.000000005","tokenId":"%s"},
+		    {"groupName":"soon-whale","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.00001","tokenId":"0x0884298fe9b82504d26ddb873dbd234a344c120da3a4317d8063dbcf96d356aa9d0100000000"},
+			{"groupName":"soon","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.0000002","tokenId":"0x0884298fe9b82504d26ddb873dbd234a344c120da3a4317d8063dbcf96d356aa9d0100000000"},
+			{"groupName":"smr-whale","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.000000636","tokenId":"%s"},
+		    {"groupName":"smr","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"smr","collectionIds":[""],"tokenThres":"0.0000000127","tokenId":"%s"},
 		    {"groupName":"staff-marketing","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x3070481ff0e0d96b1b7f6cbf8c2a484c9e7304295b44cd6ff9afe1ecbc4efca9"]},
 		    {"groupName":"staff-developer","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0xdc6c3b0167af767652567523b9240c86095241c622c37cb726efeeb5e102a93c"]},
 		    {"groupName":"GroupFi Announcement","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x115a9fdca6a2110cc3e4cc7f92555101c3d80addf56984003e51e004ac4f9148"]},

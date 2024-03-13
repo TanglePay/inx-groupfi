@@ -172,6 +172,7 @@ func sharedOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte, milest
 	groupId := metaPayload[1 : im.GroupIdLen+1]
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
+
 	CoreComponent.LogInfof("Found GROUPFISHARED output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d，senderAddress:%s",
 		len(metaPayload),
 		len(groupId),
