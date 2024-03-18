@@ -299,10 +299,23 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 		return nil, err
 	}
 	CoreComponent.LogInfof("get groupIds from address:%s,found groupIds:%d", address, len(groupIds))
-	groupIdStrArr := make([]string, len(groupIds))
-	for i, groupId := range groupIds {
-		groupIdStrArr[i] = iotago.EncodeHex(groupId)
+	publicGroupIds := deps.IMManager.GetAllPublicGroupIds()
+	groupIdStrArr := []string{}
+	seen := map[string]bool{}
+	for _, groupId := range groupIds {
+		groupIdHex := iotago.EncodeHex(groupId)
+		if _, ok := seen[groupIdHex]; !ok {
+			groupIdStrArr = append(groupIdStrArr, groupIdHex)
+			seen[groupIdHex] = true
+		}
 	}
+	for _, groupId := range publicGroupIds {
+		if _, ok := seen[groupId]; !ok {
+			groupIdStrArr = append(groupIdStrArr, groupId)
+			seen[groupId] = true
+		}
+	}
+
 	return groupIdStrArr, nil
 }
 
