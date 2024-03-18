@@ -2,7 +2,6 @@ package im
 
 import (
 	"strconv"
-	"time"
 
 	"github.com/TanglePay/inx-groupfi/pkg/im"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -125,6 +124,27 @@ func makeInboxItemsResponse(items []im.InboxItem) *InboxItemsResponse {
 	}
 }
 
+// make public items response from inbox items
+func makePublicItemsResponse(items []im.InboxItem) *PublicItemsResponse {
+	itemJsonList := make([]im.InboxItemJson, len(items))
+	var startToken string
+	var endToken string
+	for i, item := range items {
+		if i == 0 {
+			startToken = iotago.EncodeHex(item.GetToken())
+		}
+		if i == len(items)-1 {
+			endToken = iotago.EncodeHex(item.GetToken())
+		}
+		itemJsonList[i] = item.Jsonable()
+	}
+	return &PublicItemsResponse{
+		Items:      itemJsonList,
+		StartToken: startToken,
+		EndToken:   endToken,
+	}
+}
+
 // make address group details response from address group
 func makeAddressGroupDetailsResponse(addressGroup *im.AddressGroup) *AddressGroupDetailsResponse {
 	return &AddressGroupDetailsResponse{
@@ -200,30 +220,13 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	groupIdHex := iotago.EncodeHex(groupId)
-	CoreComponent.LogInfof("get shared from group:%s", groupId)
-	var groupId32 [32]byte
-	copy(groupId32[:], groupId)
-	publicCt, privateCt, err := deps.IMManager.CountVotesForGroup(groupId32)
-	if err != nil {
-		return nil, err
-	}
-	memberCt, err := deps.IMManager.GetGroupMemberAddressesCountFromGroupId(groupId32, CoreComponent.Logger())
-	if err != nil {
-		return nil, err
-	}
-	// log group ct, public ct, private ct
-	CoreComponent.LogInfof("get shared from group:%s,group memberCt:%d,public ct:%d,private ct:%d", iotago.EncodeHex(groupId), memberCt, publicCt, privateCt)
-	// group is forced to be public if there are more than 100 members, or public votes are more than private votes
-	if memberCt > 100 || publicCt > privateCt {
-		deps.IMManager.AddGroupIdToPublicGroupIds(groupIdHex)
-		// throw http error with code 901
-		return nil, echo.NewHTTPError(901, "adjusted to be public")
-	} else {
-		deps.IMManager.RemoveGroupIdFromPublicGroupIds(groupIdHex)
-	}
 	groupIdFixed := [im.GroupIdLen]byte{}
 	copy(groupIdFixed[:], groupId)
+	isPublic := deps.IMManager.GetIsGroupPublic(groupIdFixed)
+	if isPublic {
+		// http code 901
+		return nil, echo.NewHTTPError(901, "public group has no shared")
+	}
 	shared, err := deps.IMManager.ReadSharedFromGroupId(groupIdFixed)
 	if err != nil {
 		return nil, err
@@ -362,25 +365,6 @@ func getAddressGroupDetails(c echo.Context) ([]*AddressGroupDetailsResponse, err
 		AddressGroupDetailsResponseArr = append(AddressGroupDetailsResponseArr, makeAddressGroupDetailsResponse(groupDetail))
 	}
 	return AddressGroupDetailsResponseArr, nil
-}
-
-const DaysElapsedForConsolidation = 3
-
-// get outputids for consolidation,
-func getMessageOutputIdsForConsolidation(c echo.Context) ([]string, error) {
-	address, err := parseAddressQueryParam(c)
-	if err != nil {
-		return nil, err
-	}
-	CoreComponent.LogInfof("get outputids for consolidation from address:%s", address)
-	// calculate timestamp DaysElapsedForConsolidation from now
-	thresMileStoneTimestamp := uint32(time.Now().AddDate(0, 0, -DaysElapsedForConsolidation).Unix())
-	outputIds, err := deps.IMManager.ReadMessageForConsolidation(address, thresMileStoneTimestamp, CoreComponent.Logger())
-	if err != nil {
-		return nil, err
-	}
-	CoreComponent.LogInfof("get outputids for consolidation from address:%s,found outputIds:%d", address, len(outputIds))
-	return outputIds, nil
 }
 
 // get qualified address for a groupid
@@ -658,6 +642,40 @@ func getInboxList(c echo.Context) (*InboxItemsResponse, error) {
 	// make inbox message response
 	inboxItemsResponse := makeInboxItemsResponse(inboxItems)
 	return inboxItemsResponse, nil
+}
+
+// getPublicItems
+func getPublicItems(c echo.Context) (*PublicItemsResponse, error) {
+	startTokenStr, err := parseAttrNameQueryParam(c, "startToken")
+	if err != nil {
+		return nil, err
+	}
+	startToken, err := iotago.DecodeHex(startTokenStr)
+	if err != nil {
+		return nil, err
+	}
+	endTokenStr, err := parseAttrNameQueryParam(c, "endToken")
+	if err != nil {
+		return nil, err
+	}
+	endToken, err := iotago.DecodeHex(endTokenStr)
+	if err != nil {
+		return nil, err
+	}
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	size, err := parseSizeQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	items, err := deps.IMManager.ReadPublicItemsFromGroupId(groupId, startToken, endToken, size, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	resp := makePublicItemsResponse(items)
+	return resp, nil
 }
 
 // getAddressesDids given addresses

@@ -78,28 +78,133 @@ func (im *Manager) MessageKeyFromGroupIdMileStone(groupId []byte, mileStoneIndex
 }
 
 // message key from message
-func (im *Manager) MessageKeyFromMessage(message *Message, groupIdOverride []byte, prefix byte) []byte {
-	// key = prefix + (groupIdOverride != nil ? groupIdOverride : groupId) + mileStoneIndex + mileStoneTimestamp + metaSha256
+func (im *Manager) PublicMessageKeyFromMessage(message *Message) []byte {
+	// key = prefix + groupId + mileStoneIndex + mileStoneTimestamp + metaSha256
+	key := []byte{}
 	index := 0
-	key := make([]byte, 1+Sha256HashLen+4+4+Sha256HashLen) // 4 bytes for uint32
-	if prefix == 0 {
-		key[index] = ImStoreKeyPrefixMessage
-	} else {
-		key[index] = prefix
-	}
-	index++
-	groupId := message.GroupId
-	if groupIdOverride != nil {
-		groupId = groupIdOverride
-	}
-	copy(key[index:], groupId)
-	index += GroupIdLen
-	binary.BigEndian.PutUint32(key[index:], maxUint32-message.MileStoneIndex)
-	index += 4
-	binary.BigEndian.PutUint32(key[index:], maxUint32-message.MileStoneTimestamp)
-	index += 4
-	copy(key[index:], message.MetaSha256)
+	AppendBytesWithUint16Len(&key, &index, []byte{ImStoreKeyPrefixMessage}, false)
+	AppendBytesWithUint16Len(&key, &index, message.GroupId[:], false)
+	milestoneIndexReverseBytes := Uint32ToBytes(maxUint32 - message.MileStoneIndex)
+	AppendBytesWithUint16Len(&key, &index, milestoneIndexReverseBytes, false)
+	milestoneTimestampReverseBytes := Uint32ToBytes(maxUint32 - message.MileStoneTimestamp)
+	AppendBytesWithUint16Len(&key, &index, milestoneTimestampReverseBytes, false)
+	AppendBytesWithUint16Len(&key, &index, message.MetaSha256[:], false)
 	return key
+}
+
+// message value from message
+func (im *Manager) MessageValueFromMessage(message *Message) []byte {
+	// AppendBytesWithUint16Len(bytes *[]byte, idx *int, slice []byte, appendLength bool) {
+	// value = mileStoneTimestamp + outputId
+	value := []byte{}
+	index := 0
+	AppendBytesWithUint16Len(&value, &index, Uint32ToBytes(message.MileStoneTimestamp), false)
+	AppendBytesWithUint16Len(&value, &index, message.OutputId[:], false)
+	return value
+}
+
+// parse message from key and value
+func (im *Manager) ParseMessagePublicKeyAndValue(key kvstore.Key, value kvstore.Value) (*Message, error) {
+	// func ReadBytesWithUint16Len(bytes []byte, idx *int, providedLength ...int) ([]byte, error) {
+	// key = prefix + groupId + mileStoneIndex + mileStoneTimestamp + metaSha256
+	// value = mileStoneTimestamp + outputId
+	index := 0
+	_, err := ReadBytesWithUint16Len(key, &index, 1)
+	if err != nil {
+		return nil, err
+	}
+	groupId, err := ReadBytesWithUint16Len(key, &index, GroupIdLen)
+	if err != nil {
+		return nil, err
+	}
+	milestoneIndexReverseBytes, err := ReadBytesWithUint16Len(key, &index, 4)
+	if err != nil {
+		return nil, err
+	}
+	milestoneIndex := maxUint32 - BytesToUint32(milestoneIndexReverseBytes)
+	milestoneTimestampReverseBytes, err := ReadBytesWithUint16Len(key, &index, 4)
+	if err != nil {
+		return nil, err
+	}
+	milestoneTimestamp := maxUint32 - BytesToUint32(milestoneTimestampReverseBytes)
+	index = 0
+	_, err = ReadBytesWithUint16Len(value, &index, 4)
+	if err != nil {
+		return nil, err
+	}
+	outputId, err := ReadBytesWithUint16Len(value, &index, OutputIdLen)
+	if err != nil {
+		return nil, err
+	}
+	message := &Message{
+		GroupId:            groupId,
+		MileStoneIndex:     milestoneIndex,
+		MileStoneTimestamp: milestoneTimestamp,
+		OutputId:           outputId,
+	}
+	token := im.PublicMessageTokenFromKey(key)
+	message.SetToken(token)
+	return message, nil
+}
+
+// token = mileStoneIndex + mileStoneTimestamp + metaSha256
+func (im *Manager) PublicMessageTokenFromKey(key []byte) []byte {
+	return key[1+GroupIdLen:]
+}
+
+// prefix = prefix + groupId
+func (im *Manager) PublicMessageKeyPrefixFromGroupId(groupId []byte) []byte {
+	// using AppendBytesWithUint16Len
+	key := []byte{}
+	index := 0
+	AppendBytesWithUint16Len(&key, &index, []byte{ImStoreKeyPrefixMessage}, false)
+	AppendBytesWithUint16Len(&key, &index, groupId, false)
+	return key
+}
+
+// message key from token for group
+func (im *Manager) PublicMessageKeyFromTokenForGroup(token []byte, groupId []byte) []byte {
+	// check nil
+	if token == nil {
+		return nil
+	}
+	// key = prefix + groupId + mileStoneIndex + mileStoneTimestamp + metaSha256
+	key := []byte{}
+	index := 0
+	AppendBytesWithUint16Len(&key, &index, []byte{ImStoreKeyPrefixMessage}, false)
+	AppendBytesWithUint16Len(&key, &index, groupId, false)
+	AppendBytesWithUint16Len(&key, &index, token, false)
+	return key
+}
+
+// read public message given group id, start token, end token and size
+func (im *Manager) ReadPublicItemsFromGroupId(groupId []byte, startToken []byte, endToken []byte, size int, logger *logger.Logger) ([]InboxItem, error) {
+	prefix := im.PublicMessageKeyPrefixFromGroupId(groupId)
+	startKeyPoint := im.PublicMessageKeyFromTokenForGroup(startToken, groupId)
+	endKeyPoint := im.PublicMessageKeyFromTokenForGroup(endToken, groupId)
+	messages := []InboxItem{}
+	isStarted := len(startToken) == 0
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		if !isStarted {
+			if bytes.Equal(key, startKeyPoint) {
+				isStarted = true
+			}
+			return true
+		}
+		if bytes.Equal(key, endKeyPoint) {
+			return false
+		}
+		message, err := im.ParseMessagePublicKeyAndValue(key, value)
+		if err != nil {
+			return false
+		}
+		messages = append(messages, message)
+		return len(messages) < size
+	})
+	if err != nil {
+		return nil, err
+	}
+	return messages, nil
 }
 
 func (im *Manager) MessageKeyFromGroupId(groupId []byte) []byte {
@@ -114,6 +219,7 @@ func (im *Manager) KeyFromSha256hashAndPrefix(sha256hash []byte, prefix byte) []
 	copy(key[index:], sha256hash)
 	return key
 }
+
 func messageKeyPrefixFromGroupIdAndMileStone(groupId []byte, mileStoneIndex uint32) []byte {
 	timeSuffix := maxUint32 - mileStoneIndex
 	index := 0
@@ -127,16 +233,14 @@ func messageKeyPrefixFromGroupIdAndMileStone(groupId []byte, mileStoneIndex uint
 }
 
 func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) error {
-	key := im.MessageKeyFromMessage(message, nil, 0)
 	valuePayload := make([]byte, 4+OutputIdLen)
 	binary.BigEndian.PutUint32(valuePayload, message.MileStoneTimestamp)
 	copy(valuePayload[4:], message.OutputId)
-	err := im.imStore.Set(key, valuePayload)
 
 	go func() {
-		// TODO change to actual group member
 		var groupId32 [GroupIdLen]byte
 		copy(groupId32[:], message.GroupId)
+		// TODO cache group member addresses
 		addresses, err := im.GetGroupMemberAddressesFromGroupId(groupId32, logger)
 		if err != nil {
 			logger.Errorf("ReadNFTsFromGroupId error %v", err)
@@ -151,6 +255,30 @@ func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) e
 			}
 		}
 	}()
+	err := im.StoreMessageForPublicGroup(message, logger)
+	return err
+}
+
+// store message by groupId only if group is public
+func (im *Manager) StoreMessageForPublicGroup(message *Message, logger *logger.Logger) error {
+	key := im.PublicMessageKeyFromMessage(message)
+	groupIdFixed := [GroupIdLen]byte{}
+	copy(groupIdFixed[:], message.GroupId)
+	isPublic := im.GetIsGroupPublic(groupIdFixed)
+	if isPublic {
+		valuePayload := make([]byte, 4+OutputIdLen)
+		binary.BigEndian.PutUint32(valuePayload, message.MileStoneTimestamp)
+		copy(valuePayload[4:], message.OutputId)
+		err := im.imStore.Set(key, valuePayload)
+		return err
+	}
+	return nil
+}
+
+// delete message by groupId for public group
+func (im *Manager) DeleteMessageForPublicGroup(message *Message, logger *logger.Logger) error {
+	key := im.PublicMessageKeyFromMessage(message)
+	err := im.imStore.Delete(key)
 	return err
 }
 
@@ -170,12 +298,7 @@ func (im *Manager) deleteSingleMessage(message *Message, logger *logger.Logger) 
 			}
 		}
 	}()
-	key := im.MessageKeyFromMessage(message, nil, 0)
-	err := im.imStore.Delete(key)
-	if err != nil {
-		return err
-	}
-	err = im.DeleteMessageForConsolidation(message, logger)
+	err := im.DeleteMessageForPublicGroup(message, logger)
 	return err
 }
 func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, isPush bool) error {
@@ -198,10 +321,6 @@ func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, 
 			}
 		*/
 		err := im.storeSingleMessage(message, logger)
-		if err != nil {
-			return err
-		}
-		err = im.StoreMessageForConsolidation(message, logger)
 		if err != nil {
 			return err
 		}
@@ -233,52 +352,6 @@ func (imm *Manager) storeInboxMessage(receiverAddress []byte, message *Message, 
 
 func (im *Manager) InboxKeyFromMessage(message *Message, receiverAddressSha256 []byte) []byte {
 	return im.InboxKeyFromValues(receiverAddressSha256, message.MileStoneIndex, message.MileStoneTimestamp, message.MetaSha256, ImInboxEventTypeNewMessage)
-}
-
-// message for consolidation
-// key = prefix + addressSha256 + milestone + milestonetimestamp + metaSha256
-// StoreMessageForConsolidation stores a message for consolidation.
-func (im *Manager) StoreMessageForConsolidation(message *Message, logger *logger.Logger) error {
-	// key = prefix + addressSha256 + milestone + milestonetimestamp + metaSha256
-	key := im.MessageKeyFromMessage(message, message.SenderAddressSha256, ImStoreKeyPrefixMessageForConsolidation)
-	// log outputid SenderAddressSha256 key
-	logger.Infof("StoreMessageForConsolidation : outputid %s, SenderAddressSha256 %s, key %s", iotago.EncodeHex(message.OutputId), iotago.EncodeHex(message.SenderAddressSha256), iotago.EncodeHex(key))
-	valuePayload := make([]byte, 4+OutputIdLen)
-	binary.BigEndian.PutUint32(valuePayload, message.MileStoneTimestamp)
-	copy(valuePayload[4:], message.OutputId)
-	err := im.imStore.Set(key, valuePayload)
-	return err
-}
-
-// DeleteMessageForConsolidation deletes a message for consolidation.
-func (im *Manager) DeleteMessageForConsolidation(message *Message, logger *logger.Logger) error {
-	key := im.MessageKeyFromMessage(message, message.SenderAddressSha256, ImStoreKeyPrefixMessageForConsolidation)
-	err := im.imStore.Delete(key)
-	return err
-}
-
-// read inbox, all message with milestonetimestamp < given milestonetimestamp
-func (im *Manager) ReadMessageForConsolidation(ownerAddress string, thresMileStoneTimestamp uint32, logger *logger.Logger) ([]string, error) {
-	ownerAddressSha256 := Sha256Hash(ownerAddress)
-	keyPrefix := im.KeyFromSha256hashAndPrefix(ownerAddressSha256, ImStoreKeyPrefixMessageForConsolidation)
-	var outputIds []string
-	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
-		// parse message value payload
-		message, err := im.ParseMessageValuePayload(value)
-		if err != nil {
-			// log and continue
-			logger.Errorf("ParseMessageValuePayload error %v", err)
-			return true
-		}
-		if message.MileStoneTimestamp < thresMileStoneTimestamp {
-			outputIds = append(outputIds, iotago.EncodeHex(message.OutputId))
-		}
-		return true
-	})
-	if err != nil {
-		return nil, err
-	}
-	return outputIds, nil
 }
 
 // handle inbox delete

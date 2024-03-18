@@ -316,3 +316,66 @@ func (im *Manager) HandleGroupNFTOutputConsumed(nftOutput *iotago.NFTOutput, log
 
 	return nil
 }
+
+// calculate if group is public
+func (im *Manager) CalculateIfGroupIsPublic(groupId [GroupIdLen]byte, logger *logger.Logger) error {
+	groupIdHex := iotago.EncodeHex(groupId[:])
+	/*
+		if ConfigStoreGroupIdToGroupConfig[groupIdHex].MessageType == MessageTypePublic {
+			return nil
+		}
+	*/
+	// get votes
+	publicCt, privateCt, err := im.CountVotesForGroup(groupId)
+	if err != nil {
+		return err
+	}
+	// get member count
+	memberCt, err := im.GetGroupMemberAddressesCountFromGroupId(groupId, logger)
+	if err != nil {
+		return err
+	}
+
+	if memberCt > 100 || publicCt > privateCt {
+		im.AddGroupIdToPublicGroupIds(groupIdHex)
+	} else {
+		im.RemoveGroupIdFromPublicGroupIds(groupIdHex)
+	}
+	return nil
+}
+
+// try CalculateIfGroupIsPublic, only actually calculate if not during init
+func (im *Manager) TryCalculateIfGroupIsPublic(groupId [GroupIdLen]byte, logger *logger.Logger) error {
+	if IsIniting {
+		return nil
+	}
+	return im.CalculateIfGroupIsPublic(groupId, logger)
+}
+
+// calculate if group is public for all groups
+func (im *Manager) CalculateIfGroupIsPublicForAllGroups(logger *logger.Logger) error {
+	for groupIdHex := range ConfigStoreGroupIdToGroupConfig {
+		groupId, err := iotago.DecodeHex(groupIdHex)
+		if err != nil {
+			return err
+		}
+		groupIdFixed := [GroupIdLen]byte{}
+		copy(groupIdFixed[:], groupId)
+		err = im.CalculateIfGroupIsPublic(groupIdFixed, logger)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// get is group public
+func (im *Manager) GetIsGroupPublic(groupId [GroupIdLen]byte) bool {
+	groupIdHex := iotago.EncodeHex(groupId[:])
+	for _, groupIdInPublicGroupIds := range ConfigStorePublicGroupIds {
+		if groupIdInPublicGroupIds == groupIdHex {
+			return true
+		}
+	}
+	return false
+}

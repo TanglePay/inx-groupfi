@@ -16,11 +16,9 @@ import (
 )
 
 const (
-	APIRoute     = "groupfi/v1"
-	MQTTAPIRoute = "groupfi/mqtt/v1"
-	// RouteIMMessages is the route to get a slice of messages belong to the given groupID, get first size of messages, start from token
-	RouteIMMessages      = "/messages"
-	RouteIMMessagesUntil = "/messages/until"
+	APIRoute           = "groupfi/v1"
+	MQTTAPIRoute       = "groupfi/mqtt/v1"
+	RouteIMPublicItems = "/publicitems"
 	// nft
 	RouteIMNFTs = "/nfts"
 	// nfts that each with public key
@@ -35,9 +33,6 @@ const (
 
 	// address qualified group configs
 	RouteIMAddressQualifiedGroupConfigs = "/addressqualifiedgroupconfigs"
-
-	// consolidation for message
-	RouteImConsolidationForMessage = "/consolidation/message"
 
 	// health check
 	RouteHealthCheck = "/healthcheck"
@@ -350,14 +345,6 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
-	// consolidation for message
-	e.GET(RouteImConsolidationForMessage, func(c echo.Context) error {
-		outputIds, err := getMessageOutputIdsForConsolidation(c)
-		if err != nil {
-			return err
-		}
-		return httpserver.JSONResponse(c, http.StatusOK, outputIds)
-	})
 
 	// group configs for renter
 	e.GET(RouteGroupConfigs, func(c echo.Context) error {
@@ -376,7 +363,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
-
+	// RouteIMPublicItems
+	e.GET(RouteIMPublicItems, func(c echo.Context) error {
+		resp, err := getPublicItems(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 	// group qualified addresses
 	e.GET(RouteGroupQualifiedAddresses, func(c echo.Context) error {
 		resp, err := getQualifiedAddressesForGroupId(c)
