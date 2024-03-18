@@ -144,6 +144,7 @@ func (im *Manager) ParseMessagePublicKeyAndValue(key kvstore.Key, value kvstore.
 	}
 	token := im.PublicMessageTokenFromKey(key)
 	message.SetToken(token)
+	message.SetEventType(ImInboxEventTypeNewMessage)
 	return message, nil
 }
 
