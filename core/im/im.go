@@ -78,11 +78,37 @@ func parseGroupIdQueryParam(c echo.Context) ([]byte, error) {
 
 // parse given attrName from query param
 func parseAttrNameQueryParam(c echo.Context, attrName string) (string, error) {
-	attrParams := c.QueryParams()[attrName]
-	if len(attrParams) == 0 {
+	// use parseAttrNameQueryParamWithNil
+	attr, err := parseAttrNameQueryParamWithNil(c, attrName)
+	if err != nil {
+		return "", err
+	}
+	if attr == "" {
 		return "", echo.ErrBadRequest
 	}
+	return attr, nil
+}
+
+// parseAttrNameQueryParam with nil
+func parseAttrNameQueryParamWithNil(c echo.Context, attrName string) (string, error) {
+	attrParams := c.QueryParams()[attrName]
+	if len(attrParams) == 0 {
+		return "", nil
+	}
 	attr := attrParams[0]
+	return attr, nil
+}
+
+// parseAttrNameQueryParam with default
+func parseAttrNameQueryParamWithDefault(c echo.Context, attrName string, defaultVal string) (string, error) {
+	// use parseAttrNameQueryParamWithNil
+	attr, err := parseAttrNameQueryParamWithNil(c, attrName)
+	if err != nil {
+		return "", err
+	}
+	if attr == "" {
+		return defaultVal, nil
+	}
 	return attr, nil
 }
 
@@ -646,21 +672,36 @@ func getInboxList(c echo.Context) (*InboxItemsResponse, error) {
 
 // getPublicItems
 func getPublicItems(c echo.Context) (*PublicItemsResponse, error) {
-	startTokenStr, err := parseAttrNameQueryParam(c, "startToken")
+	startTokenStr, err := parseAttrNameQueryParamWithNil(c, "startToken")
 	if err != nil {
 		return nil, err
 	}
-	startToken, err := iotago.DecodeHex(startTokenStr)
+	var startToken []byte
+	if startTokenStr != "" {
+		startToken, err = iotago.DecodeHex(startTokenStr)
+		if err != nil {
+			return nil, err
+		}
+	}
+	endTokenStr, err := parseAttrNameQueryParamWithNil(c, "endToken")
 	if err != nil {
 		return nil, err
 	}
-	endTokenStr, err := parseAttrNameQueryParam(c, "endToken")
+	var endToken []byte
+	if endTokenStr != "" {
+		endToken, err = iotago.DecodeHex(endTokenStr)
+		if err != nil {
+			return nil, err
+		}
+	}
+	// direction, use parseAttrNameQueryParamWithDefault, default is "head"
+	direction, err := parseAttrNameQueryParamWithDefault(c, "direction", "head")
 	if err != nil {
 		return nil, err
 	}
-	endToken, err := iotago.DecodeHex(endTokenStr)
-	if err != nil {
-		return nil, err
+	isReverse := false
+	if direction == "tail" {
+		isReverse = true
 	}
 	groupId, err := parseGroupIdQueryParam(c)
 	if err != nil {
@@ -670,7 +711,7 @@ func getPublicItems(c echo.Context) (*PublicItemsResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	items, err := deps.IMManager.ReadPublicItemsFromGroupId(groupId, startToken, endToken, size, CoreComponent.Logger())
+	items, err := deps.IMManager.ReadPublicItemsFromGroupId(groupId, startToken, endToken, size, isReverse, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}

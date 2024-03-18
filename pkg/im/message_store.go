@@ -179,20 +179,26 @@ func (im *Manager) PublicMessageKeyFromTokenForGroup(token []byte, groupId []byt
 }
 
 // read public message given group id, start token, end token and size
-func (im *Manager) ReadPublicItemsFromGroupId(groupId []byte, startToken []byte, endToken []byte, size int, logger *logger.Logger) ([]InboxItem, error) {
+func (im *Manager) ReadPublicItemsFromGroupId(groupId []byte, startToken []byte, endToken []byte, size int, isReverse bool, logger *logger.Logger) ([]InboxItem, error) {
 	prefix := im.PublicMessageKeyPrefixFromGroupId(groupId)
 	startKeyPoint := im.PublicMessageKeyFromTokenForGroup(startToken, groupId)
 	endKeyPoint := im.PublicMessageKeyFromTokenForGroup(endToken, groupId)
 	messages := []InboxItem{}
 	isStarted := len(startToken) == 0
+	var direction = kvstore.IterDirectionForward
+	if isReverse {
+		direction = kvstore.IterDirectionBackward
+	}
 	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
 		if !isStarted {
-			if bytes.Equal(key, startKeyPoint) {
+			if startKeyPoint != nil &&
+				bytes.Equal(key, startKeyPoint) {
 				isStarted = true
 			}
 			return true
 		}
-		if bytes.Equal(key, endKeyPoint) {
+		if endKeyPoint != nil &&
+			bytes.Equal(key, endKeyPoint) {
 			return false
 		}
 		message, err := im.ParseMessagePublicKeyAndValue(key, value)
@@ -201,7 +207,7 @@ func (im *Manager) ReadPublicItemsFromGroupId(groupId []byte, startToken []byte,
 		}
 		messages = append(messages, message)
 		return len(messages) < size
-	})
+	}, direction)
 	if err != nil {
 		return nil, err
 	}
