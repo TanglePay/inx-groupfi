@@ -248,7 +248,17 @@ func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) e
 		var groupId32 [GroupIdLen]byte
 		copy(groupId32[:], message.GroupId)
 		// TODO cache group member addresses
-		addresses, err := im.GetGroupMemberAddressesFromGroupId(groupId32, logger)
+		var addresses []string
+		var err error
+		if im.GetIsGroupPublic(groupId32) {
+			var marks []*Mark
+			marks, err = im.GetMarksFromGroupId(groupId32, logger)
+			for _, mark := range marks {
+				addresses = append(addresses, mark.Address)
+			}
+		} else {
+			addresses, err = im.GetGroupMemberAddressesFromGroupId(groupId32, logger)
+		}
 		if err != nil {
 			logger.Errorf("ReadNFTsFromGroupId error %v", err)
 		}
