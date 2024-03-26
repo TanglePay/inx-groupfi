@@ -42,6 +42,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		var consumedMute []*iotago.BasicOutput
 		var consumedDid []*im.Did
 		var createdDid []*im.Did
+		var createdPairX []*im.PairX
 		for _, output := range update.Created {
 			// im.CurrentMilestoneTimestamp = max(im.CurrentMilestoneTimestamp, output.MilestoneTimestampBooked)
 			if output.MilestoneTimestampBooked > im.CurrentMilestoneTimestamp {
@@ -94,6 +95,14 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			}
 			if did != nil {
 				createdDid = append(createdDid, did)
+			}
+			pairX, err := deps.IMManager.FilterPairXFromLedgerOutput(output)
+			if err != nil {
+				// log error
+				CoreComponent.LogErrorf("LedgerUpdate FilterPairXFromLedgerOutput error:%s", err.Error())
+			}
+			if pairX != nil {
+				createdPairX = append(createdPairX, pairX)
 			}
 		}
 		for _, spent := range update.Consumed {
@@ -157,6 +166,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			ConsumedMute:    consumedMute,
 			CreatedDid:      createdDid,
 			ConsumedDid:     consumedDid,
+			CreatedPairX:    createdPairX,
 		}
 		return handler(index, dataFromListenning)
 	})

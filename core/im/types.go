@@ -69,6 +69,14 @@ type DidAddressResponse struct {
 	Picture string `json:"picture"`
 }
 
+// EvmAddressPairResponse
+type EvmAddressPairResponse struct {
+	PublicKey  string `json:"publicKey"`
+	PrivateKey string `json:"privateKeyEncrypted"`
+	HasMM      bool   `json:"hasMM"`
+	HasTP      bool   `json:"hasTP"`
+}
+
 // enum for output type created or consumed
 const (
 	ImOutputTypeCreated = iota
