@@ -3,7 +3,11 @@ package im
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"log"
+	"strings"
 
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
 	"github.com/iotaledger/hive.go/serializer/v2"
@@ -24,10 +28,11 @@ type PairX struct {
 	Signature    string
 	ProxyAddress string
 	Scenery      int // 1 for mm 2 for tp
+	Timestamp    int
 }
 
 // new PairX
-func NewPairX(evmAddress string, publicKey string, privateKey string, signature string, scenery int, proxyAddress string) *PairX {
+func NewPairX(evmAddress string, publicKey string, privateKey string, signature string, scenery int, proxyAddress string, timestamp int) *PairX {
 	return &PairX{
 		EvmAddress:   evmAddress,
 		PublicKey:    publicKey,
@@ -35,6 +40,7 @@ func NewPairX(evmAddress string, publicKey string, privateKey string, signature 
 		Signature:    signature,
 		Scenery:      scenery,
 		ProxyAddress: proxyAddress,
+		Timestamp:    timestamp,
 	}
 }
 
@@ -69,7 +75,7 @@ func (im *Manager) PairXFromKeyAndValue(key kvstore.Key, value kvstore.Value) *P
 	privateKey, _ := ReadBytesWithUint16Len(value, &idx)
 	// evm address
 	evmAddress, _ := ReadBytesWithUint16Len(value, &idx)
-	return NewPairX(string(evmAddress), string(publicKey), string(privateKey), "", 0, "")
+	return NewPairX(string(evmAddress), string(publicKey), string(privateKey), "", 0, "", 0)
 }
 
 // keyForPairXEvmAddressSceneryProxyAddress = prefix + evmAddressSha256Hash + scenery
@@ -107,7 +113,7 @@ func (im *Manager) PairXFromKeyAndValueForPairXEvmAddressSceneryProxyAddress(key
 	idx = 0
 	// proxyAddress
 	proxyAddress, _ := ReadBytesWithUint16Len(value, &idx)
-	return NewPairX("", "", "", "", int(scenery), string(proxyAddress))
+	return NewPairX("", "", "", "", int(scenery), string(proxyAddress), 0)
 }
 
 // keyForPairXProxyAddressEvmAddress = prefix + proxyAddressSha256Hash
@@ -135,7 +141,7 @@ func (im *Manager) PairXFromKeyAndValueForPairXProxyAddressEvmAddress(key kvstor
 	idx := 0
 	// evmAddress
 	evmAddress, _ := ReadBytesWithUint16Len(value, &idx)
-	return NewPairX(string(evmAddress), "", "", "", 0, "")
+	return NewPairX(string(evmAddress), "", "", "", 0, "", 0)
 }
 
 // store one PairX
@@ -163,7 +169,7 @@ func (im *Manager) StorePairX(pairX *PairX) error {
 
 // get data from evm address
 func (im *Manager) GetPairXFromEvmAddress(evmAddress string) (*PairX, error) {
-	key := im.PairXKey(NewPairX(evmAddress, "", "", "", 0, ""))
+	key := im.PairXKey(NewPairX(evmAddress, "", "", "", 0, "", 0))
 	value, err := im.imStore.Get(key)
 	if err != nil {
 		return nil, err
@@ -174,7 +180,7 @@ func (im *Manager) GetPairXFromEvmAddress(evmAddress string) (*PairX, error) {
 // get proxy address from evm address for both mm and tp
 func (im *Manager) GetPairXProxyAddressFromEvmAddress(evmAddress string) (string, string, error) {
 	// pairX from evm address
-	pairXMM := NewPairX(evmAddress, "", "", "", 1, "")
+	pairXMM := NewPairX(evmAddress, "", "", "", 1, "", 0)
 
 	// mm
 	var mmPairX *PairX
@@ -190,7 +196,7 @@ func (im *Manager) GetPairXProxyAddressFromEvmAddress(evmAddress string) (string
 	}
 	// tp
 	var tpPairX *PairX
-	pairXTP := NewPairX(evmAddress, "", "", "", 2, "")
+	pairXTP := NewPairX(evmAddress, "", "", "", 2, "", 0)
 	pairXEvmAddressSceneryProxyAddressKey = im.PairXEvmAddressSceneryProxyAddressKey(pairXTP)
 	pairXEvmAddressSceneryProxyAddressValue, err = im.imStore.Get(pairXEvmAddressSceneryProxyAddressKey)
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
@@ -213,7 +219,7 @@ func (im *Manager) GetPairXProxyAddressFromEvmAddress(evmAddress string) (string
 
 // get evm address from proxy address
 func (im *Manager) GetPairXEvmAddressFromProxyAddress(proxyAddress string) (string, error) {
-	pairX := NewPairX("", "", "", "", 0, proxyAddress)
+	pairX := NewPairX("", "", "", "", 0, proxyAddress, 0)
 	key := im.PairXProxyAddressEvmAddressKey(pairX)
 	value, err := im.imStore.Get(key)
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
@@ -296,7 +302,11 @@ func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID i
 	if !ok {
 		return nil, nil
 	}
-	scenery, ok := metaMap["scenery"].(float64)
+	scenery, ok := metaMap["scenery"].(int)
+	if !ok {
+		return nil, nil
+	}
+	timestamp, ok := metaMap["timestamp"].(int)
 	if !ok {
 		return nil, nil
 	}
@@ -306,7 +316,53 @@ func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID i
 		return nil, nil
 	}
 	proxyAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
-	return NewPairX(evmAddress, publicKey, privateKey, signature, int(scenery), proxyAddress), nil
+	pairX := NewPairX(evmAddress, publicKey, privateKey, signature, int(scenery), proxyAddress, timestamp)
+
+	return pairX, nil
+}
+
+// verify signature
+func (im *Manager) VerifyPairXSignature(pairX *PairX) bool {
+	message := fmt.Sprintf("%s%s%s%d%d",
+		pairX.PrivateKey,
+		pairX.EvmAddress,
+		pairX.PublicKey,
+		pairX.Scenery,
+		pairX.Timestamp,
+	)
+
+	// Recover the public key from the signature
+	sigHex := pairX.Signature
+
+	// Convert message to hash
+	messageHash := crypto.Keccak256Hash([]byte(message))
+
+	signature, err := iotago.DecodeHex(sigHex)
+	if err != nil {
+		log.Fatalf("Invalid signature hex: %v", err)
+	}
+
+	// Extract the Ethereum account address from the signature
+	sigPublicKey, err := crypto.Ecrecover(messageHash.Bytes(), signature)
+	if err != nil {
+		log.Fatalf("Ecrecover failed: %v", err)
+	}
+
+	// Generate the public key using the recovered public key
+	publicKey, err := crypto.UnmarshalPubkey(sigPublicKey)
+	if err != nil {
+		log.Fatalf("UnmarshalPubkey failed: %v", err)
+	}
+
+	// Get the original signer's address from the public key
+	signerAddress := crypto.PubkeyToAddress(*publicKey)
+
+	// Print the signer address
+	fmt.Println("Signer Address:", signerAddress.Hex())
+
+	// Check if the recovered address matches the provided EvmAddress
+	return strings.ToLower(signerAddress.Hex()) == strings.ToLower(pairX.EvmAddress)
+
 }
 
 // handle pairX created
