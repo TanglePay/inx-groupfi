@@ -264,6 +264,15 @@ func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID i
 	if output.ImmutableFeatureSet().MetadataFeature() == nil || output.ImmutableFeatureSet().MetadataFeature().Data == nil {
 		return nil, nil
 	}
+	/*
+			{
+		  "encryptedPrivateKey": "0x7b2276657273696f6e223a227832353531392d7873616c736132302d706f6c7931333035222c226e6f6e6365223a226148496b55726e724a68534c374b445a655057415a707658554c6442495a4344222c22657068656d5075626c69634b6579223a226d4c566e6f2b4943326776417641342f766330516639656638362f65394c5a6377562f34576b56565a6d513d222c2263697068657274657874223a224f477236757734756c6c66465a74712b762b65707a302b4f4c4738714879324e754347445959593078726f6b7464304d763251326646497678527136505041397573353666304e2f4169446a4e6172775768416764486e4d546f312b65796b39536b712b633841635665633d227d",
+		  "pairXPublicKey": "0x9b3da30c3aa890958b95e96b65a5e0f77a28cb1211d097ab943ef03d9dab9651",
+		  "evmAddress": "0x928100571464c900A2F53689353770455D78a200",
+		  "timestamp": 1711449778,
+		  "scenery": 1,
+		  "signature": "0xccec1e146ff48198566e706d548536c4cc3e6afa3ac351c740fb9f951912b90f1fb064f33682ac12f9e9fad446e3a9dc7ce53dd81c36729fa41cf946f4d1138c1b"
+		}*/
 	// unmarshal metadata as json, using go library
 	metaMap := make(map[string]interface{})
 	err := json.Unmarshal(output.ImmutableFeatureSet().MetadataFeature().Data, &metaMap)
@@ -275,11 +284,11 @@ func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID i
 	if !ok {
 		return nil, nil
 	}
-	publicKey, ok := metaMap["publicKey"].(string)
+	publicKey, ok := metaMap["pairXPublicKey"].(string)
 	if !ok {
 		return nil, nil
 	}
-	privateKey, ok := metaMap["privateKey"].(string)
+	privateKey, ok := metaMap["encryptedPrivateKey"].(string)
 	if !ok {
 		return nil, nil
 	}
