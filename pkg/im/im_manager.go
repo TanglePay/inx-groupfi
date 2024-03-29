@@ -202,6 +202,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	createdPublicKeyOutputIdHexAndAddressPairs := dataFromListenning.CreatedPublicKeyOutputIdHexAndAddressPairs
 	createdDid := dataFromListenning.CreatedDid
 	consumedDid := dataFromListenning.ConsumedDid
+	createdPairX := dataFromListenning.CreatedPairX
 	if len(createdMessage) > 0 {
 		msg := createdMessage[0]
 		logger.Infof("store new message: groupId:%s, outputId:%s, milestoneindex:%d, milestonetimestamp:%d", msg.GetGroupIdStr(), msg.GetOutputIdStr(), msg.MileStoneIndex, msg.MileStoneTimestamp)
@@ -275,6 +276,11 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	if len(consumedDid) > 0 || len(createdDid) > 0 {
 		im.HandleDidConsumedAndCreated(consumedDid, createdDid, logger)
 	}
+	if len(createdPairX) > 0 {
+		for _, pairX := range createdPairX {
+			im.HandlePairXCreated(pairX, logger)
+		}
+	}
 	return nil
 
 }
@@ -310,4 +316,5 @@ type DataFromListenning struct {
 	ConsumedVote                               []*iotago.BasicOutput
 	ConsumedDid                                []*Did
 	CreatedDid                                 []*Did
+	CreatedPairX                               []*PairX
 }

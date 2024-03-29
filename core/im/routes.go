@@ -81,6 +81,9 @@ const (
 
 	// get address did
 	RouteAddressDid = "/addressdid"
+
+	// get evm address pairx
+	RouteEvmAddressPair = "/saddresspairx"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -552,6 +555,18 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			return err
 		}
 		resp, err := getAddressesDids(addresses)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+	// RouteEvmAddressPair, using post
+	e.POST(RouteEvmAddressPair, func(c echo.Context) error {
+		address, err := parseAddressQueryParam(c)
+		if err != nil {
+			return err
+		}
+		resp, err := getEvmAddressPair(address)
 		if err != nil {
 			return err
 		}

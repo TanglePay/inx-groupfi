@@ -766,3 +766,24 @@ func getAddressesDids(addresses []string) ([]*DidAddressResponse, error) {
 	}
 	return respList, nil
 }
+
+// getEvmAddressPair, given address
+func getEvmAddressPair(address string) (*EvmAddressPairResponse, error) {
+	pairX, err := deps.IMManager.GetPairXFromEvmAddress(address)
+	if err != nil {
+		return nil, err
+	}
+	mmProxyAddress, tpProxyAddress, err := deps.IMManager.GetPairXProxyAddressFromEvmAddress(address)
+	if err != nil {
+		return nil, err
+	}
+	hasMM := mmProxyAddress != ""
+	hasTP := tpProxyAddress != ""
+	resp := &EvmAddressPairResponse{
+		PublicKey:  pairX.PublicKey,
+		PrivateKey: pairX.PrivateKey,
+		HasMM:      hasMM,
+		HasTP:      hasTP,
+	}
+	return resp, nil
+}
