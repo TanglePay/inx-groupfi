@@ -91,7 +91,6 @@ func (im *Manager) StoreGroupMember(groupMember *GroupMember, logger *logger.Log
 
 	// log group member key and value
 	if !exists {
-		logger.Infof("StoreGroupMember,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(bytes))
 		err = im.imStore.Set(key, bytes)
 		if err != nil {
 			return isActuallyStored, err
@@ -166,8 +165,6 @@ func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Lo
 	}
 
 	key := im.GroupMemberKey(groupMember)
-	// log group member key
-	logger.Infof("DeleteGroupMember,key:%s", iotago.EncodeHex(key))
 	err = im.imStore.Delete(key)
 	if err != nil {
 		return isActuallyDeleted, err

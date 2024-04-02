@@ -3,7 +3,6 @@ package im
 import (
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
-	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // struct for group qualification
@@ -116,8 +115,6 @@ func (im *Manager) ParseGroupQualificationKeyAndValue(key []byte, value []byte) 
 func (im *Manager) StoreGroupQualification(groupQualification *GroupQualification, logger *logger.Logger) error {
 	key := im.GroupQualificationKey(groupQualification)
 	value := im.GroupQualificationValue(groupQualification)
-	// log group qualification key and value
-	logger.Infof("StoreGroupQualification,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
 	err := im.imStore.Set(key, value)
 	if err != nil {
 		return err
@@ -150,8 +147,6 @@ func (im *Manager) StoreGroupQualification(groupQualification *GroupQualificatio
 // delete group qualification
 func (im *Manager) DeleteGroupQualification(groupQualification *GroupQualification, logger *logger.Logger) error {
 	key := im.GroupQualificationKey(groupQualification)
-	// log group qualification key
-	logger.Infof("DeleteGroupQualification,key:%s", iotago.EncodeHex(key))
 	err := im.imStore.Delete(key)
 	if err != nil {
 		return err
