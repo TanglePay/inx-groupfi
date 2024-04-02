@@ -406,6 +406,7 @@ func getAddressGroupDetails(c echo.Context) ([]*AddressGroupDetailsResponse, err
 	return AddressGroupDetailsResponseArr, nil
 }
 
+
 // get qualified address for a groupid
 func getQualifiedAddressesForGroupId(c echo.Context) ([]string, error) {
 	groupId, err := parseGroupIdQueryParam(c)
