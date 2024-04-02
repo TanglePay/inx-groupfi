@@ -21,6 +21,7 @@ type MessageJson struct {
 	EventJsonCommonFields
 	GroupId   string `json:"groupId"`
 	OutputId  string `json:"outputId"`
+	Token     string `json:"token"`
 	Timestamp uint32 `json:"timestamp"`
 }
 
@@ -45,6 +46,7 @@ func (m *Message) SetEventType(eventType byte) {
 func (m *Message) Jsonable() InboxItemJson {
 	json := &MessageJson{
 		GroupId:   iotago.EncodeHex(m.GroupId),
+		Token:     iotago.EncodeHex(m.Token),
 		OutputId:  iotago.EncodeHex(m.OutputId),
 		Timestamp: m.MileStoneTimestamp,
 	}

@@ -100,3 +100,13 @@ func makeDrainerForGroupConfigNft(ctx context.Context, nodeHTTPAPIClient *nodecl
 	}, 1000, 100, 2000)
 
 }
+
+// calculate is group public for all group config
+func calculateIsGroupPublicForAllGroupConfig(initCtx *InitContext) {
+	err := deps.IMManager.CalculateIfGroupIsPublicForAllGroups(initCtx.Logger)
+	if err != nil {
+		// log error
+		initCtx.Logger.Warnf("LedgerInit ... CalculateIfGroupIsPublicForAllGroups failed:%s", err)
+	}
+
+}

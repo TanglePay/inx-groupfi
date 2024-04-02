@@ -141,6 +141,7 @@ func (im *Manager) StoreGroupMember(groupMember *GroupMember, logger *logger.Log
 				}
 			*/
 		})
+		im.TryCalculateIfGroupIsPublic(groupMember.GroupId, logger)
 	}
 	return isActuallyStored, nil
 }
@@ -199,6 +200,8 @@ func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Lo
 			groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp, false, groupMember.Address)
 			im.PushInbox(groupMemberChangedEvent.ToPushTopic(), groupMemberChangedEvent.ToPushPayload(), logger)
 		})
+
+		im.TryCalculateIfGroupIsPublic(groupMember.GroupId, logger)
 	}
 	return isActuallyDeleted, nil
 }

@@ -6,6 +6,11 @@ type InboxItemsResponse struct {
 	Items []im.InboxItemJson `json:"items"`
 	Token string             `json:"token"`
 }
+type PublicItemsResponse struct {
+	Items      []im.InboxItemJson `json:"items"`
+	StartToken string             `json:"startToken"`
+	EndToken   string             `json:"endToken"`
+}
 
 // AddressGroupDetailsResponse
 type AddressGroupDetailsResponse struct {
@@ -62,6 +67,14 @@ type DidAddressResponse struct {
 	Address string `json:"address"`
 	Name    string `json:"name"`
 	Picture string `json:"picture"`
+}
+
+// EvmAddressPairResponse
+type EvmAddressPairResponse struct {
+	PublicKey  string `json:"publicKey"`
+	PrivateKey string `json:"privateKeyEncrypted"`
+	HasMM      bool   `json:"hasMM"`
+	HasTP      bool   `json:"hasTP"`
 }
 
 // enum for output type created or consumed

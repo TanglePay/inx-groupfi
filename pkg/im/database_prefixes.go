@@ -62,4 +62,10 @@ const (
 	ImStoreKeyPrefixAddressMark byte = 31
 
 	ImStoreKeyPrefixDid byte = 32
+
+	ImStoreKeyPrefixPairXData byte = 33
+
+	ImStoreKeyPrefixPairXEvmAddressSceneryProxyAddress byte = 34
+
+	ImStoreKeyPrefixPairXProxyAddressEvmAddress byte = 35
 )

@@ -57,7 +57,10 @@ func (im *Manager) StoreVote(vote *Vote, logger *logger.Logger) error {
 	value := []byte{vote.Vote}
 	// log vote key and value
 	logger.Infof("StoreVote,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
-	return im.imStore.Set(key, value)
+	err := im.imStore.Set(key, value)
+	groupId := vote.GroupId
+	im.TryCalculateIfGroupIsPublic(groupId, logger)
+	return err
 }
 
 // delete vote
@@ -65,7 +68,10 @@ func (im *Manager) DeleteVote(vote *Vote, logger *logger.Logger) error {
 	key := im.VoteKey(vote)
 	// log vote key
 	logger.Infof("DeleteVote,key:%s", iotago.EncodeHex(key))
-	return im.imStore.Delete(key)
+	err := im.imStore.Delete(key)
+	groupId := vote.GroupId
+	im.TryCalculateIfGroupIsPublic(groupId, logger)
+	return err
 }
 
 // VoteKeyPrefix
