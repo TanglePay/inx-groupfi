@@ -255,6 +255,15 @@ func (im *Manager) FilterPairXFromOutput(output iotago.Output, outputID iotago.O
 	return im.FilterPairXFromNFTOutput(nftOutput, outputID, logger)
 }
 
+type PairXData struct {
+	EncryptedPrivateKey string `json:"encryptedPrivateKey"`
+	PairXPublicKey      string `json:"pairXPublicKey"`
+	EvmAddress          string `json:"evmAddress"`
+	Timestamp           int64  `json:"timestamp"`
+	Scenery             int    `json:"scenery"`
+	Signature           string `json:"signature"`
+}
+
 // filter pairX from nftOutput
 func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID iotago.OutputID, logger *logger.Logger) (*PairX, error) {
 	if output == nil {
@@ -282,42 +291,44 @@ func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID i
 		  "signature": "0xccec1e146ff48198566e706d548536c4cc3e6afa3ac351c740fb9f951912b90f1fb064f33682ac12f9e9fad446e3a9dc7ce53dd81c36729fa41cf946f4d1138c1b"
 		}*/
 	// unmarshal metadata as json, using go library
-	metaMap := make(map[string]interface{})
+	var data PairXData
 	// log unmarshal metadata
 	logger.Infof("FilterPairXFromNFTOutput ... metadata:%s", string(output.ImmutableFeatureSet().MetadataFeature().Data))
-	err := json.Unmarshal(output.ImmutableFeatureSet().MetadataFeature().Data, &metaMap)
+	err := json.Unmarshal(output.ImmutableFeatureSet().MetadataFeature().Data, &data)
 	if err != nil {
 		return nil, err
 	}
 	// get each field of pairX, check nil then get from metaMap
-	evmAddress, ok := metaMap["evmAddress"].(string)
-	if !ok {
+	evmAddress := data.EvmAddress
+	if evmAddress == "" {
+		// log evm address nil
+		logger.Infof("FilterPairXFromNFTOutput ... evmAddress nil")
 		return nil, nil
 	}
-	publicKey, ok := metaMap["pairXPublicKey"].(string)
-	if !ok {
+	pairXPublicKey := data.PairXPublicKey
+	if pairXPublicKey == "" {
+		// log public key nil
+		logger.Infof("FilterPairXFromNFTOutput ... pairXPublicKey nil")
 		return nil, nil
 	}
-	privateKey, ok := metaMap["encryptedPrivateKey"].(string)
-	if !ok {
+	encryptedPrivateKey := data.EncryptedPrivateKey
+	if encryptedPrivateKey == "" {
+		// log encrypted private key nil
+		logger.Infof("FilterPairXFromNFTOutput ... encryptedPrivateKey nil")
 		return nil, nil
 	}
-	signature, ok := metaMap["signature"].(string)
-	if !ok {
+	signature := data.Signature
+	if signature == "" {
+		// log signature nil
+		logger.Infof("FilterPairXFromNFTOutput ... signature nil")
 		return nil, nil
 	}
-	// log until signature ok
-	logger.Infof("FilterPairXFromNFTOutput ... ok until signature")
-	scenery, ok := metaMap["scenery"].(int)
-	if !ok {
-		return nil, nil
-	}
-	timestamp, ok := metaMap["timestamp"].(int)
-	if !ok {
-		return nil, nil
-	}
-	// log until timestamp ok
-	logger.Infof("FilterPairXFromNFTOutput ... ok until timestamp")
+	scenery := data.Scenery
+	timestamp := int(data.Timestamp)
+	// log each field
+	logger.Infof("FilterPairXFromNFTOutput ... evmAddress:%s, pairXPublicKey:%s, encryptedPrivateKey:%s, signature:%s, scenery:%d, timestamp:%d",
+		evmAddress, pairXPublicKey, encryptedPrivateKey, signature, scenery, timestamp)
+
 	// get proxy address from unlock condition
 	unlockConditionSet := output.UnlockConditionSet()
 	if unlockConditionSet == nil {
@@ -326,7 +337,7 @@ func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID i
 	proxyAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
 	// log proxy address
 	logger.Infof("FilterPairXFromNFTOutput ... proxyAddress:%s", proxyAddress)
-	pairX := NewPairX(evmAddress, publicKey, privateKey, signature, int(scenery), proxyAddress, timestamp)
+	pairX := NewPairX(evmAddress, pairXPublicKey, encryptedPrivateKey, signature, scenery, proxyAddress, timestamp)
 
 	return pairX, nil
 }
