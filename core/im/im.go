@@ -406,7 +406,6 @@ func getAddressGroupDetails(c echo.Context) ([]*AddressGroupDetailsResponse, err
 	return AddressGroupDetailsResponseArr, nil
 }
 
-
 // get qualified address for a groupid
 func getQualifiedAddressesForGroupId(c echo.Context) ([]string, error) {
 	groupId, err := parseGroupIdQueryParam(c)
@@ -672,13 +671,11 @@ func getInboxList(c echo.Context) (*InboxItemsResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	CoreComponent.LogInfof("get inbox message from address:%s,token:%d", address, token)
 	// get inbox message
 	inboxItems, err := deps.IMManager.ReadInbox(im.Sha256Hash(address), token, size, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
-	CoreComponent.LogInfof("get inbox items from address:%s,token:%d,found inbox items:%d", address, token, len(inboxItems))
 	// make inbox message response
 	inboxItemsResponse := makeInboxItemsResponse(inboxItems)
 	return inboxItemsResponse, nil

@@ -150,8 +150,6 @@ func (im *Manager) StoreMemberGroup(groupMember *GroupMember, logger *logger.Log
 	key := im.MemberGroupKey(groupMember)
 	// value is empty
 	value := []byte{}
-	// log group member key and value
-	logger.Infof("StoreMemberGroup,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
 	return im.imStore.Set(key, value)
 }
 
@@ -207,7 +205,6 @@ func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Lo
 func (im *Manager) DeleteMemberGroup(groupMember *GroupMember, logger *logger.Logger) error {
 	key := im.MemberGroupKey(groupMember)
 	// log group member key
-	logger.Infof("DeleteMemberGroup,key:%s", iotago.EncodeHex(key))
 	return im.imStore.Delete(key)
 }
 
