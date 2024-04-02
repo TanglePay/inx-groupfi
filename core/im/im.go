@@ -771,17 +771,18 @@ func getEvmAddressPair(address string) (*EvmAddressPairResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	if pairX == nil {
+		return nil, nil
+	}
 	mmProxyAddress, tpProxyAddress, err := deps.IMManager.GetPairXProxyAddressFromEvmAddress(address)
 	if err != nil {
 		return nil, err
 	}
-	hasMM := mmProxyAddress != ""
-	hasTP := tpProxyAddress != ""
 	resp := &EvmAddressPairResponse{
-		PublicKey:  pairX.PublicKey,
-		PrivateKey: pairX.PrivateKey,
-		HasMM:      hasMM,
-		HasTP:      hasTP,
+		PublicKey:      pairX.PublicKey,
+		PrivateKey:     pairX.PrivateKey,
+		MMProxyAddress: mmProxyAddress,
+		TPProxyAddress: tpProxyAddress,
 	}
 	return resp, nil
 }

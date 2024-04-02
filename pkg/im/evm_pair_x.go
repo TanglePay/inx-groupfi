@@ -27,9 +27,12 @@ type PairX struct {
 	PrivateKey   string
 	Signature    string
 	ProxyAddress string
-	Scenery      int // 1 for mm 2 for tp
+	Scenery      int // 1 for tp 2 for mm
 	Timestamp    int
 }
+
+const TPScenery = 1
+const MMScenery = 2
 
 // new PairX
 func NewPairX(evmAddress string, publicKey string, privateKey string, signature string, scenery int, proxyAddress string, timestamp int) *PairX {
@@ -172,6 +175,10 @@ func (im *Manager) GetPairXFromEvmAddress(evmAddress string) (*PairX, error) {
 	key := im.PairXKey(NewPairX(evmAddress, "", "", "", 0, "", 0))
 	value, err := im.imStore.Get(key)
 	if err != nil {
+		// return nil for key not found
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return im.PairXFromKeyAndValue(key, value), nil
@@ -180,7 +187,7 @@ func (im *Manager) GetPairXFromEvmAddress(evmAddress string) (*PairX, error) {
 // get proxy address from evm address for both mm and tp
 func (im *Manager) GetPairXProxyAddressFromEvmAddress(evmAddress string) (string, string, error) {
 	// pairX from evm address
-	pairXMM := NewPairX(evmAddress, "", "", "", 1, "", 0)
+	pairXMM := NewPairX(evmAddress, "", "", "", MMScenery, "", 0)
 
 	// mm
 	var mmPairX *PairX
@@ -196,7 +203,7 @@ func (im *Manager) GetPairXProxyAddressFromEvmAddress(evmAddress string) (string
 	}
 	// tp
 	var tpPairX *PairX
-	pairXTP := NewPairX(evmAddress, "", "", "", 2, "", 0)
+	pairXTP := NewPairX(evmAddress, "", "", "", TPScenery, "", 0)
 	pairXEvmAddressSceneryProxyAddressKey = im.PairXEvmAddressSceneryProxyAddressKey(pairXTP)
 	pairXEvmAddressSceneryProxyAddressValue, err = im.imStore.Get(pairXEvmAddressSceneryProxyAddressKey)
 	if errors.Is(err, kvstore.ErrKeyNotFound) {

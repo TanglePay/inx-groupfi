@@ -71,10 +71,10 @@ type DidAddressResponse struct {
 
 // EvmAddressPairResponse
 type EvmAddressPairResponse struct {
-	PublicKey  string `json:"publicKey"`
-	PrivateKey string `json:"privateKeyEncrypted"`
-	HasMM      bool   `json:"hasMM"`
-	HasTP      bool   `json:"hasTP"`
+	PublicKey      string `json:"publicKey"`
+	PrivateKey     string `json:"privateKeyEncrypted"`
+	MMProxyAddress string `json:"mmProxyAddress"`
+	TPProxyAddress string `json:"tpProxyAddress"`
 }
 
 // enum for output type created or consumed
