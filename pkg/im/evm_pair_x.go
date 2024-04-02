@@ -306,6 +306,8 @@ func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID i
 	if !ok {
 		return nil, nil
 	}
+	// log until signature ok
+	logger.Infof("FilterPairXFromNFTOutput ... ok until signature")
 	scenery, ok := metaMap["scenery"].(int)
 	if !ok {
 		return nil, nil
@@ -314,12 +316,16 @@ func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID i
 	if !ok {
 		return nil, nil
 	}
+	// log until timestamp ok
+	logger.Infof("FilterPairXFromNFTOutput ... ok until timestamp")
 	// get proxy address from unlock condition
 	unlockConditionSet := output.UnlockConditionSet()
 	if unlockConditionSet == nil {
 		return nil, nil
 	}
 	proxyAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
+	// log proxy address
+	logger.Infof("FilterPairXFromNFTOutput ... proxyAddress:%s", proxyAddress)
 	pairX := NewPairX(evmAddress, publicKey, privateKey, signature, int(scenery), proxyAddress, timestamp)
 
 	return pairX, nil
@@ -371,6 +377,8 @@ func (im *Manager) VerifyPairXSignature(pairX *PairX) bool {
 
 // handle pairX created
 func (im *Manager) HandlePairXCreated(pairx *PairX, logger *logger.Logger) {
+	// log pairX creation
+	logger.Infof("HandlePairXCreated ... pairX:%+v", pairx)
 	//TODO validate signature
 	if err := im.StorePairX(pairx); err != nil {
 		logger.Warnf("HandlePairXCreated ... StorePairX failed:%s", err)
