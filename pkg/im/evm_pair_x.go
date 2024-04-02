@@ -261,9 +261,9 @@ func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID i
 		return nil, nil
 	}
 	// get tag
-	if output.ImmutableFeatureSet().TagFeature() == nil ||
-		output.ImmutableFeatureSet().TagFeature().Tag == nil ||
-		!bytes.Equal(output.ImmutableFeatureSet().TagFeature().Tag, pairXTag) {
+	if output.FeatureSet().TagFeature() == nil ||
+		output.FeatureSet().TagFeature().Tag == nil ||
+		!bytes.Equal(output.FeatureSet().TagFeature().Tag, pairXTag) {
 		return nil, nil
 	}
 	// get metadata
