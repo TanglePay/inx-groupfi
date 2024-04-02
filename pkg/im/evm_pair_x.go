@@ -231,7 +231,7 @@ func (im *Manager) GetPairXEvmAddressFromProxyAddress(proxyAddress string) (stri
 }
 
 // filter pairX from LedgerOutput
-func (im *Manager) FilterPairXFromLedgerOutput(inxOutput *inx.LedgerOutput) (*PairX, error) {
+func (im *Manager) FilterPairXFromLedgerOutput(inxOutput *inx.LedgerOutput, logger *logger.Logger) (*PairX, error) {
 	if inxOutput == nil {
 		return nil, nil
 	}
@@ -240,11 +240,11 @@ func (im *Manager) FilterPairXFromLedgerOutput(inxOutput *inx.LedgerOutput) (*Pa
 		return nil, err
 	}
 	outputID := inxOutput.UnwrapOutputID()
-	return im.FilterPairXFromOutput(output, outputID)
+	return im.FilterPairXFromOutput(output, outputID, logger)
 }
 
 // filter pairX from output
-func (im *Manager) FilterPairXFromOutput(output iotago.Output, outputID iotago.OutputID) (*PairX, error) {
+func (im *Manager) FilterPairXFromOutput(output iotago.Output, outputID iotago.OutputID, logger *logger.Logger) (*PairX, error) {
 	if output == nil {
 		return nil, nil
 	}
@@ -252,11 +252,11 @@ func (im *Manager) FilterPairXFromOutput(output iotago.Output, outputID iotago.O
 	if !ok {
 		return nil, nil
 	}
-	return im.FilterPairXFromNFTOutput(nftOutput, outputID)
+	return im.FilterPairXFromNFTOutput(nftOutput, outputID, logger)
 }
 
 // filter pairX from nftOutput
-func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID iotago.OutputID) (*PairX, error) {
+func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID iotago.OutputID, logger *logger.Logger) (*PairX, error) {
 	if output == nil {
 		return nil, nil
 	}
@@ -266,6 +266,8 @@ func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID i
 		!bytes.Equal(output.FeatureSet().TagFeature().Tag, pairXTag) {
 		return nil, nil
 	}
+	// log tag match
+	logger.Infof("FilterPairXFromNFTOutput ... tag match:%s", PairXTagStr)
 	// get metadata
 	if output.ImmutableFeatureSet().MetadataFeature() == nil || output.ImmutableFeatureSet().MetadataFeature().Data == nil {
 		return nil, nil
@@ -281,6 +283,8 @@ func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID i
 		}*/
 	// unmarshal metadata as json, using go library
 	metaMap := make(map[string]interface{})
+	// log unmarshal metadata
+	logger.Infof("FilterPairXFromNFTOutput ... metadata:%s", string(output.ImmutableFeatureSet().MetadataFeature().Data))
 	err := json.Unmarshal(output.ImmutableFeatureSet().MetadataFeature().Data, &metaMap)
 	if err != nil {
 		return nil, err

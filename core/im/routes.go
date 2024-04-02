@@ -83,7 +83,7 @@ const (
 	RouteAddressDid = "/addressdid"
 
 	// get evm address pairx
-	RouteEvmAddressPair = "/saddresspairx"
+	RouteEvmAddressPair = "/addresspairx"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
