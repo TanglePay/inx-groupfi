@@ -169,6 +169,15 @@ func (im *Manager) GetAllPublicGroupIds() []string {
 	return ConfigStorePublicGroupIds
 }
 
+// get all group ids
+func (im *Manager) GetAllGroupIds() []string {
+	var res []string
+	for groupIdHex := range ConfigStoreGroupIdToGroupConfig {
+		res = append(res, groupIdHex)
+	}
+	return res
+}
+
 // add groupId to public group ids
 func (im *Manager) AddGroupIdToPublicGroupIds(groupIdHex string) {
 	// check if already exists

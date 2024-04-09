@@ -240,3 +240,9 @@ func ProcessOutputToOutputPair(pair map[string]*OutputPair, output *OutputAndOut
 		pair[ownerAddress].CreatedOutput = output
 	}
 }
+
+// is address evm address
+func IsEvmAddress(address string) bool {
+	// start with 0x and length is 42
+	return len(address) == 42 && address[:2] == "0x"
+}

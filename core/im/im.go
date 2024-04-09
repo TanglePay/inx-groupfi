@@ -293,6 +293,12 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 		return nil, err
 	}
 	CoreComponent.LogInfof("get groupIds from address:%s", address)
+	isEvmAddress := im.IsEvmAddress(address)
+	// if isEvmAddress, return all groupIds
+	if isEvmAddress {
+		groupIds := deps.IMManager.GetAllGroupIds()
+		return groupIds, nil
+	}
 	addressSha256 := im.Sha256Hash(address)
 	groupIds, err := deps.IMManager.GetGroupIdsFromAddress(addressSha256)
 	if err != nil {
