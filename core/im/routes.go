@@ -84,6 +84,9 @@ const (
 
 	// get evm address pairx
 	RouteEvmAddressPair = "/addresspairx"
+
+	// batch smr address to evm address conversion
+	RouteBatchSmrAddressToEvmAddress = "/batchsmraddresstoevmaddress"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -571,5 +574,12 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
-
+	// RouteBatchSmrAddressToEvmAddress
+	e.POST(RouteBatchSmrAddressToEvmAddress, func(c echo.Context) error {
+		resp, err := batchSmrAddressToEvmAddress(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 }
