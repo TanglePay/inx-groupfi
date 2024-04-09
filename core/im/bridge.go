@@ -43,6 +43,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		var consumedDid []*im.Did
 		var createdDid []*im.Did
 		var createdPairX []*im.PairX
+		var createdEvmQualify []*im.EvmQualify
 		for _, output := range update.Created {
 			// im.CurrentMilestoneTimestamp = max(im.CurrentMilestoneTimestamp, output.MilestoneTimestampBooked)
 			if output.MilestoneTimestampBooked > im.CurrentMilestoneTimestamp {
@@ -104,6 +105,14 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if pairX != nil {
 				createdPairX = append(createdPairX, pairX)
 			}
+			evmQualify, err := deps.IMManager.FilterEvmQualifyFromLedgerOutput(output, CoreComponent.Logger())
+			if err != nil {
+				// log error
+				CoreComponent.LogErrorf("LedgerUpdate FilterEvmQualifyFromLedgerOutput error:%s", err.Error())
+			}
+			if evmQualify != nil {
+				createdEvmQualify = append(createdEvmQualify, evmQualify)
+			}
 		}
 		for _, spent := range update.Consumed {
 			output := spent.GetOutput()
@@ -155,18 +164,19 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			CreatedNft:     createdNft,
 			CreatedShared:  createdShared,
 			CreatedPublicKeyOutputIdHexAndAddressPairs: createdPublicKeyOutputIdHexAndAddressPairs,
-			ConsumedMessage: consumedMessage,
-			ConsumedShared:  consumedShared,
-			ConsumedNft:     consumedNft,
-			CreatedMark:     createdMark,
-			ConsumedMark:    consumedMark,
-			CreatedVote:     createdVote,
-			ConsumedVote:    consumedVote,
-			CreatedMute:     createdMute,
-			ConsumedMute:    consumedMute,
-			CreatedDid:      createdDid,
-			ConsumedDid:     consumedDid,
-			CreatedPairX:    createdPairX,
+			ConsumedMessage:   consumedMessage,
+			ConsumedShared:    consumedShared,
+			ConsumedNft:       consumedNft,
+			CreatedMark:       createdMark,
+			ConsumedMark:      consumedMark,
+			CreatedVote:       createdVote,
+			ConsumedVote:      consumedVote,
+			CreatedMute:       createdMute,
+			ConsumedMute:      consumedMute,
+			CreatedDid:        createdDid,
+			ConsumedDid:       consumedDid,
+			CreatedPairX:      createdPairX,
+			CreatedEvmQualify: createdEvmQualify,
 		}
 		return handler(index, dataFromListenning)
 	})

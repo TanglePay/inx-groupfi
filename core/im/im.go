@@ -293,6 +293,12 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 		return nil, err
 	}
 	CoreComponent.LogInfof("get groupIds from address:%s", address)
+	isEvmAddress := im.IsEvmAddress(address)
+	// if isEvmAddress, return all groupIds
+	if isEvmAddress {
+		groupIds := deps.IMManager.GetAllGroupIds()
+		return groupIds, nil
+	}
 	addressSha256 := im.Sha256Hash(address)
 	groupIds, err := deps.IMManager.GetGroupIdsFromAddress(addressSha256)
 	if err != nil {
@@ -785,4 +791,25 @@ func getEvmAddressPair(address string) (*EvmAddressPairResponse, error) {
 		TPProxyAddress: tpProxyAddress,
 	}
 	return resp, nil
+}
+
+// batchSmrAddressToEvmAddress
+func batchSmrAddressToEvmAddress(c echo.Context) ([]string, error) {
+	addresses, err := parseAddressesFromBody(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("batch smr address to evm address from addresses:%s", addresses)
+	evmAddresses := make([]string, len(addresses))
+	for i, address := range addresses {
+		evmAddress, err := deps.IMManager.GetPairXEvmAddressFromProxyAddress(address)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("batch smr address to evm address from addresses:%s failed:%s", addresses, err)
+			continue
+		}
+		evmAddresses[i] = evmAddress
+	}
+	CoreComponent.LogInfof("batch smr address to evm address from addresses:%s,found evmAddresses:%d", addresses, len(evmAddresses))
+	return evmAddresses, nil
 }

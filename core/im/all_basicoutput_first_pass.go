@@ -49,6 +49,16 @@ func ProcessAllBasicOutputFirstPass(initCtx *InitContext) {
 			}
 			return nil
 		},
+		// handle evm qualify
+		func(outputId []byte, output iotago.Output, milestoneIndex uint32, milestoneTimestamp uint32, initCtx *InitContext) error {
+			// filter evm qualify output
+			evmQualify, err := deps.IMManager.FilterEvmQualifyFromOutput(output, initCtx.Logger)
+			if err != nil {
+				return err
+			}
+			deps.IMManager.HandleEvmQualifyCreated(evmQualify, initCtx.Logger)
+			return nil
+		},
 	}
 	HandleGenericInit(initCtx, "allbasicoutputfirstpass", idsFetcher, processors)
 	// HandleTotalInit after all basic output first pass

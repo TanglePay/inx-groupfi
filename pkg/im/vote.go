@@ -145,6 +145,8 @@ func (im *Manager) deserializeUserVoteGroup(address string, data []byte) []*Vote
 func (im *Manager) GetUserVoteGroupsFromBasicOutput(output *iotago.BasicOutput) []*Vote {
 	unlock := output.UnlockConditionSet()
 	address := unlock.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
+	// ConvertAddressToActualAddress
+	address = im.ConvertAddressToActualAddress(address)
 	feature := output.FeatureSet()
 	meta := feature.MetadataFeature()
 	return im.deserializeUserVoteGroup(address, meta.Data)
