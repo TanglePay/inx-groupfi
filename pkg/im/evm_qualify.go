@@ -72,6 +72,11 @@ func UnmarshalEvmQualify(data []byte) (*EvmQualify, error) {
 func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.Logger) error {
 	// log evm qualify, all fields, including group id, address list, signature
 	logger.Infof("StoreSingleEvmQualify ,groupId %s, addressList %v, signature %s", iotago.EncodeHex(evmQualify.GroupId[:]), evmQualify.AddressList, iotago.EncodeHex(evmQualify.Signature))
+	// check if group id exist
+	if bytes.Equal(evmQualify.GroupId[:], []byte{}) {
+		return fmt.Errorf("StoreSingleEvmQualify invalid group id")
+	}
+
 	// get group config by group id
 	groupIdHex := iotago.EncodeHex(evmQualify.GroupId[:])
 	groupConfig := ConfigStoreGroupIdToGroupConfig[groupIdHex]
@@ -165,16 +170,20 @@ func (im *Manager) FilterEvmQualifyFromOutput(output iotago.Output, logger *logg
 		return nil, nil
 	}
 	// try unmarshal evm qualify
+	// log evm qualify found
+	logger.Infof("found evm qualify output")
 	// get metadata
 	if output.FeatureSet().MetadataFeature() == nil {
 		return nil, fmt.Errorf("metadata not found in evm qualify output")
 	}
 	qualify, err := UnmarshalEvmQualify(output.FeatureSet().MetadataFeature().Data)
 	if err != nil {
+		// log error
+		logger.Errorf("failed to unmarshal evm qualify output:%s", err.Error())
 		return nil, err
 	}
-	// log evm qualify
-	logger.Infof("found evm qualify %s", qualify)
+	// log evm qualify, fields by fields in one line
+	logger.Infof("found evm qualify output, groupId %s, addressList %v, signature %s", iotago.EncodeHex(qualify.GroupId[:]), qualify.AddressList, iotago.EncodeHex(qualify.Signature))
 	return qualify, nil
 }
 
@@ -194,6 +203,8 @@ func (im *Manager) HandleEvmQualifyCreated(evmQualify *EvmQualify, logger *logge
 	// store evm qualify
 	err = im.StoreSingleEvmQualify(evmQualify, logger)
 	if err != nil {
+		// log error
+		logger.Errorf("HandleEvmQualifyCreated store evm qualify error:%s", err.Error())
 		return err
 	}
 	return nil
