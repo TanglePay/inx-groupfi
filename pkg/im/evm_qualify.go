@@ -78,9 +78,13 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 	}
 	// get group qualify type
 	groupQualifyType := groupConfig.QualifyType
+	// log group qualify type
+	logger.Infof("StoreSingleEvmQualify group qualify type %s", groupQualifyType)
 	// store if not exist
 	for _, addressBytes := range evmQualify.AddressList {
 		addressHex := iotago.EncodeHex(addressBytes[:])
+		// log address
+		logger.Infof("StoreSingleEvmQualify address %s", addressHex)
 		exist, err := im.GroupQualificationExists(evmQualify.GroupId, addressHex)
 		if err != nil {
 			return err
