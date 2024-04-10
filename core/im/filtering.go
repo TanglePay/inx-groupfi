@@ -270,8 +270,7 @@ func handleTokenAmount(amount *big.Int, tokenId []byte, iotaOutput iotago.Output
 	tokenStatus := outputStatusToTokenStatus(outputStatus)
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
-	// ConvertAddressToActualAddress
-	ownerAddress = deps.IMManager.ConvertAddressToActualAddress(ownerAddress)
+	// shimmer l1 token belong to proxy address
 	amountText := amount.Text(10)
 	tokenStat := deps.IMManager.NewTokenStat(tokenId, outputId, ownerAddress, tokenStatus, amountText)
 	err := deps.IMManager.StoreOneToken(tokenStat)
