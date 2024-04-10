@@ -167,6 +167,8 @@ func (im *Manager) FilterEvmQualifyFromOutput(output iotago.Output, logger *logg
 	if err != nil {
 		return nil, err
 	}
+	// log evm qualify
+	logger.Infof("found evm qualify %s", qualify)
 	return qualify, nil
 }
 
