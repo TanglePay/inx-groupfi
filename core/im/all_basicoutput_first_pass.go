@@ -56,6 +56,9 @@ func ProcessAllBasicOutputFirstPass(initCtx *InitContext) {
 			if err != nil {
 				return err
 			}
+			if evmQualify == nil {
+				return nil
+			}
 			deps.IMManager.HandleEvmQualifyCreated(evmQualify, initCtx.Logger)
 			return nil
 		},
