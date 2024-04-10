@@ -70,6 +70,8 @@ func UnmarshalEvmQualify(data []byte) (*EvmQualify, error) {
 
 // store one evm qualify
 func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.Logger) error {
+	// log evm qualify, all fields, including group id, address list, signature
+	logger.Infof("StoreSingleEvmQualify ,groupId %s, addressList %v, signature %s", iotago.EncodeHex(evmQualify.GroupId[:]), evmQualify.AddressList, iotago.EncodeHex(evmQualify.Signature))
 	// get group config by group id
 	groupIdHex := iotago.EncodeHex(evmQualify.GroupId[:])
 	groupConfig := ConfigStoreGroupIdToGroupConfig[groupIdHex]
