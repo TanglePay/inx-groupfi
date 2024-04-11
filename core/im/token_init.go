@@ -35,14 +35,14 @@ func HandleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 
 	tokenPrefix := deps.IMManager.TokenKeyPrefixForAll()
 	var currentTokenId []byte
-	var previousTokenId []byte
+	// var previousTokenId []byte
 	var currentTokenIdHash [im.Sha256HashLen]byte
 	var previousTokenIdHash [im.Sha256HashLen]byte
 	var currentAddress string
 	var previousAddress string
 	var currentTotalAddress string
 	isPreviousAddressTotalAddress := false
-	currentTokenTotal := big.NewInt(0)
+	// currentTokenTotal := big.NewInt(0)
 	currentAddressTotal := big.NewInt(0)
 	// hash set for address
 	deps.IMManager.GetImStore().Iterate(tokenPrefix, func(key kvstore.Key, value kvstore.Value) bool {
