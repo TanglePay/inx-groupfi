@@ -97,6 +97,8 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 			return err
 		}
 		if exist {
+			// log address exist
+			logger.Infof("StoreSingleEvmQualify address %s exist", addressHex)
 			continue
 		}
 
@@ -111,6 +113,8 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 			return fmt.Errorf("invalid group qualify type %s", groupQualifyType)
 		}
 		qualification := NewGroupQualification(evmQualify.GroupId, addressHex, hash, "", qualifyType, "")
+		// log store group qualification
+		logger.Infof("StoreSingleEvmQualify store group qualification %s", addressHex)
 		// store group qualification
 		err = im.StoreGroupQualification(qualification, logger)
 		if err != nil {
