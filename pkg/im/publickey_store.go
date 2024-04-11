@@ -232,7 +232,7 @@ type OutputIdHexAndAddressPair struct {
 func (im *Manager) GetAddressPublicKeyFromTransactionId(ctx context.Context, client *nodeclient.Client, transactionId string, address string, logger *logger.Logger) ([]byte, error) {
 
 	// log transaction id
-	logger.Infof("GetAddressPublicKey, address:%s, transactionId:%s", address, transactionId)
+	// logger.Infof("GetAddressPublicKey, address:%s, transactionId:%s", address, transactionId)
 	publicKey, err := GetPublicKeyViaTransactionId(ctx, client, transactionId, address)
 	if err != nil {
 		return nil, err
