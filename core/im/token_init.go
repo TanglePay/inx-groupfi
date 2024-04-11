@@ -84,7 +84,7 @@ func HandleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 			if isAddressDifferent {
 				// case total address
 				if isPreviousAddressTotalAddress {
-					currentTokenTotal = currentAddressTotal
+					// currentTokenTotal = currentAddressTotal
 					// log tokenId, currentTotalAddress, currentTokenTotal
 					// CoreComponent.LogInfof("tokenId:%s,currentTotalAddress:%s,currentTokenTotal:%d", iotago.EncodeHex(previousTokenId), currentTotalAddress, currentTokenTotal)
 					GetTokenTotal(previousTokenIdHash).Add(currentAddressTotal)
@@ -128,7 +128,7 @@ func HandleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 			isPreviousAddressTotalAddress = currentTotalAddress == currentAddress
 			previousAddress = currentAddress
 			previousTokenIdHash = currentTokenIdHash
-			previousTokenId = currentTokenId
+			// previousTokenId = currentTokenId
 		}
 		return true
 	})
