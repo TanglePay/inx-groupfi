@@ -167,6 +167,12 @@ func (im *Manager) StorePairX(pairX *PairX) error {
 	if err := im.imStore.Set(keyForPairXProxyAddressEvmAddress, valueForPairXProxyAddressEvmAddress); err != nil {
 		return err
 	}
+	// store evm address publickey
+	publicKeyBytes, err := iotago.DecodeHex(pairX.PublicKey)
+	if err != nil {
+		return err
+	}
+	im.StoreOnePublickKey(pairX.EvmAddress, publicKeyBytes)
 	return nil
 }
 
