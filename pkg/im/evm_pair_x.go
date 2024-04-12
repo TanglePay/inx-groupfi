@@ -318,6 +318,8 @@ func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID i
 		logger.Infof("FilterPairXFromNFTOutput ... evmAddress nil")
 		return nil, nil
 	}
+	// to lower
+	evmAddress = strings.ToLower(evmAddress)
 	pairXPublicKey := data.PairXPublicKey
 	if pairXPublicKey == "" {
 		// log public key nil
@@ -419,5 +421,7 @@ func (im *Manager) ConvertAddressToActualAddress(address string) string {
 	if evmAddress == "" {
 		return address
 	}
+	// to lower
+	evmAddress = strings.ToLower(evmAddress)
 	return evmAddress
 }

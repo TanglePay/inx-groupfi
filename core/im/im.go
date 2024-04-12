@@ -2,6 +2,7 @@ package im
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/TanglePay/inx-groupfi/pkg/im"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -28,6 +29,8 @@ func parseAddressQueryParam(c echo.Context) (string, error) {
 		return "", echo.ErrBadRequest
 	}
 	address := addressParams[0]
+	// to lower case
+	address = strings.ToLower(address)
 	return address, nil
 }
 
@@ -38,7 +41,11 @@ func parseAddressesFromBody(c echo.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return addresses, nil
+	var lowerAddresses []string
+	for _, address := range addresses {
+		lowerAddresses = append(lowerAddresses, strings.ToLower(address))
+	}
+	return lowerAddresses, nil
 }
 func parseAddressQueryParamWithNil(c echo.Context) (string, error) {
 	addressParams := c.QueryParams()["address"]
@@ -46,6 +53,8 @@ func parseAddressQueryParamWithNil(c echo.Context) (string, error) {
 		return "", nil
 	}
 	address := addressParams[0]
+	// to lower case
+	address = strings.ToLower(address)
 	return address, nil
 }
 
