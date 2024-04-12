@@ -120,6 +120,11 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 		if err != nil {
 			return err
 		}
+		addressGroup := NewAddressGroupNft([]byte(addressHex), evmQualify.GroupId[:], "", "")
+		err = im.StoreAddressGroup(addressGroup)
+		if err != nil {
+			return err
+		}
 	}
 	// go through all qualified address of this group, if not in evm qualify, delete
 	qualifiedList, err := im.GetAllGroupQualificationsFromGroupId(evmQualify.GroupId, logger)
