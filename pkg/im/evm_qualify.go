@@ -121,7 +121,7 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 			return err
 		}
 		addressGroup := NewAddressGroupNft([]byte(addressHex), evmQualify.GroupId[:], "", "")
-		err = im.StoreAddressGroup(addressGroup)
+		err = im.StoreAddressGroup(addressGroup, logger)
 		if err != nil {
 			return err
 		}

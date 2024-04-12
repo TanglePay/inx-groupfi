@@ -73,7 +73,7 @@ func (im *Manager) storeSingleNFT(nft *NFT, logger *logger.Logger) error {
 		return err
 	}
 
-	err = im.StoreAddressGroup(addressGroup)
+	err = im.StoreAddressGroup(addressGroup, logger)
 	return err
 }
 
