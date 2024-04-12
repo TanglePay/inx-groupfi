@@ -77,7 +77,7 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 	}
 
 	// check if group qualification exists, if so, store group member
-	exists, err := im.GroupQualificationExists(mark.GroupId, mark.Address)
+	exists, err := im.GroupQualificationExists(mark.GroupId, mark.Address, logger)
 	if err != nil {
 		return err
 	}

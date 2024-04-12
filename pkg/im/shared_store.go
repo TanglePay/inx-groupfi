@@ -36,14 +36,18 @@ func (im *Manager) SharedKeyFromGroupId(groupId [GroupIdLen]byte) []byte {
 func (im *Manager) storeSingleShared(shared *GroupShared, logger *logger.Logger) error {
 	if !IsIniting {
 		// filter out shareds that address is not in the group's qualification
-		isQualify, err := im.GroupQualificationExists(shared.GroupId, shared.SenderBech32Address)
-		if err != nil {
-			// log error
-			logger.Warnf("storeSingleShared ... GroupQualificationExists failed:%s", err)
-			return err
-		}
-		if !isQualify {
-			return nil
+		// bypass evm address for now
+		isEvmAddress := IsEvmAddress(shared.SenderBech32Address)
+		if !isEvmAddress {
+			isQualify, err := im.GroupQualificationExists(shared.GroupId, shared.SenderBech32Address, logger)
+			if err != nil {
+				// log error
+				logger.Warnf("storeSingleShared ... GroupQualificationExists failed:%s", err)
+				return err
+			}
+			if !isQualify {
+				return nil
+			}
 		}
 	}
 	key := im.SharedKeyFromGroupId(

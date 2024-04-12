@@ -92,7 +92,7 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 		addressHex := iotago.EncodeHex(addressBytes[:])
 		// log address
 		logger.Infof("StoreSingleEvmQualify address %s", addressHex)
-		exist, err := im.GroupQualificationExists(evmQualify.GroupId, addressHex)
+		exist, err := im.GroupQualificationExists(evmQualify.GroupId, addressHex, logger)
 		if err != nil {
 			return err
 		}
