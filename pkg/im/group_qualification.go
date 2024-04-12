@@ -3,6 +3,7 @@ package im
 import (
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // struct for group qualification
@@ -213,6 +214,9 @@ func (im *Manager) GetAllGroupQualificationsFromGroupId(groupId [GroupIdLen]byte
 			logger.Errorf("ParseGroupQualificationKeyAndValue error: %s", err)
 			return false
 		}
+		// log group qualification
+		logger.Infof("GetAllGroupQualificationsFromGroupId group qualification groupId %s, address %s, nftId %s, groupName %s, groupQualifyType %d, ipfsLink %s",
+			iotago.EncodeHex(groupQualification.GroupId[:]), groupQualification.Address, iotago.EncodeHex(groupQualification.NFTId[:]), groupQualification.GroupName, groupQualification.GroupQualifyType, groupQualification.IpfsLink)
 		groupQualifications = append(groupQualifications, groupQualification)
 		return true
 	})
