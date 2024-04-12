@@ -153,6 +153,11 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 			if err != nil {
 				return err
 			}
+			addressGroup := NewAddressGroupNft([]byte(addressPreviouslyQualified), evmQualify.GroupId[:], "", "")
+			err = im.DeleteAddressGroup(addressGroup)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
