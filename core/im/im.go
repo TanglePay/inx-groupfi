@@ -434,6 +434,27 @@ func getQualifiedAddressesForGroupId(c echo.Context) ([]string, error) {
 	return addresses, nil
 }
 
+// isAddressQualifiedGroup
+func isAddressQualifiedGroup(c echo.Context) (bool, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return false, err
+	}
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return false, err
+	}
+	CoreComponent.LogInfof("is address qualified group from groupId:%s,address:%s", iotago.EncodeHex(groupId), address)
+	groupIdFixed := [im.GroupIdLen]byte{}
+	copy(groupIdFixed[:], groupId)
+	qualified, err := deps.IMManager.GroupQualificationExists(groupIdFixed, address, CoreComponent.Logger())
+	if err != nil {
+		return false, err
+	}
+	CoreComponent.LogInfof("is address qualified group from groupId:%s,address:%s,qualified:%t", iotago.EncodeHex(groupId), address, qualified)
+	return qualified, nil
+}
+
 // get all marked addresses from groupId
 func getMarkedAddressesFromGroupId(c echo.Context) ([]string, error) {
 	groupId, err := parseGroupIdQueryParam(c)

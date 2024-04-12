@@ -46,6 +46,9 @@ const (
 	// group qualified addresses
 	RouteGroupQualifiedAddresses = "/groupqualifiedaddresses"
 
+	// is address qualified group
+	RouteIsAddressQualifiedGroup = "/isaddressqualifiedgroup"
+
 	// group marked addresses
 	RouteGroupMarkedAddresses = "/groupmarkedaddresses"
 
@@ -380,6 +383,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// group qualified addresses
 	e.GET(RouteGroupQualifiedAddresses, func(c echo.Context) error {
 		resp, err := getQualifiedAddressesForGroupId(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// RouteIsAddressQualifiedGroup
+	e.GET(RouteIsAddressQualifiedGroup, func(c echo.Context) error {
+		resp, err := isAddressQualifiedGroup(c)
 		if err != nil {
 			return err
 		}

@@ -153,7 +153,7 @@ func (im *Manager) DeleteGroupQualification(groupQualification *GroupQualificati
 		return err
 	}
 	if !IsIniting {
-		isQualify, err := im.GroupQualificationExists(groupQualification.GroupId, groupQualification.Address)
+		isQualify, err := im.GroupQualificationExists(groupQualification.GroupId, groupQualification.Address, logger)
 		if err != nil {
 			return err
 		}
@@ -177,7 +177,9 @@ func (im *Manager) DeleteGroupQualification(groupQualification *GroupQualificati
 }
 
 // check if group qualification exists, input is group id and address
-func (im *Manager) GroupQualificationExists(groupId [GroupIdLen]byte, address string) (bool, error) {
+func (im *Manager) GroupQualificationExists(groupId [GroupIdLen]byte, address string, logger *logger.Logger) (bool, error) {
+	// log group qualification exists
+	logger.Infof("GroupQualificationExists groupId %s, address %s", iotago.EncodeHex(groupId[:]), address)
 	addressHash := Sha256Hash(address)
 	var addressHash32 [Sha256HashLen]byte
 	copy(addressHash32[:], addressHash)
