@@ -491,7 +491,7 @@ func getGroupMembersFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
 				Timestamp:    groupmember.Timestamp,
 			})
 		}
-		CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d", iotago.EncodeHex(groupId), len(resp))
+		return resp, nil
 	} else {
 		// map addresses to nfts, nft should be created with owner address only
 		nfts := make([]*im.NFT, len(groupmembers))
