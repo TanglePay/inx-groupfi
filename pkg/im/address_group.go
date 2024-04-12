@@ -3,6 +3,7 @@ package im
 import (
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 const (
@@ -135,8 +136,15 @@ func (im *Manager) AddressGroupKeyPrefix(addressSha256 []byte) []byte {
 }
 func (im *Manager) StoreAddressGroup(addressGroup *AddressGroup, logger *logger.Logger) error {
 	// log store address group
-	logger.Infof("StoreAddressGroup: group id %v, address %v, group name %v, group qualify type %v, nft link %v, token id %v, token thres %v",
-		addressGroup.GroupId, addressGroup.AddressSha256, addressGroup.GroupName, addressGroup.GroupQualifyType, addressGroup.NftLink, addressGroup.TokenId, addressGroup.TokenThres)
+	logger.Infof("StoreAddressGroup: group id %s, address %s, group name %v, group qualify type %v, nft link %v, token id %v, token thres %v",
+		iotago.EncodeHex(addressGroup.GroupId),
+		iotago.EncodeHex(addressGroup.AddressSha256),
+		addressGroup.GroupName,
+		addressGroup.GroupQualifyType,
+		addressGroup.NftLink,
+		addressGroup.TokenId,
+		addressGroup.TokenThres)
+
 	key := im.AddressGroupKey(addressGroup)
 	value := im.GetAddressGroupValue(addressGroup)
 	return im.imStore.Set(key, value)
