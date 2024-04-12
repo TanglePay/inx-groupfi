@@ -419,14 +419,16 @@ func getQualifiedAddressesForGroupId(c echo.Context) ([]string, error) {
 		return nil, err
 	}
 	CoreComponent.LogInfof("get qualified address for groupId:%s", iotago.EncodeHex(groupId))
-	nfts, err := deps.IMManager.ReadNFTsFromGroupId(groupId)
+	groupIdFixed := [im.GroupIdLen]byte{}
+	copy(groupIdFixed[:], groupId)
+	qualifications, err := deps.IMManager.GetAllGroupQualificationsFromGroupId(groupIdFixed, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
 	// nfts to addresses
 	var addresses []string
-	for _, nft := range nfts {
-		addresses = append(addresses, string(nft.OwnerAddress))
+	for _, qualification := range qualifications {
+		addresses = append(addresses, qualification.Address)
 	}
 	CoreComponent.LogInfof("get qualified address for groupId:%s,found addresses:%d", iotago.EncodeHex(groupId), len(addresses))
 	return addresses, nil
