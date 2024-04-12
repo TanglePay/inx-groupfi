@@ -28,8 +28,8 @@ func (im *Manager) DeleteOnePublicKey(bech32Address string) error {
 	return im.imStore.Delete(key)
 }
 
-func (im *Manager) ReadOnePublicKey(bech32Address string) ([]byte, error) {
-	key := keyFromAddressPublicKey(bech32Address)
+func (im *Manager) ReadOnePublicKey(address string) ([]byte, error) {
+	key := keyFromAddressPublicKey(address)
 	publicKey, err := im.imStore.Get(key)
 	if err != nil {
 		return nil, err

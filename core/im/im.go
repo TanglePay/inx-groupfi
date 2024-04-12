@@ -467,24 +467,51 @@ func getGroupMembersFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	// map addresses to nfts, nft should be created with owner address only
-	nfts := make([]*im.NFT, len(groupmembers))
-	var maxTimestamp uint32
-	for i, groupmember := range groupmembers {
-		nfts[i] = &im.NFT{
-			OwnerAddress:       []byte(groupmember.Address),
-			MileStoneTimestamp: groupmember.Timestamp,
-		}
-		if groupmember.Timestamp > maxTimestamp {
-			maxTimestamp = groupmember.Timestamp
-		}
+	// check if first address evm address
+	var isEvmAddress bool
+	if len(groupmembers) > 0 {
+		isEvmAddress = im.IsEvmAddress(groupmembers[0].Address)
 	}
-	CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d, maxTimestamp:%d", iotago.EncodeHex(groupId), len(nfts), maxTimestamp)
-	resp, err := deps.IMManager.FullfillNFTsWithPublickKey(nfts, im.PublicKeyDrainer, CoreComponent.Logger())
-	if err != nil {
-		return nil, err
+	if isEvmAddress {
+		var resp []*im.NFTResponse
+		for _, groupmember := range groupmembers {
+			publicKey, err := deps.IMManager.ReadOnePublicKey(groupmember.Address)
+			if err != nil {
+				// log error then continue
+				CoreComponent.LogWarnf("getGroupMembersFromGroupId ReadOnePublicKey failed:%s", err)
+				continue
+			}
+			var publicKeyHex string
+			if publicKey != nil {
+				publicKeyHex = iotago.EncodeHex(publicKey)
+			}
+			resp = append(resp, &im.NFTResponse{
+				OwnerAddress: groupmember.Address,
+				PublicKey:    publicKeyHex,
+				Timestamp:    groupmember.Timestamp,
+			})
+		}
+		CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d", iotago.EncodeHex(groupId), len(resp))
+	} else {
+		// map addresses to nfts, nft should be created with owner address only
+		nfts := make([]*im.NFT, len(groupmembers))
+		var maxTimestamp uint32
+		for i, groupmember := range groupmembers {
+			nfts[i] = &im.NFT{
+				OwnerAddress:       []byte(groupmember.Address),
+				MileStoneTimestamp: groupmember.Timestamp,
+			}
+			if groupmember.Timestamp > maxTimestamp {
+				maxTimestamp = groupmember.Timestamp
+			}
+		}
+		CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d, maxTimestamp:%d", iotago.EncodeHex(groupId), len(nfts), maxTimestamp)
+		resp, err := deps.IMManager.FullfillNFTsWithPublickKey(nfts, im.PublicKeyDrainer, CoreComponent.Logger())
+		if err != nil {
+			return nil, err
+		}
+		return resp, nil
 	}
-	return resp, nil
 }
 
 // get all group votes from groupId
