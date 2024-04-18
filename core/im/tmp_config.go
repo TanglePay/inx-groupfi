@@ -39,7 +39,7 @@ var (
 		    {"groupName":"staff-developer","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0xdc6c3b0167af767652567523b9240c86095241c622c37cb726efeeb5e102a93c"]},
 		    {"groupName":"dapper-groupfi","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x1fd2407145ef147e0b06f835fef0e2059e56899aa8ce80147506893f837ea606"]},
 			{"groupName":"First EVM group","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"shimmer-evm","collectionIds":["0x115a9fdca6a2110cc3e4cc7f92555101c3d80addf56984003e51e004ac4f9148"]},
-			{"groupName":"GroupFi Announcement","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x115a9fdca6a2110cc3e4cc7f92555101c3d80addf56984003e51e004ac4f9148"]},
+			{"groupName":"GroupFi Announcement","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x544F353C02363D848dBAC8Dc3a818B36B7f9355e"]},
 			{"groupName":"alpha-test","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x23e5f8500132f9dfa8698e3d352f0d57bd79cf57533f273e87e31b6cd0e0a5ef"]},
 		   	{"groupName":"iceberg-1","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x064d0eaefb86a94eb326ff633c22cdf744decca954bb93b1572b449d324ae717"]},
 		   	{"groupName":"iceberg-2","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x451ac5e96cea2ddf399924ce22f0e56a4b485ca417aba1430e9e5ce582d605f2"]},
