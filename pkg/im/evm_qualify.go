@@ -35,21 +35,27 @@ func NewEvmQualify(groupId [GroupIdLen]byte, addressList [][EvmAddressLen]byte, 
 }
 
 // unmarsal evm qualify from bytes
-func UnmarshalEvmQualify(data []byte) (*EvmQualify, error) {
+func UnmarshalEvmQualify(data []byte, logger *logger.Logger) (*EvmQualify, error) {
 	// schema(1byte) + signature length  + signature + group id + address list
 	idx := 0
-	_, err := ReadBytesWithUint16Len(data, &idx, 1)
+	schema, err := ReadBytesWithUint16Len(data, &idx, 1)
 	if err != nil {
 		return nil, err
 	}
+	// log schema
+	logger.Infof("UnmarshalEvmQualify schema %d", schema[0])
 	signatureBytes, err := ReadBytesWithUint16Len(data, &idx)
 	if err != nil {
 		return nil, err
 	}
+	// log signature
+	logger.Infof("UnmarshalEvmQualify signature %s", string(signatureBytes))
 	groupId, err := ReadBytesWithUint16Len(data, &idx, GroupIdLen)
 	if err != nil {
 		return nil, err
 	}
+	// log group id
+	logger.Infof("UnmarshalEvmQualify groupId %s", iotago.EncodeHex(groupId))
 	groupIdFixed := [GroupIdLen]byte{}
 	copy(groupIdFixed[:], groupId)
 	addressList := make([][EvmAddressLen]byte, 0)
@@ -61,6 +67,8 @@ func UnmarshalEvmQualify(data []byte) (*EvmQualify, error) {
 		if err != nil {
 			return nil, err
 		}
+		// log address
+		logger.Infof("UnmarshalEvmQualify address %s", iotago.EncodeHex(address))
 		addressFixed := [EvmAddressLen]byte{}
 		copy(addressFixed[:], address)
 		addressList = append(addressList, addressFixed)
