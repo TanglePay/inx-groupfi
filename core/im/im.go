@@ -503,6 +503,8 @@ func getGroupMembersFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
 	var firstAddress string
 	if len(groupmembers) > 0 {
 		firstAddress = groupmembers[0].Address
+	} else {
+		return nil, nil
 	}
 	CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d, first address:%s", iotago.EncodeHex(groupId), len(groupmembers), firstAddress)
 	// check if first address evm address
