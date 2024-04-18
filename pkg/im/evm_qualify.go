@@ -198,7 +198,7 @@ func (im *Manager) FilterEvmQualifyFromOutput(output iotago.Output, logger *logg
 	if output.FeatureSet().MetadataFeature() == nil {
 		return nil, fmt.Errorf("metadata not found in evm qualify output")
 	}
-	qualify, err := UnmarshalEvmQualify(output.FeatureSet().MetadataFeature().Data)
+	qualify, err := UnmarshalEvmQualify(output.FeatureSet().MetadataFeature().Data, logger)
 	if err != nil {
 		// log error
 		logger.Errorf("failed to unmarshal evm qualify output:%s", err.Error())
