@@ -120,7 +120,7 @@ func (im *Manager) GetDidsFromAddress(bech32Address string) ([]*Did, error) {
 }
 
 // filter ledger output for did
-func (im *Manager) FilterLedgerOutputForDid(inxOutput *inx.LedgerOutput) (*Did, error) {
+func (im *Manager) FilterLedgerOutputForDid(inxOutput *inx.LedgerOutput) ([]*Did, error) {
 	// check nil
 	if inxOutput == nil {
 		return nil, nil
@@ -136,7 +136,7 @@ func (im *Manager) FilterLedgerOutputForDid(inxOutput *inx.LedgerOutput) (*Did, 
 }
 
 // filter output for did
-func (im *Manager) FilterOutputForDid(output iotago.Output, outputId iotago.OutputID) (*Did, error) {
+func (im *Manager) FilterOutputForDid(output iotago.Output, outputId iotago.OutputID) ([]*Did, error) {
 	// check nil
 	if output == nil {
 		return nil, nil
@@ -152,7 +152,7 @@ func (im *Manager) FilterOutputForDid(output iotago.Output, outputId iotago.Outp
 
 // filter nft output for did
 // nft with meta['property'] == 'groupfi-name' will be considered as did, it should have picture and name in metadata
-func (im *Manager) FilterNftOutputForDid(output *iotago.NFTOutput, outputId iotago.OutputID) (*Did, error) {
+func (im *Manager) FilterNftOutputForDid(output *iotago.NFTOutput, outputId iotago.OutputID) ([]*Did, error) {
 	// check nil
 	if output == nil {
 		return nil, nil
@@ -202,7 +202,7 @@ func (im *Manager) FilterNftOutputForDid(output *iotago.NFTOutput, outputId iota
 		return nil, nil
 	}
 	bech32Address := address.Address.Bech32(iotago.NetworkPrefix(HornetChainName))
-	bech32Address = im.ConvertAddressToActualAddress(bech32Address)
+	evmAddress := im.ConvertAddressToActualAddress(bech32Address)
 	// expiration return address unlock
 	isHasStorageDepositReturn := output.UnlockConditionSet().HasStorageDepositReturnCondition()
 	if isHasStorageDepositReturn {
@@ -212,8 +212,13 @@ func (im *Manager) FilterNftOutputForDid(output *iotago.NFTOutput, outputId iota
 	if isHasExpirationReturn {
 		return nil, nil
 	}
+	var dids []*Did
+	dids = append(dids, NewDid(bech32Address, nameStr, pictureStr, outputId[:]))
+	if evmAddress != bech32Address {
+		dids = append(dids, NewDid(evmAddress, nameStr, pictureStr, outputId[:]))
+	}
 	// create did
-	return NewDid(bech32Address, nameStr, pictureStr, outputId[:]), nil
+	return dids, nil
 }
 
 // handle consumed and created did

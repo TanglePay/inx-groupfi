@@ -89,13 +89,13 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if is {
 				createdVote = append(createdVote, vote)
 			}
-			did, err := deps.IMManager.FilterLedgerOutputForDid(output)
+			dids, err := deps.IMManager.FilterLedgerOutputForDid(output)
 			if err != nil {
 				// log error
 				CoreComponent.LogErrorf("LedgerUpdate FilterLedgerOutputForDid error:%s", err.Error())
 			}
-			if did != nil {
-				createdDid = append(createdDid, did)
+			if dids != nil {
+				createdDid = append(createdDid, dids...)
 			}
 			pairX, err := deps.IMManager.FilterPairXFromLedgerOutput(output, CoreComponent.Logger())
 			if err != nil {
@@ -150,13 +150,13 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if is {
 				consumedVote = append(consumedVote, vote)
 			}
-			did, err := deps.IMManager.FilterLedgerOutputForDid(output)
+			dids, err := deps.IMManager.FilterLedgerOutputForDid(output)
 			if err != nil {
 				// log error
 				CoreComponent.LogErrorf("LedgerUpdate FilterLedgerOutputForDid error:%s", err.Error())
 			}
-			if did != nil {
-				consumedDid = append(consumedDid, did)
+			if dids != nil {
+				consumedDid = append(consumedDid, dids...)
 			}
 		}
 		dataFromListenning := &im.DataFromListenning{
