@@ -640,14 +640,25 @@ func getAddressMarkGroups(c echo.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	isEvmAddress := im.IsEvmAddress(address)
 	CoreComponent.LogInfof("get address mark groups from address:%s", address)
 	marks, err := deps.IMManager.GetMarksFromAddress(address, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
-	groupIds := make([]string, len(marks))
-	for i, mark := range marks {
-		groupIds[i] = iotago.EncodeHex(mark.GroupId[:])
+	var groupIds []string
+	for _, mark := range marks {
+		canAppend := true
+		groupIdStr := iotago.EncodeHex(mark.GroupId[:])
+		if isEvmAddress {
+			groupConfig := im.ConfigStoreGroupIdToGroupConfig[groupIdStr]
+			if groupConfig == nil || groupConfig.ChainName == "smr" {
+				canAppend = false
+			}
+		}
+		if canAppend {
+			groupIds = append(groupIds, groupIdStr)
+		}
 	}
 	CoreComponent.LogInfof("get address mark groups from address:%s,found groupIds:%d", address, len(groupIds))
 	return groupIds, nil
