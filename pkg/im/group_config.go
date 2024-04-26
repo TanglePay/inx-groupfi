@@ -178,6 +178,17 @@ func (im *Manager) GetAllGroupIds() []string {
 	return res
 }
 
+// get all non smr group ids
+func (im *Manager) GetAllNonSmrGroupIds() []string {
+	var res []string
+	for groupIdHex := range ConfigStoreGroupIdToGroupConfig {
+		if ConfigStoreGroupIdToGroupConfig[groupIdHex].ChainName != "smr" {
+			res = append(res, groupIdHex)
+		}
+	}
+	return res
+}
+
 // add groupId to public group ids
 func (im *Manager) AddGroupIdToPublicGroupIds(groupIdHex string) {
 	// check if already exists

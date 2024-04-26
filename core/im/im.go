@@ -305,7 +305,7 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 	isEvmAddress := im.IsEvmAddress(address)
 	// if isEvmAddress, return all groupIds
 	if isEvmAddress {
-		groupIds := deps.IMManager.GetAllGroupIds()
+		groupIds := deps.IMManager.GetAllNonSmrGroupIds()
 		return groupIds, nil
 	}
 	addressSha256 := im.Sha256Hash(address)
