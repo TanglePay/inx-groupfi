@@ -13,6 +13,7 @@ const (
 	// plain text, new message
 	ImInboxEventTypeNewMessage         byte = 1
 	ImInboxEventTypeGroupMemberChanged byte = 2
+	ImInboxEventTypeMarkChanged        byte = 3
 )
 
 type EventCommonFields struct {
