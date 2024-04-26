@@ -640,13 +640,47 @@ func getAddressMarkGroups(c echo.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	isEvmAddress := im.IsEvmAddress(address)
-	CoreComponent.LogInfof("get address mark groups from address:%s", address)
+	marks, err := getAddressMarkGroupMarks(address)
+	if err != nil {
+		return nil, err
+	}
+	groupIds := make([]string, len(marks))
+	for i, mark := range marks {
+		groupIds[i] = iotago.EncodeHex(mark.GroupId[:])
+	}
+	CoreComponent.LogInfof("get address mark groups from address:%s,found groupIds:%d", address, len(groupIds))
+	return groupIds, nil
+}
+
+// getAddressMarkGroupDetails
+func getAddressMarkGroupDetails(c echo.Context) ([]*AddressGroupDetailsResponseLite, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	marks, err := getAddressMarkGroupMarks(address)
+	if err != nil {
+		return nil, err
+	}
+	groupDetails := make([]*AddressGroupDetailsResponseLite, len(marks))
+	for i, mark := range marks {
+		groupDetails[i] = &AddressGroupDetailsResponseLite{
+			GroupId:   iotago.EncodeHex(mark.GroupId[:]),
+			Timestamp: im.BytesToUint32(mark.Timestamp[:]),
+		}
+	}
+	return groupDetails, nil
+}
+
+// getAddressMarkGroupMarks
+func getAddressMarkGroupMarks(address string) ([]*im.Mark, error) {
+	CoreComponent.LogInfof("get address mark group marks from address:%s", address)
 	marks, err := deps.IMManager.GetMarksFromAddress(address, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
-	var groupIds []string
+	isEvmAddress := im.IsEvmAddress(address)
+	var filteredMarks []*im.Mark
 	for _, mark := range marks {
 		canAppend := true
 		groupIdStr := iotago.EncodeHex(mark.GroupId[:])
@@ -657,11 +691,10 @@ func getAddressMarkGroups(c echo.Context) ([]string, error) {
 			}
 		}
 		if canAppend {
-			groupIds = append(groupIds, groupIdStr)
+			filteredMarks = append(filteredMarks, mark)
 		}
 	}
-	CoreComponent.LogInfof("get address mark groups from address:%s,found groupIds:%d", address, len(groupIds))
-	return groupIds, nil
+	return filteredMarks, nil
 }
 
 // getGroupUserReputation
