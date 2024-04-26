@@ -54,6 +54,12 @@ type GroupUserReputationResponse struct {
 	Reputation        float32 `json:"reputation"`
 }
 
+// AddressGroupDetailsResponse
+type AddressGroupDetailsResponseLite struct {
+	GroupId   string `json:"groupId"`
+	Timestamp uint32 `json:"timestamp"`
+}
+
 // test repuation response
 type TestReputationResponse struct {
 	// muted count
