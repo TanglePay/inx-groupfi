@@ -51,6 +51,12 @@ func Sha256Hash(str string) []byte {
 	hasher.Write([]byte(str))
 	return hasher.Sum(nil)
 }
+func Sha256HashFixed(str string) [Sha256HashLen]byte {
+	bytes := Sha256Hash(str)
+	var fixed [Sha256HashLen]byte
+	copy(fixed[:], bytes)
+	return fixed
+}
 func Sha256HashBytes(bytes []byte) []byte {
 	hasher := sha256.New()
 	hasher.Write(bytes)

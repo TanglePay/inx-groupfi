@@ -83,7 +83,7 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 	}
 	// log group qualification GroupId, address, exists
 	logger.Infof("StoreMark,group qualification exists,groupId:%s,address:%s,exists:%t", iotago.EncodeHex(mark.GroupId[:]), mark.Address, exists)
-	if exists {
+	if exists && isActuallyMarked {
 		outputId := mark.OutputId
 		resp, err := NodeHTTPAPIClient.OutputMetadataByID(ListeningCtx, outputId)
 		if err != nil {
@@ -97,6 +97,13 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 			return err
 		}
 
+	} else {
+		// only mark changed, push mark changed event
+		if isActuallyMarked {
+			// push mark changed event
+			markChangedEvent := NewMarkChangedEvent(Sha256HashFixed(mark.Address), mark.GroupId, true, CurrentMilestoneTimestamp)
+			im.PushInbox(markChangedEvent.ToPushTopic(), markChangedEvent.ToPushPayload(), logger)
+		}
 	}
 	return nil
 }
@@ -127,6 +134,14 @@ func (im *Manager) DeleteMark(mark *Mark, isActuallyUnmarked bool, logger *logge
 		if err != nil {
 			return err
 		}
+	} else {
+		// only mark changed, push mark changed event
+		if isActuallyUnmarked {
+			// push mark changed event
+			markChangedEvent := NewMarkChangedEvent(Sha256HashFixed(mark.Address), mark.GroupId, false, CurrentMilestoneTimestamp)
+			im.PushInbox(markChangedEvent.ToPushTopic(), markChangedEvent.ToPushPayload(), logger)
+		}
+
 	}
 
 	return nil
