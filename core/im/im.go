@@ -635,6 +635,54 @@ func getAddressMemberGroups(c echo.Context) ([]string, error) {
 	CoreComponent.LogInfof("get address member groups from address:%s,found groupIds:%d", address, len(groupIds))
 	return groupIds, nil
 }
+
+func getAddressCanAppendMarkGroups(address string) ([]*im.Mark, error) {
+	isEvmAddress := im.IsEvmAddress(address)
+	CoreComponent.LogInfof("get address mark groups from address:%s", address)
+	marks, err := deps.IMManager.GetMarksFromAddress(address, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	var canAppendMarkGroups []*im.Mark
+	for _, mark := range marks {
+		canAppend := true
+		groupIdStr := iotago.EncodeHex(mark.GroupId[:])
+		if isEvmAddress {
+			groupConfig := im.ConfigStoreGroupIdToGroupConfig[groupIdStr]
+			if groupConfig == nil || groupConfig.ChainName == "smr" {
+				canAppend = false
+			}
+		}
+		if canAppend {
+			canAppendMarkGroups = append(canAppendMarkGroups, mark)
+		}
+	}
+	return canAppendMarkGroups, nil
+}
+
+type AddressMarkGroupItem struct {
+	GroupId   string
+	Timestamp [im.TimestampLen]byte
+}
+
+func getAddressMarkGroupList(c echo.Context) ([]AddressMarkGroupItem, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	canAppendMarkGroups, err := getAddressCanAppendMarkGroups(address)
+	if err != nil {
+		return nil, err
+	}
+	var addressMarkGroupList []AddressMarkGroupItem
+	for _, mark := range canAppendMarkGroups {
+		groupIdStr := iotago.EncodeHex(mark.GroupId[:])
+		item := AddressMarkGroupItem{GroupId: groupIdStr, Timestamp: mark.Timestamp}
+		addressMarkGroupList = append(addressMarkGroupList, item)
+	}
+	return addressMarkGroupList, nil
+}
+
 func getAddressMarkGroups(c echo.Context) ([]string, error) {
 	address, err := parseAddressQueryParam(c)
 	if err != nil {

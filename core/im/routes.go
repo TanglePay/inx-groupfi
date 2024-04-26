@@ -70,6 +70,9 @@ const (
 	// get address mark groups
 	RouteAddressMarkGroups = "/addressmarkgroups"
 
+	// get address mark group list
+	RouteAddressMarkGroupList = "/addressmarkgroupList"
+
 	// get group user reputation
 	RouteGroupUserReputation = "/groupuserreputation"
 
