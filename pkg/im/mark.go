@@ -251,7 +251,7 @@ func (im *Manager) DeserializeUserMarkedGroupIds(address string, data []byte) ([
 }
 
 // get unlock address and []*Mark from BasicOutput
-func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputId) ([]*Mark, error) {
+func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputId) ([]*Mark, string, error) {
 	unlockConditionSet := output.Output.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
 	// Convert address to actual address
@@ -259,17 +259,17 @@ func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputId) ([]*Mark, 
 	featureSet := output.Output.FeatureSet()
 	meta := featureSet.MetadataFeature()
 	if meta == nil {
-		return nil, errors.New("meta is nil")
+		return nil, "", errors.New("meta is nil")
 	}
 	outputId := output.OutputId
 	marks, err := im.DeserializeUserMarkedGroupIds(ownerAddress, meta.Data)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	for _, mark := range marks {
 		mark.OutputId = outputId
 	}
-	return marks, nil
+	return marks, ownerAddress, nil
 }
 
 // handle group mark basic output created
@@ -279,19 +279,20 @@ func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(consumedOutput *
 	logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ...")
 	var createdMarkGroupIds []string
 	var createdMarks []*Mark
+	var address string
 	if createdOutput != nil {
-		_createdMarks, err := im.GetMarksFromBasicOutput(createdOutput)
+		_createdMarks, _address, err := im.GetMarksFromBasicOutput(createdOutput)
 		if err != nil {
 			// log error
 			logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
 			return
 		}
 		createdMarks = _createdMarks
+		address = _address
 	}
-	if len(createdMarks) == 0 {
+	if address == "" {
 		return
 	}
-	address := createdMarks[0].Address
 	for _, mark := range createdMarks {
 		createdMarkGroupIds = append(createdMarkGroupIds, iotago.EncodeHex(mark.GroupId[:]))
 	}
