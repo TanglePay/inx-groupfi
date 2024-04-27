@@ -579,6 +579,29 @@ func getGroupVotes(c echo.Context) ([]*VoteResponse, error) {
 	return voteResponseArr, nil
 }
 
+// getAddressVotes
+func getAddressVotes(c echo.Context) ([]*VoteResponse, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address votes from address:%s", address)
+	addressSha256 := im.Sha256HashFixed(address)
+	votes, err := deps.IMManager.GetAllVotesFromAddressSha256Hash(addressSha256, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address votes from address:%s,found votes:%d", address, len(votes))
+	voteResponseArr := make([]*VoteResponse, len(votes))
+	for i, vote := range votes {
+		voteResponseArr[i] = &VoteResponse{
+			GroupId: iotago.EncodeHex(vote.GroupId[:]),
+			Vote:    int(vote.Vote),
+		}
+	}
+	return voteResponseArr, nil
+}
+
 // getGroupVotesCount
 func getGroupVotesCount(c echo.Context) (*VoteCountResponse, error) {
 	groupId, err := parseGroupIdQueryParam(c)
