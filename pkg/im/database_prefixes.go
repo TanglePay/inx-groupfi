@@ -68,4 +68,6 @@ const (
 	ImStoreKeyPrefixPairXEvmAddressSceneryProxyAddress byte = 34
 
 	ImStoreKeyPrefixPairXProxyAddressEvmAddress byte = 35
+
+	ImStoreKeyPrefixAddressVote byte = 36
 )
