@@ -933,7 +933,6 @@ func batchSmrAddressToEvmAddress(c echo.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	CoreComponent.LogInfof("batch smr address to evm address from addresses:%s", addresses)
 	evmAddresses := make([]string, len(addresses))
 	for i, address := range addresses {
 		evmAddress, err := deps.IMManager.GetPairXEvmAddressFromProxyAddress(address)
@@ -944,6 +943,5 @@ func batchSmrAddressToEvmAddress(c echo.Context) ([]string, error) {
 		}
 		evmAddresses[i] = evmAddress
 	}
-	CoreComponent.LogInfof("batch smr address to evm address from addresses:%s,found evmAddresses:%d", addresses, len(evmAddresses))
 	return evmAddresses, nil
 }
