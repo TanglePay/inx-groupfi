@@ -290,6 +290,8 @@ func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(consumedOutput *
 		createdMarks = _createdMarks
 		address = _address
 	}
+	// log address
+	logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... address:%s", address)
 	if address == "" {
 		return
 	}
@@ -336,6 +338,8 @@ func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(consumedOutput *
 			markedMarkGroupIds = append(markedMarkGroupIds, createdMarkGroupId)
 		}
 	}
+	// log unmarkedMarkGroupIds, markedMarkGroupIds
+	logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... unmarkedMarkGroupIds:%v,markedMarkGroupIds:%v", unmarkedMarkGroupIds, markedMarkGroupIds)
 	// delete unmarked marks
 	for _, mark := range existingMarks {
 		found := false
