@@ -252,3 +252,10 @@ func IsEvmAddress(address string) bool {
 	// start with 0x and length is 42
 	return len(address) == 42 && address[:2] == "0x"
 }
+
+// bytes to fixed size bytes, Sha256HashLen
+func BytesToFixedSha256HashLenBytes(bytes []byte) [Sha256HashLen]byte {
+	var fixed [Sha256HashLen]byte
+	copy(fixed[:], bytes)
+	return fixed
+}

@@ -602,6 +602,28 @@ func getAddressVotes(c echo.Context) ([]*VoteResponse, error) {
 	return voteResponseArr, nil
 }
 
+// getAddressMutes
+func getAddressMutes(c echo.Context) ([]*MuteResponse, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	addressSha256 := im.Sha256HashFixed(address)
+	mutes, err := deps.IMManager.GetAllMuteGroupMembersFromAddress(addressSha256, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address mutes from address:%s,found mutes:%d", address, len(mutes))
+	muteResponseArr := make([]*MuteResponse, len(mutes))
+	for i, mute := range mutes {
+		muteResponseArr[i] = &MuteResponse{
+			GroupId:                iotago.EncodeHex(mute.GroupId[:]),
+			MutedAddressSha256Hash: iotago.EncodeHex(mute.MutedAddrSha256Hash[:]),
+		}
+	}
+	return muteResponseArr, nil
+}
+
 // getGroupVotesCount
 func getGroupVotesCount(c echo.Context) (*VoteCountResponse, error) {
 	groupId, err := parseGroupIdQueryParam(c)

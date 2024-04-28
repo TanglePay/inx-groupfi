@@ -40,6 +40,17 @@ func (im *Manager) UserMuteGroupMemberKey(userMuteGroupMember *UserMuteGroupMemb
 	return key
 }
 
+// address mute key = prefix + muteAddrSha256Hash + groupid + mutedAddrSha256Hash, value = empty
+func (im *Manager) AddressMuteKey(userMuteGroupMember *UserMuteGroupMember) []byte {
+	var key []byte
+	index := 0
+	AppendBytesWithUint16Len(&key, &index, []byte{ImStoreKeyPrefixAddressMute}, false)
+	AppendBytesWithUint16Len(&key, &index, userMuteGroupMember.MuteAddrSha256Hash[:], false)
+	AppendBytesWithUint16Len(&key, &index, userMuteGroupMember.GroupId[:], false)
+	AppendBytesWithUint16Len(&key, &index, userMuteGroupMember.MutedAddrSha256Hash[:], false)
+	return key
+}
+
 // check if user has group member
 func (im *Manager) UserHasGroupMember(userMuteGroupMember *UserMuteGroupMember) (bool, error) {
 
@@ -66,8 +77,13 @@ func (im *Manager) StoreUserMuteGroupMember(userMuteGroupMember *UserMuteGroupMe
 	)
 
 	key := im.UserMuteGroupMemberKey(userMuteGroupMember)
+	addressKey := im.AddressMuteKey(userMuteGroupMember)
 	value := []byte{}
 	err = im.imStore.Set(key, value)
+	if err != nil {
+		return err
+	}
+	err = im.imStore.Set(addressKey, value)
 	if err != nil {
 		return err
 	}
@@ -133,6 +149,56 @@ func (im *Manager) UserMuteGroupMemberKeyPrefix(groupId [GroupIdLen]byte, mutedA
 	index += GroupIdLen
 	copy(key[index:], mutedAddrSha256Hash[:])
 	return key
+}
+
+// Address Mute Key Prefix
+func (im *Manager) AddressMuteKeyPrefix(muteAddrSha256Hash [Sha256HashLen]byte) []byte {
+	var key []byte
+	index := 0
+	AppendBytesWithUint16Len(&key, &index, []byte{ImStoreKeyPrefixAddressMute}, false)
+	AppendBytesWithUint16Len(&key, &index, muteAddrSha256Hash[:], false)
+	return key
+}
+
+// vote from address key and value to struct
+func (im *Manager) GetUserMuteGroupMemberFromAddressKeyAndValue(key kvstore.Key, value kvstore.Value) *UserMuteGroupMember {
+	idx := 0
+	// prefix
+	idx++
+	// muteAddrSha256Hash
+	muteAddrSha256Hash, err := ReadBytesWithUint16Len(key, &idx, Sha256HashLen)
+	if err != nil {
+		return nil
+	}
+	muteAddrSha256HashFixed := BytesToFixedSha256HashLenBytes(muteAddrSha256Hash)
+	// group id
+	groupId, err := ReadBytesWithUint16Len(key, &idx, GroupIdLen)
+	if err != nil {
+		return nil
+	}
+	groupIdFixed := BytesToFixedSha256HashLenBytes(groupId)
+	// mutedAddrSha256Hash
+	mutedAddrSha256Hash, err := ReadBytesWithUint16Len(key, &idx, Sha256HashLen)
+	if err != nil {
+		return nil
+	}
+	mutedAddrSha256HashFixed := BytesToFixedSha256HashLenBytes(mutedAddrSha256Hash)
+	return NewUserMuteGroupMember(groupIdFixed, muteAddrSha256HashFixed, mutedAddrSha256HashFixed)
+}
+
+// get all mute group members from an address
+func (im *Manager) GetAllMuteGroupMembersFromAddress(muteAddrSha256Hash [Sha256HashLen]byte, logger *logger.Logger
+	) ([]*UserMuteGroupMember, error) {
+	prefix := im.AddressMuteKeyPrefix(muteAddrSha256Hash)
+	var muteGroupMembers []*UserMuteGroupMember
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		muteGroupMember := im.GetUserMuteGroupMemberFromAddressKeyAndValue(key, value)
+		if muteGroupMember != nil {
+			muteGroupMembers = append(muteGroupMembers, muteGroupMember)
+		}
+		return true
+	})
+	return muteGroupMembers, err
 }
 
 // count times user get muted in group, and compute reputation score

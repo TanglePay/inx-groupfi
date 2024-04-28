@@ -61,6 +61,9 @@ const (
 	// get address votes
 	RouteAddressVotes = "/addressvotes"
 
+	// get address mutes
+	RouteAddressMutes = "/addressmutes"
+
 	// get group votes count
 	RouteGroupVotesCount = "/groupvotescount"
 
@@ -434,6 +437,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// get address votes
 	e.GET(RouteAddressVotes, func(c echo.Context) error {
 		resp, err := getAddressVotes(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// RouteAddressMutes
+	e.GET(RouteAddressMutes, func(c echo.Context) error {
+		resp, err := getAddressMutes(c)
 		if err != nil {
 			return err
 		}

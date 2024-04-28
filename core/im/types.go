@@ -39,6 +39,12 @@ type VoteResponse struct {
 	Vote              int    `json:"vote"`
 }
 
+// MuteResponse
+type MuteResponse struct {
+	GroupId                string `json:"groupId"`
+	MutedAddressSha256Hash string `json:"mutedAddressSha256Hash"`
+}
+
 // VoteCountResponse
 type VoteCountResponse struct {
 	GroupId      string `json:"groupId"`

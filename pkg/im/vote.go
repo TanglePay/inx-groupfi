@@ -19,6 +19,7 @@ type Vote struct {
 const (
 	VotePublic = iota
 	VotePrivate
+	VoteUnvote
 )
 
 // newVote creates a new Vote.
@@ -162,7 +163,7 @@ func (im *Manager) CountVotesForGroup(groupId [GroupIdLen]byte) (int, int, error
 	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
 		if value[0] == VotePublic {
 			publicCt++
-		} else {
+		} else if value[0] == VotePrivate {
 			privateCt++
 		}
 		return true
