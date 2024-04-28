@@ -267,7 +267,7 @@ func (im *Manager) deserializeUserMuteGroupMember(muteAddress string, data []byt
 }
 
 // get user mute group members from basicoutput
-func (im *Manager) GetUserMuteGroupMembersFromBasicOutput(output *iotago.BasicOutput) []*UserMuteGroupMember {
+func (im *Manager) GetUserMuteGroupMembersFromBasicOutput(output *iotago.BasicOutput) ([]*UserMuteGroupMember, string) {
 	unlockConditionSet := output.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
 	// convert address to actual address
@@ -275,29 +275,101 @@ func (im *Manager) GetUserMuteGroupMembersFromBasicOutput(output *iotago.BasicOu
 	featureSet := output.FeatureSet()
 	meta := featureSet.MetadataFeature()
 	if meta == nil {
-		return nil
+		return nil, ""
 	}
 	userMuteGroupMembers := im.deserializeUserMuteGroupMember(ownerAddress, meta.Data)
-	return userMuteGroupMembers
+	return userMuteGroupMembers, ownerAddress
 }
 
 // handle user mute group member basic output created
 func (im *Manager) HandleUserMuteGroupMemberBasicOutputCreated(output *iotago.BasicOutput, logger *logger.Logger) {
-	userMuteGroupMembers := im.GetUserMuteGroupMembersFromBasicOutput(output)
+	createdUserMuteGroupMembers, address := im.GetUserMuteGroupMembersFromBasicOutput(output)
 	if len(userMuteGroupMembers) == 0 {
 		return
 	}
-	for _, userMuteGroupMember := range userMuteGroupMembers {
-		err := im.StoreUserMuteGroupMember(userMuteGroupMember, logger)
-		if err != nil {
-			return
+	addressSha256Hash := Sha256HashFixed(address)
+	existingUserMuteGroupMembers, err := im.GetAllMuteGroupMembersFromAddress(addressSha256Hash, logger)
+	if err != nil {
+		return
+	}
+	// pair = groupId + '-' + mutedAddrSha256Hash
+	var existingUserMuteGroupMemberPairs []string
+	for _, existingUserMuteGroupMember := range existingUserMuteGroupMembers {
+		joined := iotago.EncodeHex(existingUserMuteGroupMember.GroupId[:]) + "-" + iotago.EncodeHex(existingUserMuteGroupMember.MutedAddrSha256Hash[:])
+		existingUserMuteGroupMemberPairs = append(existingUserMuteGroupMemberPairs, joined)
+	}
+	var createdUserMuteGroupMemberPairs []string
+	for _, createdUserMuteGroupMember := range createdUserMuteGroupMembers {
+		joined := iotago.EncodeHex(createdUserMuteGroupMember.GroupId[:]) + "-" + iotago.EncodeHex(createdUserMuteGroupMember.MutedAddrSha256Hash[:])
+		createdUserMuteGroupMemberPairs = append(createdUserMuteGroupMemberPairs, joined)
+	}
+	// calculate diff
+	var toCreateUserMuteGroupMemberPairs []string
+	for _, createdUserMuteGroupMemberPair := range createdUserMuteGroupMemberPairs {
+		found := false
+		for _, existingUserMuteGroupMemberPair := range existingUserMuteGroupMemberPairs {
+			if createdUserMuteGroupMemberPair == existingUserMuteGroupMemberPair {
+				found = true
+				break
+			}
+		}
+		if !found {
+			toCreateUserMuteGroupMemberPairs = append(toCreateUserMuteGroupMemberPairs, createdUserMuteGroupMemberPair)
+		}
+	}
+	var toDeleteUserMuteGroupMemberPairs []string
+	for _, existingUserMuteGroupMemberPair := range existingUserMuteGroupMemberPairs {
+		found := false
+		for _, createdUserMuteGroupMemberPair := range createdUserMuteGroupMemberPairs {
+			if existingUserMuteGroupMemberPair == createdUserMuteGroupMemberPair {
+				found = true
+				break
+			}
+		}
+		if !found {
+			toDeleteUserMuteGroupMemberPairs = append(toDeleteUserMuteGroupMemberPairs, existingUserMuteGroupMemberPair)
+		}
+	}
+	// create
+	for _, createdUserMuteGroupMember := range createdUserMuteGroupMembers {
+		joined := iotago.EncodeHex(createdUserMuteGroupMember.GroupId[:]) + "-" + iotago.EncodeHex(createdUserMuteGroupMember.MutedAddrSha256Hash[:])
+		found := false
+		for _, toCreateUserMuteGroupMemberPair := range toCreateUserMuteGroupMemberPairs {
+			if joined == toCreateUserMuteGroupMemberPair {
+				found = true
+				break
+			}
+		}
+		if found {
+			err := im.StoreUserMuteGroupMember(createdUserMuteGroupMember, logger)
+			if err != nil {
+				return
+			}
+		}
+	}
+
+	// delete
+	for _, existingUserMuteGroupMember := range existingUserMuteGroupMembers {
+		joined := iotago.EncodeHex(existingUserMuteGroupMember.GroupId[:]) + "-" + iotago.EncodeHex(existingUserMuteGroupMember.MutedAddrSha256Hash[:])
+		found := false
+		for _, toDeleteUserMuteGroupMemberPair := range toDeleteUserMuteGroupMemberPairs {
+			if joined == toDeleteUserMuteGroupMemberPair {
+				found = true
+				break
+			}
+		}
+		if found {
+			err := im.DeleteUserMuteGroupMember(existingUserMuteGroupMember)
+			if err != nil {
+				return
+			}
 		}
 	}
 }
 
 // handle user mute group member basic output consumed
 func (im *Manager) HandleUserMuteGroupMemberBasicOutputConsumed(output *iotago.BasicOutput) {
-	userMuteGroupMembers := im.GetUserMuteGroupMembersFromBasicOutput(output)
+	userMuteGroupMembers, _ := im.GetUserMuteGroupMembersFromBasicOutput(output)
 	if len(userMuteGroupMembers) == 0 {
 		return
 	}
