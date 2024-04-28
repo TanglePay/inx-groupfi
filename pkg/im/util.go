@@ -259,3 +259,33 @@ func BytesToFixedSha256HashLenBytes(bytes []byte) [Sha256HashLen]byte {
 	copy(fixed[:], bytes)
 	return fixed
 }
+
+func CalculateDiff[T any](created, existing []*T, getKey func(*T) string) (toCreate, toDelete []*T) {
+	existingMap := make(map[string]*T)
+	for _, e := range existing {
+		key := getKey(e)
+		existingMap[key] = e
+	}
+
+	createdMap := make(map[string]*T)
+	for _, c := range created {
+		key := getKey(c)
+		createdMap[key] = c
+	}
+
+	// Determine what to create (in created but not in existing)
+	for k, c := range createdMap {
+		if _, exists := existingMap[k]; !exists {
+			toCreate = append(toCreate, c)
+		}
+	}
+
+	// Determine what to delete (in existing but not in created)
+	for k, e := range existingMap {
+		if _, exists := createdMap[k]; !exists {
+			toDelete = append(toDelete, e)
+		}
+	}
+
+	return toCreate, toDelete
+}
