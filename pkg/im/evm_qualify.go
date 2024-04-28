@@ -107,7 +107,6 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 		if exist {
 			// log address exist
 			logger.Infof("StoreSingleEvmQualify address %s exist", addressHex)
-			continue
 		}
 
 		hash := [Sha256HashLen]byte{}
