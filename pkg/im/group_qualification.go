@@ -127,6 +127,8 @@ func (im *Manager) StoreGroupQualification(groupQualification *GroupQualificatio
 		if err != nil {
 			return err
 		}
+		// log mark exists
+		logger.Infof("StoreGroupQualification mark exists groupId %s, address %s, exists %v", iotago.EncodeHex(mark.GroupId[:]), mark.Address, exists)
 		if exists {
 			groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
 			isActuallyStored, err := im.StoreGroupMember(groupMember, logger)
