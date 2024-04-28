@@ -284,16 +284,22 @@ func (im *Manager) GetUserMuteGroupMembersFromBasicOutput(output *iotago.BasicOu
 // handle user mute group member basic output created
 func (im *Manager) HandleUserMuteGroupMemberBasicOutputCreated(output *iotago.BasicOutput, logger *logger.Logger) {
 	createdUserMuteGroupMembers, address := im.GetUserMuteGroupMembersFromBasicOutput(output)
+	// log createdUserMuteGroupMembers, address
+	logger.Infof("HandleUserMuteGroupMemberBasicOutputCreated: createdUserMuteGroupMembers=%v, address=%s", createdUserMuteGroupMembers, address)
 	addressSha256Hash := Sha256HashFixed(address)
 	existingUserMuteGroupMembers, err := im.GetAllMuteGroupMembersFromAddress(addressSha256Hash, logger)
 	if err != nil {
 		return
 	}
+	// log existingUserMuteGroupMembers
+	logger.Infof("HandleUserMuteGroupMemberBasicOutputCreated: existingUserMuteGroupMembers=%v", existingUserMuteGroupMembers)
 	getKey := func(userMuteGroupMember *UserMuteGroupMember) string {
 		joined := iotago.EncodeHex(userMuteGroupMember.GroupId[:]) + "-" + iotago.EncodeHex(userMuteGroupMember.MutedAddrSha256Hash[:])
 		return joined
 	}
 	toCreate, toDelete := CalculateDiff(createdUserMuteGroupMembers, existingUserMuteGroupMembers, getKey)
+	// log toCreate, toDelete
+	logger.Infof("HandleUserMuteGroupMemberBasicOutputCreated: toCreate=%v, toDelete=%v", toCreate, toDelete)
 	// create
 	for _, userMuteGroupMember := range toCreate {
 		err := im.StoreUserMuteGroupMember(userMuteGroupMember, logger)
