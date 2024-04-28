@@ -336,7 +336,7 @@ func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(consumedOutput *
 				break
 			}
 		}
-		if found {
+		if !found {
 			markedMarkGroupIds = append(markedMarkGroupIds, createdMarkGroupId)
 		}
 	}
