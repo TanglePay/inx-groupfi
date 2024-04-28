@@ -311,6 +311,8 @@ func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(consumedOutput *
 		logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
 		return
 	}
+	// log existingMarkGroupIds, createdMarkGroupIds
+	logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... existingMarkGroupIds:%v,createdMarkGroupIds:%v", existingMarkGroupIds, createdMarkGroupIds)
 	// calculate difference
 	var unmarkedMarkGroupIds []string
 	for _, existingMarkGroupId := range existingMarkGroupIds {
