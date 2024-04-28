@@ -123,11 +123,12 @@ func (im *Manager) GetVoteFromKeyAndValue(key kvstore.Key, value kvstore.Value) 
 }
 
 // get vote from address key and value
+// address vote key = prefix + addressSha256Hash + groupid,
 func (im *Manager) GetVoteFromAddressKeyAndValue(key kvstore.Key, value kvstore.Value) *Vote {
 	var addressSha256 [Sha256HashLen]byte
-	copy(addressSha256[:], key[1+Sha256HashLen:])
+	copy(addressSha256[:], key[1:1+Sha256HashLen])
 	var groupId [GroupIdLen]byte
-	copy(groupId[:], key[1+Sha256HashLen+Sha256HashLen:])
+	copy(groupId[:], key[1+Sha256HashLen:])
 	return NewVote(groupId, addressSha256, value[0])
 }
 
