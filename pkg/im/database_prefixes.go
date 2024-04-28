@@ -70,4 +70,6 @@ const (
 	ImStoreKeyPrefixPairXProxyAddressEvmAddress byte = 35
 
 	ImStoreKeyPrefixAddressVote byte = 36
+
+	ImStoreKeyPrefixAddressMute byte = 37
 )
