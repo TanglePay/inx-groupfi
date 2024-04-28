@@ -187,8 +187,7 @@ func (im *Manager) GetUserMuteGroupMemberFromAddressKeyAndValue(key kvstore.Key,
 }
 
 // get all mute group members from an address
-func (im *Manager) GetAllMuteGroupMembersFromAddress(muteAddrSha256Hash [Sha256HashLen]byte, logger *logger.Logger
-	) ([]*UserMuteGroupMember, error) {
+func (im *Manager) GetAllMuteGroupMembersFromAddress(muteAddrSha256Hash [Sha256HashLen]byte, logger *logger.Logger) ([]*UserMuteGroupMember, error) {
 	prefix := im.AddressMuteKeyPrefix(muteAddrSha256Hash)
 	var muteGroupMembers []*UserMuteGroupMember
 	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
