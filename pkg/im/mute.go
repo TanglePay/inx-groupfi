@@ -128,7 +128,12 @@ func (im *Manager) UpdateGroupBlacklist(userMuteGroupMember *UserMuteGroupMember
 // delete user mute group member
 func (im *Manager) DeleteUserMuteGroupMember(userMuteGroupMember *UserMuteGroupMember) error {
 	key := im.UserMuteGroupMemberKey(userMuteGroupMember)
+	addressKey := im.AddressMuteKey(userMuteGroupMember)
 	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	err = im.imStore.Delete(addressKey)
 	if err != nil {
 		return err
 	}
@@ -288,22 +293,12 @@ func (im *Manager) HandleUserMuteGroupMemberBasicOutputCreated(output *iotago.Ba
 		return joined
 	}
 	createdUserMuteGroupMembers, address := im.GetUserMuteGroupMembersFromBasicOutput(output)
-	// log getKey of each of createdUserMuteGroupMembers and address
-	for _, createdUserMuteGroupMember := range createdUserMuteGroupMembers {
-		logger.Infof("HandleUserMuteGroupMemberBasicOutputCreated: createdUserMuteGroupMember: getKey=%s, address=%s", getKey(createdUserMuteGroupMember), address)
-	}
 	addressSha256Hash := Sha256HashFixed(address)
 	existingUserMuteGroupMembers, err := im.GetAllMuteGroupMembersFromAddress(addressSha256Hash, logger)
 	if err != nil {
 		return
 	}
-	// log get key of each of existingUserMuteGroupMembers
-	for _, existingUserMuteGroupMember := range existingUserMuteGroupMembers {
-		logger.Infof("HandleUserMuteGroupMemberBasicOutputCreated: existingUserMuteGroupMember: getKey=%s", getKey(existingUserMuteGroupMember))
-	}
 	toCreate, toDelete := CalculateDiff(createdUserMuteGroupMembers, existingUserMuteGroupMembers, getKey)
-	// log toCreate, toDelete
-	logger.Infof("HandleUserMuteGroupMemberBasicOutputCreated: toCreate=%v, toDelete=%v", toCreate, toDelete)
 	// create
 	for _, userMuteGroupMember := range toCreate {
 		err := im.StoreUserMuteGroupMember(userMuteGroupMember, logger)
