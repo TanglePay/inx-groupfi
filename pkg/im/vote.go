@@ -173,7 +173,14 @@ func (im *Manager) CountVotesForGroup(groupId [GroupIdLen]byte) (int, int, error
 
 func (im *Manager) deserializeUserVoteGroup(address string, data []byte) []*Vote {
 	userVoteGroups := make([]*Vote, 0)
-	idx := 1
+	idx := 0
+	commonHeader, err := DeserializeCommonHeader(data, &idx)
+	if err != nil {
+		return nil
+	}
+	if !commonHeader.IsActAsSelf {
+		address = im.ConvertAddressToActualAddress(address)
+	}
 	for idx < len(data) {
 		groupId, err := ReadBytesWithUint16Len(data, &idx, GroupIdLen)
 		if err != nil {
@@ -196,8 +203,6 @@ func (im *Manager) deserializeUserVoteGroup(address string, data []byte) []*Vote
 func (im *Manager) GetUserVoteGroupsFromBasicOutput(output *iotago.BasicOutput) []*Vote {
 	unlock := output.UnlockConditionSet()
 	address := unlock.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
-	// ConvertAddressToActualAddress
-	address = im.ConvertAddressToActualAddress(address)
 	feature := output.FeatureSet()
 	meta := feature.MetadataFeature()
 	return im.deserializeUserVoteGroup(address, meta.Data)

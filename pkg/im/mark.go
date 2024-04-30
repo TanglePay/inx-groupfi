@@ -229,47 +229,52 @@ func (im *Manager) GetMarksFromAddress(address string, logger *logger.Logger) ([
 }
 
 // deserialized using func ReadBytesWithUint16Len(bytes []byte, idx *int, providedLength ...int) ([]byte, error) {
-func (im *Manager) DeserializeUserMarkedGroupIds(address string, data []byte) ([]*Mark, error) {
+func (im *Manager) DeserializeUserMarkedGroupIds(address string, data []byte) ([]*Mark, string, error) {
 	marks := make([]*Mark, 0)
-	idx := 1
+	idx := 0
+	commonHeader, err := DeserializeCommonHeader(data, &idx)
+	if err != nil {
+		return nil, "", err
+	}
+	if !commonHeader.IsActAsSelf {
+		address = im.ConvertAddressToActualAddress(address)
+	}
 	for idx < len(data) {
 		groupId, err := ReadBytesWithUint16Len(data, &idx, GroupIdLen)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		var groupIdBytes [GroupIdLen]byte
 		copy(groupIdBytes[:], groupId)
 		timestamp, err := ReadBytesWithUint16Len(data, &idx, TimestampLen)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		var timestampBytes [TimestampLen]byte
 		copy(timestampBytes[:], timestamp)
 		marks = append(marks, NewMark(address, groupIdBytes, timestampBytes))
 	}
-	return marks, nil
+	return marks, address, nil
 }
 
 // get unlock address and []*Mark from BasicOutput
 func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputId) ([]*Mark, string, error) {
 	unlockConditionSet := output.Output.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
-	// Convert address to actual address
-	ownerAddress = im.ConvertAddressToActualAddress(ownerAddress)
 	featureSet := output.Output.FeatureSet()
 	meta := featureSet.MetadataFeature()
 	if meta == nil {
 		return nil, "", errors.New("meta is nil")
 	}
 	outputId := output.OutputId
-	marks, err := im.DeserializeUserMarkedGroupIds(ownerAddress, meta.Data)
+	marks, address, err := im.DeserializeUserMarkedGroupIds(ownerAddress, meta.Data)
 	if err != nil {
 		return nil, "", err
 	}
 	for _, mark := range marks {
 		mark.OutputId = outputId
 	}
-	return marks, ownerAddress, nil
+	return marks, address, nil
 }
 
 // handle group mark basic output created

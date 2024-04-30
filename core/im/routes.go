@@ -46,6 +46,9 @@ const (
 	// group qualified addresses
 	RouteGroupQualifiedAddresses = "/groupqualifiedaddresses"
 
+	// group qualified (addresse, public key) pairs
+	RouteGroupQualifiedAddressPublicKeyPairs = "/groupqualifiedaddresspublickeypairs"
+
 	// is address qualified group
 	RouteIsAddressQualifiedGroup = "/isaddressqualifiedgroup"
 
@@ -398,6 +401,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
+	// RouteGroupQualifiedAddressPublicKeyPairs
+	e.GET(RouteGroupQualifiedAddressPublicKeyPairs, func(c echo.Context) error {
+		resp, err := getQualifiedAddressPublicKeyPairsForGroupId(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 	// RouteIsAddressQualifiedGroup
 	e.GET(RouteIsAddressQualifiedGroup, func(c echo.Context) error {
 		resp, err := isAddressQualifiedGroup(c)
