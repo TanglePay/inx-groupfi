@@ -71,14 +71,6 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeCreated)
 
-			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output, CoreComponent.Logger())
-			if is {
-				createdMute = append(createdMute, mute)
-			}
-			vote, is := deps.IMManager.FilterVoteOutputFromLedgerOutput(output, CoreComponent.Logger())
-			if is {
-				createdVote = append(createdVote, vote)
-			}
 			dids, err := deps.IMManager.FilterLedgerOutputForDid(output)
 			if err != nil {
 				// log error
@@ -114,14 +106,6 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeConsumed)
 
-			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output, CoreComponent.Logger())
-			if is {
-				consumedMute = append(consumedMute, mute)
-			}
-			vote, is := deps.IMManager.FilterVoteOutputFromLedgerOutput(output, CoreComponent.Logger())
-			if is {
-				consumedVote = append(consumedVote, vote)
-			}
 			dids, err := deps.IMManager.FilterLedgerOutputForDid(output)
 			if err != nil {
 				// log error
@@ -219,6 +203,15 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 						OutputId: outputId,
 					}
 					deps.IMManager.HandleGroupMarkBasicOutputConsumedAndCreated(markAndOutputId, CoreComponent.Logger())
+				}
+
+				mute, is := deps.IMManager.FilterMuteOutput(output, CoreComponent.Logger())
+				if is {
+					deps.IMManager.HandleUserMuteGroupMemberBasicOutputCreated(mute, CoreComponent.Logger())
+				}
+				vote, is := deps.IMManager.FilterVoteOutput(output, CoreComponent.Logger())
+				if is {
+					deps.IMManager.HandleUserVoteGroupBasicOutputCreated(vote, CoreComponent.Logger())
 				}
 			}
 		}
