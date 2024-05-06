@@ -105,14 +105,6 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if pairX != nil {
 				createdPairX = append(createdPairX, pairX)
 			}
-			evmQualify, err := deps.IMManager.FilterEvmQualifyFromLedgerOutput(output, CoreComponent.Logger())
-			if err != nil {
-				// log error
-				CoreComponent.LogErrorf("LedgerUpdate FilterEvmQualifyFromLedgerOutput error:%s", err.Error())
-			}
-			if evmQualify != nil {
-				createdEvmQualify = append(createdEvmQualify, evmQualify)
-			}
 		}
 		for _, spent := range update.Consumed {
 			output := spent.GetOutput()
@@ -225,6 +217,14 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 					pl = append(pl, meta...)
 					deps.IMManager.PushInbox(groupId, pl, CoreComponent.Logger())
 				}()
+			}
+			evmQualify, err := deps.IMManager.FilterEvmQualifyFromOutput(output, CoreComponent.Logger())
+			if err != nil {
+				// log error
+				CoreComponent.LogErrorf("LedgerUpdate FilterEvmQualifyFromLedgerOutput error:%s", err.Error())
+			}
+			if evmQualify != nil {
+				deps.IMManager.HandleEvmQualifyCreated(evmQualify, CoreComponent.Logger())
 			}
 		}
 	}
