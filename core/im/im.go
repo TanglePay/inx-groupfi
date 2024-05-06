@@ -518,6 +518,38 @@ func getMarkedAddressesFromGroupId(c echo.Context) ([]string, error) {
 	return addresses, nil
 }
 
+// getQualifiedAddressPublicKeyPairsForGroupId
+func getQualifiedAddressPublicKeyPairsForGroupId(c echo.Context) ([]*im.NFTResponse, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get qualified address public key pairs for groupId:%s", iotago.EncodeHex(groupId))
+	addresses, err := getQualifiedAddressesForGroupId(c)
+	if err != nil {
+		return nil, err
+	}
+	// map addresses to nfts, nft should be created with owner address only
+	var resp []*im.NFTResponse
+	for _, address := range addresses {
+		publicKey, err := deps.IMManager.ReadOnePublicKey(address)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("getQualifiedAddressPublicKeyPairsForGroupId ReadOnePublicKey failed:%s", err)
+			continue
+		}
+		var publicKeyHex string
+		if publicKey != nil {
+			publicKeyHex = iotago.EncodeHex(publicKey)
+		}
+		resp = append(resp, &im.NFTResponse{
+			OwnerAddress: address,
+			PublicKey:    publicKeyHex,
+		})
+	}
+	return resp, nil
+}
+
 // get all group member addresses from groupId
 func getGroupMembersFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
 	groupId, err := parseGroupIdQueryParam(c)
