@@ -38,12 +38,12 @@ func NewEvmQualify(groupId [GroupIdLen]byte, addressList [][EvmAddressLen]byte, 
 func UnmarshalEvmQualify(data []byte, logger *logger.Logger) (*EvmQualify, error) {
 	// schema(1byte) + signature length  + signature + group id + address list
 	idx := 0
-	schema, err := ReadBytesWithUint16Len(data, &idx, 1)
+	commonHeader, err := DeserializeCommonHeader(data, &idx)
 	if err != nil {
 		return nil, err
 	}
 	// log schema
-	logger.Infof("UnmarshalEvmQualify schema %d", schema[0])
+	logger.Infof("UnmarshalEvmQualify schema %d", commonHeader.SchemaVersion)
 	signatureBytes, err := ReadBytesWithUint16Len(data, &idx)
 	if err != nil {
 		return nil, err

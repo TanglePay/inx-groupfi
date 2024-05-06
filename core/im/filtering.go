@@ -169,10 +169,18 @@ func sharedOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte, milest
 		return nil
 	}
 	// groupid is GroupIdLen bytes of second byte of meta feature
-	groupId := metaPayload[1 : im.GroupIdLen+1]
+	idx := 0
+	commonHeader, err := im.DeserializeCommonHeader(metaPayload, &idx)
+	if err != nil {
+		return nil
+	}
+
+	groupId := metaPayload[idx : im.GroupIdLen+idx]
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
-	senderAddressStr = deps.IMManager.ConvertAddressToActualAddress(senderAddressStr)
+	if !commonHeader.IsActAsSelf {
+		senderAddressStr = deps.IMManager.ConvertAddressToActualAddress(senderAddressStr)
+	}
 	CoreComponent.LogInfof("Found GROUPFISHARED output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d，senderAddress:%s",
 		len(metaPayload),
 		len(groupId),
@@ -437,11 +445,19 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 		return nil
 	}
 	// groupid is GroupIdLen bytes from second byte of meta feature
-	groupId := metaPayload[1 : im.GroupIdLen+1]
+	idx := 0
+	commonHeader, err := im.DeserializeCommonHeader(metaPayload, &idx)
+	if err != nil {
+		return nil
+	}
+	groupId := metaPayload[idx : im.GroupIdLen+idx]
+
 	metapayloadSha256 := im.Sha256HashBytes(metaPayload)
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
-	senderAddressStr = deps.IMManager.ConvertAddressToActualAddress(senderAddressStr)
+	if !commonHeader.IsActAsSelf {
+		senderAddressStr = deps.IMManager.ConvertAddressToActualAddress(senderAddressStr)
+	}
 	senderAddressSha256 := im.Sha256Hash(senderAddressStr)
 	CoreComponent.LogInfof("Found GROUPFI Message output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d，senderAddress:%s",
 		len(metaPayload),

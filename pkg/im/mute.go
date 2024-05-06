@@ -247,19 +247,27 @@ func (im *Manager) CalculateReputationScore(groupId [GroupIdLen]byte, mutedAddrS
 	    return list;
 	}
 */
-func (im *Manager) deserializeUserMuteGroupMember(muteAddress string, data []byte) []*UserMuteGroupMember {
+func (im *Manager) deserializeUserMuteGroupMember(muteAddress string, data []byte) ([]*UserMuteGroupMember, string) {
 	userMuteGroupMembers := make([]*UserMuteGroupMember, 0)
-	idx := 1
+	idx := 0
+	commonHeader, err := DeserializeCommonHeader(data, &idx)
+	if err != nil {
+		return nil, ""
+	}
+	if !commonHeader.IsActAsSelf {
+		muteAddress = im.ConvertAddressToActualAddress(muteAddress)
+	}
+
 	for idx < len(data) {
 		groupId, err := ReadBytesWithUint16Len(data, &idx, GroupIdLen)
 		if err != nil {
-			return nil
+			return nil, ""
 		}
 		var groupIdBytes [GroupIdLen]byte
 		copy(groupIdBytes[:], groupId)
 		mutedAddrSha256Hash, err := ReadBytesWithUint16Len(data, &idx, Sha256HashLen)
 		if err != nil {
-			return nil
+			return nil, ""
 		}
 		var mutedAddrSha256HashBytes [Sha256HashLen]byte
 		copy(mutedAddrSha256HashBytes[:], mutedAddrSha256Hash)
@@ -268,22 +276,20 @@ func (im *Manager) deserializeUserMuteGroupMember(muteAddress string, data []byt
 		userMuteGroupMember := NewUserMuteGroupMember(groupIdBytes, muteAddrSha256HashBytes, mutedAddrSha256HashBytes)
 		userMuteGroupMembers = append(userMuteGroupMembers, userMuteGroupMember)
 	}
-	return userMuteGroupMembers
+	return userMuteGroupMembers, muteAddress
 }
 
 // get user mute group members from basicoutput
 func (im *Manager) GetUserMuteGroupMembersFromBasicOutput(output *iotago.BasicOutput) ([]*UserMuteGroupMember, string) {
 	unlockConditionSet := output.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
-	// convert address to actual address
-	ownerAddress = im.ConvertAddressToActualAddress(ownerAddress)
 	featureSet := output.FeatureSet()
 	meta := featureSet.MetadataFeature()
 	if meta == nil {
 		return nil, ""
 	}
-	userMuteGroupMembers := im.deserializeUserMuteGroupMember(ownerAddress, meta.Data)
-	return userMuteGroupMembers, ownerAddress
+	userMuteGroupMembers, adderss := im.deserializeUserMuteGroupMember(ownerAddress, meta.Data)
+	return userMuteGroupMembers, adderss
 }
 
 // handle user mute group member basic output created
