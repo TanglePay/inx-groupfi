@@ -273,7 +273,7 @@ func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputId) ([]*Mark, 
 }
 
 // handle group mark basic output created
-func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(consumedOutput *OutputAndOutputId, createdOutput *OutputAndOutputId, logger *logger.Logger) {
+func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(createdOutput *OutputAndOutputId, logger *logger.Logger) {
 
 	// log entering
 	logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ...")

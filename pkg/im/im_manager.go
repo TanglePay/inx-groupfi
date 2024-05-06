@@ -240,7 +240,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	}
 	// for each outputPair, call HandleGroupMarkBasicOutputConsumedAndCreated
 	for _, outputPair := range outputPairMap {
-		im.HandleGroupMarkBasicOutputConsumedAndCreated(outputPair.ConsumedOutput, outputPair.CreatedOutput, logger)
+		im.HandleGroupMarkBasicOutputConsumedAndCreated(outputPair.CreatedOutput, logger)
 	}
 	if len(consumedMute) > 0 {
 		for _, mute := range consumedMute {

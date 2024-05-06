@@ -71,16 +71,6 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeCreated)
 
-			mark, outputId, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output, CoreComponent.Logger())
-			markAndOutputId := &im.OutputAndOutputId{
-				Output:   mark,
-				OutputId: outputId,
-			}
-			if is {
-				// log found mark
-				CoreComponent.LogInfof("LedgerUpdate just found created mark:%s", iotago.EncodeHex(output.OutputId.Id))
-				createdMark = append(createdMark, markAndOutputId)
-			}
 			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output, CoreComponent.Logger())
 			if is {
 				createdMute = append(createdMute, mute)
@@ -124,16 +114,6 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeConsumed)
 
-			mark, outputId, is := deps.IMManager.FilterMarkOutputFromLedgerOutput(output, CoreComponent.Logger())
-			markAndOutputId := &im.OutputAndOutputId{
-				Output:   mark,
-				OutputId: outputId,
-			}
-			if is {
-				// log found mark
-				CoreComponent.LogInfof("LedgerUpdate just found consumed mark:%s", iotago.EncodeHex(output.OutputId.Id))
-				consumedMark = append(consumedMark, markAndOutputId)
-			}
 			mute, is := deps.IMManager.FilterMuteOutputFromLedgerOutput(output, CoreComponent.Logger())
 			if is {
 				consumedMute = append(consumedMute, mute)
@@ -206,25 +186,40 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 			continue
 		}
 		transaction := block.Payload.(*iotago.Transaction)
-		for _, output := range transaction.Essence.Outputs {
-			isMessage, sender, groupId, meta := filterOutputForPush(output)
-			if isMessage {
-				// log sender length
-				CoreComponent.LogInfof("LedgerUpdateBlock before push sender len:%d", len(sender))
-				go func() {
-					// prefix ImInboxMessageTypeNewMessageP2PV1 + sender + meta
-					pl := append([]byte{im.ImInboxEventTypeNewMessage}, sender...)
-					pl = append(pl, meta...)
-					deps.IMManager.PushInbox(groupId, pl, CoreComponent.Logger())
-				}()
-			}
-			evmQualify, err := deps.IMManager.FilterEvmQualifyFromOutput(output, CoreComponent.Logger())
-			if err != nil {
-				// log error
-				CoreComponent.LogErrorf("LedgerUpdate FilterEvmQualifyFromLedgerOutput error:%s", err.Error())
-			}
-			if evmQualify != nil {
-				deps.IMManager.HandleEvmQualifyCreated(evmQualify, CoreComponent.Logger())
+		outputSets, err := transaction.OutputsSet()
+		if err != nil {
+			// log error
+			CoreComponent.LogErrorf("LedgerUpdateBlock OutputsSet error:%s", err.Error())
+		} else {
+			for outputId, output := range outputSets {
+				isMessage, sender, groupId, meta := filterOutputForPush(output)
+				if isMessage {
+					// log sender length
+					CoreComponent.LogInfof("LedgerUpdateBlock before push sender len:%d", len(sender))
+					go func() {
+						// prefix ImInboxMessageTypeNewMessageP2PV1 + sender + meta
+						pl := append([]byte{im.ImInboxEventTypeNewMessage}, sender...)
+						pl = append(pl, meta...)
+						deps.IMManager.PushInbox(groupId, pl, CoreComponent.Logger())
+					}()
+				}
+				evmQualify, err := deps.IMManager.FilterEvmQualifyFromOutput(output, CoreComponent.Logger())
+				if err != nil {
+					// log error
+					CoreComponent.LogErrorf("LedgerUpdate FilterEvmQualifyFromLedgerOutput error:%s", err.Error())
+				}
+				if evmQualify != nil {
+					deps.IMManager.HandleEvmQualifyCreated(evmQualify, CoreComponent.Logger())
+				}
+				mark, is := deps.IMManager.FilterMarkOutput(output, CoreComponent.Logger())
+
+				if is {
+					markAndOutputId := &im.OutputAndOutputId{
+						Output:   mark,
+						OutputId: outputId,
+					}
+					deps.IMManager.HandleGroupMarkBasicOutputConsumedAndCreated(markAndOutputId, CoreComponent.Logger())
+				}
 			}
 		}
 	}
