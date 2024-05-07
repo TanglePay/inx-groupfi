@@ -301,11 +301,21 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	var groupParam GroupParam
+	hasGroupParam := true
+	err = c.Bind(&groupParam)
+	if err != nil {
+		hasGroupParam = false
+		CoreComponent.LogWarnf("getGroupIdsFromAddress ... Bind failed:%s", err)
+	}
 	CoreComponent.LogInfof("get groupIds from address:%s", address)
 	isEvmAddress := im.IsEvmAddress(address)
 	// if isEvmAddress, return all groupIds
 	if isEvmAddress {
 		groupIds := deps.IMManager.GetAllNonSmrGroupIds()
+		if hasGroupParam {
+			groupIds = filterGroupIdsFromGroupParam(groupIds, groupParam)
+		}
 		return groupIds, nil
 	}
 	addressSha256 := im.Sha256Hash(address)
@@ -341,6 +351,37 @@ type GroupData struct {
 type GroupParam struct {
 	Includes []GroupData `json:"includes"`
 	Excludes []GroupData `json:"excludes"`
+}
+
+// filter groupIds from group param
+func filterGroupIdsFromGroupParam(groupIds []string, groupParam GroupParam) []string {
+	includeGroupNameMap := map[string]bool{}
+	if len(groupParam.Includes) > 0 {
+		for _, include := range groupParam.Includes {
+			includeGroupNameMap[include.GroupName] = true
+		}
+	}
+	excludeGroupNameMap := map[string]bool{}
+	if len(groupParam.Excludes) > 0 {
+		for _, exclude := range groupParam.Excludes {
+			excludeGroupNameMap[exclude.GroupName] = true
+		}
+	}
+	var filteredGroupIds []string
+	for _, groupId := range groupIds {
+		config := im.ConfigStoreGroupIdToGroupConfig[groupId]
+		if config == nil {
+			continue
+		}
+		if (len(includeGroupNameMap) > 0) && (!includeGroupNameMap[config.GroupName]) {
+			continue
+		}
+		if (len(excludeGroupNameMap) > 0) && (excludeGroupNameMap[config.GroupName]) {
+			continue
+		}
+		filteredGroupIds = append(filteredGroupIds, groupId)
+	}
+	return filteredGroupIds
 }
 
 // getQualifiedGroupConfigsFromAddress
