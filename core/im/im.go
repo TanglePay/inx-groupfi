@@ -340,7 +340,9 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 			seen[groupId] = true
 		}
 	}
-
+	if hasGroupParam {
+		groupIdStrArr = filterGroupIdsFromGroupParam(groupIdStrArr, groupParam)
+	}
 	return groupIdStrArr, nil
 }
 
