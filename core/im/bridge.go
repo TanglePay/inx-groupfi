@@ -71,14 +71,6 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeCreated)
 
-			dids, err := deps.IMManager.FilterLedgerOutputForDid(output)
-			if err != nil {
-				// log error
-				CoreComponent.LogErrorf("LedgerUpdate FilterLedgerOutputForDid error:%s", err.Error())
-			}
-			if dids != nil {
-				createdDid = append(createdDid, dids...)
-			}
 			pairX, err := deps.IMManager.FilterPairXFromLedgerOutput(output, CoreComponent.Logger())
 			if err != nil {
 				// log error
@@ -195,6 +187,16 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 				if evmQualify != nil {
 					deps.IMManager.HandleEvmQualifyCreated(evmQualify, CoreComponent.Logger())
 				}
+
+				dids, err := deps.IMManager.FilterOutputForDid(output, outputId)
+				if err != nil {
+					// log error
+					CoreComponent.LogErrorf("LedgerUpdate FilterLedgerOutputForDid error:%s", err.Error())
+				}
+				if dids != nil {
+					deps.IMManager.HandleDidConsumedAndCreated(nil, dids, CoreComponent.Logger())
+				}
+
 				mark, is := deps.IMManager.FilterMarkOutput(output, CoreComponent.Logger())
 
 				if is {
