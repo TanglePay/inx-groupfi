@@ -116,8 +116,6 @@ func (im *Manager) ParseGroupQualificationKeyAndValue(key []byte, value []byte) 
 func (im *Manager) StoreGroupQualification(groupQualification *GroupQualification, logger *logger.Logger) error {
 	key := im.GroupQualificationKey(groupQualification)
 	value := im.GroupQualificationValue(groupQualification)
-	// log group qualification key and value
-	logger.Infof("StoreGroupQualification,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
 	err := im.imStore.Set(key, value)
 	if err != nil {
 		return err
@@ -129,6 +127,8 @@ func (im *Manager) StoreGroupQualification(groupQualification *GroupQualificatio
 		if err != nil {
 			return err
 		}
+		// log mark exists
+		logger.Infof("StoreGroupQualification mark exists groupId %s, address %s, exists %v", iotago.EncodeHex(mark.GroupId[:]), mark.Address, exists)
 		if exists {
 			groupMember := NewGroupMember(groupQualification.GroupId, groupQualification.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
 			isActuallyStored, err := im.StoreGroupMember(groupMember, logger)
@@ -150,14 +150,12 @@ func (im *Manager) StoreGroupQualification(groupQualification *GroupQualificatio
 // delete group qualification
 func (im *Manager) DeleteGroupQualification(groupQualification *GroupQualification, logger *logger.Logger) error {
 	key := im.GroupQualificationKey(groupQualification)
-	// log group qualification key
-	logger.Infof("DeleteGroupQualification,key:%s", iotago.EncodeHex(key))
 	err := im.imStore.Delete(key)
 	if err != nil {
 		return err
 	}
 	if !IsIniting {
-		isQualify, err := im.GroupQualificationExists(groupQualification.GroupId, groupQualification.Address)
+		isQualify, err := im.GroupQualificationExists(groupQualification.GroupId, groupQualification.Address, logger)
 		if err != nil {
 			return err
 		}
@@ -181,7 +179,9 @@ func (im *Manager) DeleteGroupQualification(groupQualification *GroupQualificati
 }
 
 // check if group qualification exists, input is group id and address
-func (im *Manager) GroupQualificationExists(groupId [GroupIdLen]byte, address string) (bool, error) {
+func (im *Manager) GroupQualificationExists(groupId [GroupIdLen]byte, address string, logger *logger.Logger) (bool, error) {
+	// log group qualification exists
+	//logger.Infof("GroupQualificationExists groupId %s, address %s", iotago.EncodeHex(groupId[:]), address)
 	addressHash := Sha256Hash(address)
 	var addressHash32 [Sha256HashLen]byte
 	copy(addressHash32[:], addressHash)
@@ -218,6 +218,9 @@ func (im *Manager) GetAllGroupQualificationsFromGroupId(groupId [GroupIdLen]byte
 			logger.Errorf("ParseGroupQualificationKeyAndValue error: %s", err)
 			return false
 		}
+		// log group qualification
+		logger.Infof("GetAllGroupQualificationsFromGroupId group qualification groupId %s, address %s, nftId %s, groupName %s, groupQualifyType %d, ipfsLink %s",
+			iotago.EncodeHex(groupQualification.GroupId[:]), groupQualification.Address, iotago.EncodeHex(groupQualification.NFTId[:]), groupQualification.GroupName, groupQualification.GroupQualifyType, groupQualification.IpfsLink)
 		groupQualifications = append(groupQualifications, groupQualification)
 		return true
 	})

@@ -35,14 +35,14 @@ func HandleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 
 	tokenPrefix := deps.IMManager.TokenKeyPrefixForAll()
 	var currentTokenId []byte
-	var previousTokenId []byte
+	// var previousTokenId []byte
 	var currentTokenIdHash [im.Sha256HashLen]byte
 	var previousTokenIdHash [im.Sha256HashLen]byte
 	var currentAddress string
 	var previousAddress string
 	var currentTotalAddress string
 	isPreviousAddressTotalAddress := false
-	currentTokenTotal := big.NewInt(0)
+	// currentTokenTotal := big.NewInt(0)
 	currentAddressTotal := big.NewInt(0)
 	// hash set for address
 	deps.IMManager.GetImStore().Iterate(tokenPrefix, func(key kvstore.Key, value kvstore.Value) bool {
@@ -84,9 +84,9 @@ func HandleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 			if isAddressDifferent {
 				// case total address
 				if isPreviousAddressTotalAddress {
-					currentTokenTotal = currentAddressTotal
+					// currentTokenTotal = currentAddressTotal
 					// log tokenId, currentTotalAddress, currentTokenTotal
-					CoreComponent.LogInfof("tokenId:%s,currentTotalAddress:%s,currentTokenTotal:%d", iotago.EncodeHex(previousTokenId), currentTotalAddress, currentTokenTotal)
+					// CoreComponent.LogInfof("tokenId:%s,currentTotalAddress:%s,currentTokenTotal:%d", iotago.EncodeHex(previousTokenId), currentTotalAddress, currentTokenTotal)
 					GetTokenTotal(previousTokenIdHash).Add(currentAddressTotal)
 
 				} else {
@@ -105,7 +105,7 @@ func HandleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 							CoreComponent.LogWarnf("LedgerInit ... handleTokenWhaleEligibilityFromAddressGivenTotalAmount failed:%s", err)
 						}
 						// log tokenId, currentAddress, currentAddressTotal
-						CoreComponent.LogInfof("tokenId:%s,currentAddress:%s,currentAddressTotal:%d, currentTokenTotal:%d", iotago.EncodeHex(currentTokenId), previousAddress, currentAddressTotal, currentTokenTotal)
+						// CoreComponent.LogInfof("tokenId:%s,currentAddress:%s,currentAddressTotal:%d, currentTokenTotal:%d", iotago.EncodeHex(currentTokenId), previousAddress, currentAddressTotal, currentTokenTotal)
 					}
 				}
 				currentAddressTotal = big.NewInt(0)
@@ -128,7 +128,7 @@ func HandleTotalInit(ctx context.Context, client *nodeclient.Client, indexerClie
 			isPreviousAddressTotalAddress = currentTotalAddress == currentAddress
 			previousAddress = currentAddress
 			previousTokenIdHash = currentTokenIdHash
-			previousTokenId = currentTokenId
+			// previousTokenId = currentTokenId
 		}
 		return true
 	})
@@ -234,14 +234,14 @@ func makeTokenInitDrainer(ctx context.Context, client *nodeclient.Client, indexe
 			CoreComponent.LogWarnf("LedgerInit ... OutputIDFromHex failed:%s", err)
 
 		}
-		did, err := deps.IMManager.FilterOutputForDid(output, outputIdIota)
+		dids, err := deps.IMManager.FilterOutputForDid(output, outputIdIota)
 		if err != nil {
 			// log error
 			CoreComponent.LogWarnf("LedgerInit ... FilterOutputForDid failed:%s", err)
 		}
-		if did != nil {
+		if dids != nil {
 			// handle did
-			createdDid := []*im.Did{did}
+			createdDid := dids
 			deps.IMManager.HandleDidConsumedAndCreated(nil, createdDid, CoreComponent.Logger())
 		}
 		// handle group config

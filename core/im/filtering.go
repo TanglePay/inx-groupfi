@@ -169,10 +169,18 @@ func sharedOutputFromINXOutput(iotaOutput iotago.Output, outputId []byte, milest
 		return nil
 	}
 	// groupid is GroupIdLen bytes of second byte of meta feature
-	groupId := metaPayload[1 : im.GroupIdLen+1]
+	idx := 0
+	commonHeader, err := im.DeserializeCommonHeader(metaPayload, &idx)
+	if err != nil {
+		return nil
+	}
+
+	groupId := metaPayload[idx : im.GroupIdLen+idx]
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
-
+	if !commonHeader.IsActAsSelf {
+		senderAddressStr = deps.IMManager.ConvertAddressToActualAddress(senderAddressStr)
+	}
 	CoreComponent.LogInfof("Found GROUPFISHARED output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d，senderAddress:%s",
 		len(metaPayload),
 		len(groupId),
@@ -270,7 +278,7 @@ func handleTokenAmount(amount *big.Int, tokenId []byte, iotaOutput iotago.Output
 	tokenStatus := outputStatusToTokenStatus(outputStatus)
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
-
+	// shimmer l1 token belong to proxy address
 	amountText := amount.Text(10)
 	tokenStat := deps.IMManager.NewTokenStat(tokenId, outputId, ownerAddress, tokenStatus, amountText)
 	err := deps.IMManager.StoreOneToken(tokenStat)
@@ -437,10 +445,19 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 		return nil
 	}
 	// groupid is GroupIdLen bytes from second byte of meta feature
-	groupId := metaPayload[1 : im.GroupIdLen+1]
+	idx := 0
+	commonHeader, err := im.DeserializeCommonHeader(metaPayload, &idx)
+	if err != nil {
+		return nil
+	}
+	groupId := metaPayload[idx : im.GroupIdLen+idx]
+
 	metapayloadSha256 := im.Sha256HashBytes(metaPayload)
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
+	if !commonHeader.IsActAsSelf {
+		senderAddressStr = deps.IMManager.ConvertAddressToActualAddress(senderAddressStr)
+	}
 	senderAddressSha256 := im.Sha256Hash(senderAddressStr)
 	CoreComponent.LogInfof("Found GROUPFI Message output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d，senderAddress:%s",
 		len(metaPayload),

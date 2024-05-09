@@ -77,13 +77,13 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 	}
 
 	// check if group qualification exists, if so, store group member
-	exists, err := im.GroupQualificationExists(mark.GroupId, mark.Address)
+	exists, err := im.GroupQualificationExists(mark.GroupId, mark.Address, logger)
 	if err != nil {
 		return err
 	}
 	// log group qualification GroupId, address, exists
 	logger.Infof("StoreMark,group qualification exists,groupId:%s,address:%s,exists:%t", iotago.EncodeHex(mark.GroupId[:]), mark.Address, exists)
-	if exists {
+	if exists && isActuallyMarked {
 		outputId := mark.OutputId
 		resp, err := NodeHTTPAPIClient.OutputMetadataByID(ListeningCtx, outputId)
 		if err != nil {
@@ -97,6 +97,15 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 			return err
 		}
 
+	} else {
+		// only mark changed, push mark changed event
+		if isActuallyMarked {
+			// push mark changed event
+			markChangedEvent := NewMarkChangedEvent(Sha256HashFixed(mark.Address), mark.GroupId, true, CurrentMilestoneTimestamp)
+			// log push mark changed event, address, topic
+			logger.Infof("StoreMark,push mark changed event,address:%s,topic:%s", mark.Address, iotago.EncodeHex(markChangedEvent.ToPushTopic()))
+			im.PushInbox(markChangedEvent.ToPushTopic(), markChangedEvent.ToPushPayload(), logger)
+		}
 	}
 	return nil
 }
@@ -127,6 +136,14 @@ func (im *Manager) DeleteMark(mark *Mark, isActuallyUnmarked bool, logger *logge
 		if err != nil {
 			return err
 		}
+	} else {
+		// only mark changed, push mark changed event
+		if isActuallyUnmarked {
+			// push mark changed event
+			markChangedEvent := NewMarkChangedEvent(Sha256HashFixed(mark.Address), mark.GroupId, false, CurrentMilestoneTimestamp)
+			im.PushInbox(markChangedEvent.ToPushTopic(), markChangedEvent.ToPushPayload(), logger)
+		}
+
 	}
 
 	return nil
@@ -212,131 +229,162 @@ func (im *Manager) GetMarksFromAddress(address string, logger *logger.Logger) ([
 }
 
 // deserialized using func ReadBytesWithUint16Len(bytes []byte, idx *int, providedLength ...int) ([]byte, error) {
-func (im *Manager) DeserializeUserMarkedGroupIds(address string, data []byte) ([]*Mark, error) {
+func (im *Manager) DeserializeUserMarkedGroupIds(address string, data []byte) ([]*Mark, string, error) {
 	marks := make([]*Mark, 0)
-	idx := 1
+	idx := 0
+	commonHeader, err := DeserializeCommonHeader(data, &idx)
+	if err != nil {
+		return nil, "", err
+	}
+	if !commonHeader.IsActAsSelf {
+		address = im.ConvertAddressToActualAddress(address)
+	}
 	for idx < len(data) {
 		groupId, err := ReadBytesWithUint16Len(data, &idx, GroupIdLen)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		var groupIdBytes [GroupIdLen]byte
 		copy(groupIdBytes[:], groupId)
 		timestamp, err := ReadBytesWithUint16Len(data, &idx, TimestampLen)
 		if err != nil {
-			return nil, err
+			return nil, "", err
 		}
 		var timestampBytes [TimestampLen]byte
 		copy(timestampBytes[:], timestamp)
 		marks = append(marks, NewMark(address, groupIdBytes, timestampBytes))
 	}
-	return marks, nil
+	return marks, address, nil
 }
 
 // get unlock address and []*Mark from BasicOutput
-func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputId) ([]*Mark, error) {
+func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputId) ([]*Mark, string, error) {
 	unlockConditionSet := output.Output.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
 	featureSet := output.Output.FeatureSet()
 	meta := featureSet.MetadataFeature()
 	if meta == nil {
-		return nil, errors.New("meta is nil")
+		return nil, "", errors.New("meta is nil")
 	}
 	outputId := output.OutputId
-	marks, err := im.DeserializeUserMarkedGroupIds(ownerAddress, meta.Data)
+	marks, address, err := im.DeserializeUserMarkedGroupIds(ownerAddress, meta.Data)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	for _, mark := range marks {
 		mark.OutputId = outputId
 	}
-	return marks, nil
+	return marks, address, nil
 }
 
 // handle group mark basic output created
-func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(consumedOutput *OutputAndOutputId, createdOutput *OutputAndOutputId, logger *logger.Logger) {
+func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(createdOutput *OutputAndOutputId, logger *logger.Logger) {
 
 	// log entering
 	logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ...")
-	var consumedMarks []*Mark
+	var createdMarkGroupIds []string
 	var createdMarks []*Mark
-	if consumedOutput != nil {
-		_consumedMarks, err := im.GetMarksFromBasicOutput(consumedOutput)
-		if err != nil {
-			// log error
-			logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
-			return
-		}
-		consumedMarks = _consumedMarks
-	}
+	var address string
 	if createdOutput != nil {
-		_createdMarks, err := im.GetMarksFromBasicOutput(createdOutput)
+		_createdMarks, _address, err := im.GetMarksFromBasicOutput(createdOutput)
 		if err != nil {
 			// log error
 			logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
 			return
 		}
 		createdMarks = _createdMarks
+		address = _address
 	}
-	// map consumed marks to map[GroupId]true
-	consumedMarksMap := make(map[[GroupIdLen]byte]bool)
-	for _, mark := range consumedMarks {
-		consumedMarksMap[mark.GroupId] = true
+	// log address
+	logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... address:%s", address)
+	if address == "" {
+		return
 	}
-	// map created marks to map[GroupId]true
-	createdMarksMap := make(map[[GroupIdLen]byte]bool)
 	for _, mark := range createdMarks {
-		createdMarksMap[mark.GroupId] = true
+		createdMarkGroupIds = append(createdMarkGroupIds, iotago.EncodeHex(mark.GroupId[:]))
 	}
-	// filter created marks out of consumed marks
-	// loop through consumed marks, if groupId is in created marks, delete it
-	var filteredConsumedMarks []*Mark
-	for _, mark := range consumedMarks {
-		_, ok := createdMarksMap[mark.GroupId]
-		if ok {
-			continue
+	var existingMarkGroupIds []string
+	var existingMarks []*Mark
+	err := im.imStore.Iterate(im.AddressMarkKeyPrefix(address), func(key kvstore.Key, value kvstore.Value) bool {
+		mark := im.AddressMarkKeyAndValueToMark(key, value)
+		existingMarks = append(existingMarks, mark)
+		existingMarkGroupIds = append(existingMarkGroupIds, iotago.EncodeHex(mark.GroupId[:]))
+		return true
+	})
+	if err != nil {
+		// log error
+		logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
+		return
+	}
+	// log existingMarkGroupIds, createdMarkGroupIds
+	logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... existingMarkGroupIds:%v,createdMarkGroupIds:%v", existingMarkGroupIds, createdMarkGroupIds)
+	// calculate difference
+	var unmarkedMarkGroupIds []string
+	for _, existingMarkGroupId := range existingMarkGroupIds {
+		found := false
+		for _, createdMarkGroupId := range createdMarkGroupIds {
+			if existingMarkGroupId == createdMarkGroupId {
+				found = true
+				break
+			}
 		}
-		filteredConsumedMarks = append(filteredConsumedMarks, mark)
+		if !found {
+			unmarkedMarkGroupIds = append(unmarkedMarkGroupIds, existingMarkGroupId)
+		}
 	}
-	// filter consumed marks out of created marks
-	// loop through created marks, if groupId is in consumed marks, delete it
-	var filteredCreatedMarks []*Mark
+	var markedMarkGroupIds []string
+	for _, createdMarkGroupId := range createdMarkGroupIds {
+		found := false
+		for _, existingMarkGroupId := range existingMarkGroupIds {
+			if existingMarkGroupId == createdMarkGroupId {
+				found = true
+				break
+			}
+		}
+		if !found {
+			markedMarkGroupIds = append(markedMarkGroupIds, createdMarkGroupId)
+		}
+	}
+	// log unmarkedMarkGroupIds, markedMarkGroupIds
+	logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... unmarkedMarkGroupIds:%v,markedMarkGroupIds:%v", unmarkedMarkGroupIds, markedMarkGroupIds)
+	// delete unmarked marks
+	for _, mark := range existingMarks {
+		found := false
+		for _, unmarkedMarkGroupId := range unmarkedMarkGroupIds {
+			if iotago.EncodeHex(mark.GroupId[:]) == unmarkedMarkGroupId {
+				found = true
+				break
+			}
+		}
+		if found {
+			err := im.DeleteMark(mark, true, logger)
+			if err != nil {
+				// log error
+				logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
+				return
+			}
+		}
+	}
+
+	// store marked marks
 	for _, mark := range createdMarks {
-		_, ok := consumedMarksMap[mark.GroupId]
-		if ok {
-			continue
+		found := false
+		for _, markedMarkGroupId := range markedMarkGroupIds {
+			if iotago.EncodeHex(mark.GroupId[:]) == markedMarkGroupId {
+				found = true
+				break
+			}
 		}
-		filteredCreatedMarks = append(filteredCreatedMarks, mark)
-	}
-	// store filtered consumed marks
-
-	for _, mark := range filteredConsumedMarks {
-		err := im.DeleteMark(mark, true, logger)
-		if err != nil {
-			// log error
-			logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
-			return
-		}
-	}
-	// store filtered created marks
-	for _, mark := range filteredCreatedMarks {
-		err := im.StoreMark(mark, true, logger)
-		if err != nil {
-			// log error
-			logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
-			return
+		if found {
+			err := im.StoreMark(mark, true, logger)
+			if err != nil {
+				// log error
+				logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
+				return
+			}
 		}
 	}
 
-	// store filtered created marks
-	for _, mark := range filteredCreatedMarks {
-		err := im.StoreMark(mark, true, logger)
-		if err != nil {
-			// log error
-			logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ... err:%s", err.Error())
-			return
-		}
-	}
 }
 
 var markTagRawStr = "GROUPFIMARKV2"

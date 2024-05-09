@@ -2,6 +2,7 @@ package im
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/TanglePay/inx-groupfi/pkg/im"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -28,6 +29,8 @@ func parseAddressQueryParam(c echo.Context) (string, error) {
 		return "", echo.ErrBadRequest
 	}
 	address := addressParams[0]
+	// to lower case
+	address = strings.ToLower(address)
 	return address, nil
 }
 
@@ -38,7 +41,11 @@ func parseAddressesFromBody(c echo.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	return addresses, nil
+	var lowerAddresses []string
+	for _, address := range addresses {
+		lowerAddresses = append(lowerAddresses, strings.ToLower(address))
+	}
+	return lowerAddresses, nil
 }
 func parseAddressQueryParamWithNil(c echo.Context) (string, error) {
 	addressParams := c.QueryParams()["address"]
@@ -46,6 +53,8 @@ func parseAddressQueryParamWithNil(c echo.Context) (string, error) {
 		return "", nil
 	}
 	address := addressParams[0]
+	// to lower case
+	address = strings.ToLower(address)
 	return address, nil
 }
 
@@ -292,7 +301,23 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
+	var groupParam GroupParam
+	hasGroupParam := true
+	err = c.Bind(&groupParam)
+	if err != nil {
+		hasGroupParam = false
+		CoreComponent.LogWarnf("getGroupIdsFromAddress ... Bind failed:%s", err)
+	}
 	CoreComponent.LogInfof("get groupIds from address:%s", address)
+	isEvmAddress := im.IsEvmAddress(address)
+	// if isEvmAddress, return all groupIds
+	if isEvmAddress {
+		groupIds := deps.IMManager.GetAllNonSmrGroupIds()
+		if hasGroupParam {
+			groupIds = filterGroupIdsFromGroupParam(groupIds, groupParam)
+		}
+		return groupIds, nil
+	}
 	addressSha256 := im.Sha256Hash(address)
 	groupIds, err := deps.IMManager.GetGroupIdsFromAddress(addressSha256)
 	if err != nil {
@@ -315,6 +340,9 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 			seen[groupId] = true
 		}
 	}
+	if hasGroupParam {
+		groupIdStrArr = filterGroupIdsFromGroupParam(groupIdStrArr, groupParam)
+	}
 
 	return groupIdStrArr, nil
 }
@@ -326,6 +354,37 @@ type GroupData struct {
 type GroupParam struct {
 	Includes []GroupData `json:"includes"`
 	Excludes []GroupData `json:"excludes"`
+}
+
+// filter groupIds from group param
+func filterGroupIdsFromGroupParam(groupIds []string, groupParam GroupParam) []string {
+	includeGroupNameMap := map[string]bool{}
+	if len(groupParam.Includes) > 0 {
+		for _, include := range groupParam.Includes {
+			includeGroupNameMap[include.GroupName] = true
+		}
+	}
+	excludeGroupNameMap := map[string]bool{}
+	if len(groupParam.Excludes) > 0 {
+		for _, exclude := range groupParam.Excludes {
+			excludeGroupNameMap[exclude.GroupName] = true
+		}
+	}
+	var filteredGroupIds []string
+	for _, groupId := range groupIds {
+		config := im.ConfigStoreGroupIdToGroupConfig[groupId]
+		if config == nil {
+			continue
+		}
+		if (len(includeGroupNameMap) > 0) && (!includeGroupNameMap[config.GroupName]) {
+			continue
+		}
+		if (len(excludeGroupNameMap) > 0) && (excludeGroupNameMap[config.GroupName]) {
+			continue
+		}
+		filteredGroupIds = append(filteredGroupIds, groupId)
+	}
+	return filteredGroupIds
 }
 
 // getQualifiedGroupConfigsFromAddress
@@ -406,7 +465,6 @@ func getAddressGroupDetails(c echo.Context) ([]*AddressGroupDetailsResponse, err
 	return AddressGroupDetailsResponseArr, nil
 }
 
-
 // get qualified address for a groupid
 func getQualifiedAddressesForGroupId(c echo.Context) ([]string, error) {
 	groupId, err := parseGroupIdQueryParam(c)
@@ -414,17 +472,40 @@ func getQualifiedAddressesForGroupId(c echo.Context) ([]string, error) {
 		return nil, err
 	}
 	CoreComponent.LogInfof("get qualified address for groupId:%s", iotago.EncodeHex(groupId))
-	nfts, err := deps.IMManager.ReadNFTsFromGroupId(groupId)
+	groupIdFixed := [im.GroupIdLen]byte{}
+	copy(groupIdFixed[:], groupId)
+	qualifications, err := deps.IMManager.GetAllGroupQualificationsFromGroupId(groupIdFixed, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
 	// nfts to addresses
 	var addresses []string
-	for _, nft := range nfts {
-		addresses = append(addresses, string(nft.OwnerAddress))
+	for _, qualification := range qualifications {
+		addresses = append(addresses, qualification.Address)
 	}
 	CoreComponent.LogInfof("get qualified address for groupId:%s,found addresses:%d", iotago.EncodeHex(groupId), len(addresses))
 	return addresses, nil
+}
+
+// isAddressQualifiedGroup
+func isAddressQualifiedGroup(c echo.Context) (bool, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return false, err
+	}
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return false, err
+	}
+	CoreComponent.LogInfof("is address qualified group from groupId:%s,address:%s", iotago.EncodeHex(groupId), address)
+	groupIdFixed := [im.GroupIdLen]byte{}
+	copy(groupIdFixed[:], groupId)
+	qualified, err := deps.IMManager.GroupQualificationExists(groupIdFixed, address, CoreComponent.Logger())
+	if err != nil {
+		return false, err
+	}
+	CoreComponent.LogInfof("is address qualified group from groupId:%s,address:%s,qualified:%t", iotago.EncodeHex(groupId), address, qualified)
+	return qualified, nil
 }
 
 // get all marked addresses from groupId
@@ -449,6 +530,38 @@ func getMarkedAddressesFromGroupId(c echo.Context) ([]string, error) {
 	return addresses, nil
 }
 
+// getQualifiedAddressPublicKeyPairsForGroupId
+func getQualifiedAddressPublicKeyPairsForGroupId(c echo.Context) ([]*im.NFTResponse, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get qualified address public key pairs for groupId:%s", iotago.EncodeHex(groupId))
+	addresses, err := getQualifiedAddressesForGroupId(c)
+	if err != nil {
+		return nil, err
+	}
+	// map addresses to nfts, nft should be created with owner address only
+	var resp []*im.NFTResponse
+	for _, address := range addresses {
+		publicKey, err := deps.IMManager.ReadOnePublicKey(address)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("getQualifiedAddressPublicKeyPairsForGroupId ReadOnePublicKey failed:%s", err)
+			continue
+		}
+		var publicKeyHex string
+		if publicKey != nil {
+			publicKeyHex = iotago.EncodeHex(publicKey)
+		}
+		resp = append(resp, &im.NFTResponse{
+			OwnerAddress: address,
+			PublicKey:    publicKeyHex,
+		})
+	}
+	return resp, nil
+}
+
 // get all group member addresses from groupId
 func getGroupMembersFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
 	groupId, err := parseGroupIdQueryParam(c)
@@ -462,24 +575,59 @@ func getGroupMembersFromGroupId(c echo.Context) ([]*im.NFTResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	// map addresses to nfts, nft should be created with owner address only
-	nfts := make([]*im.NFT, len(groupmembers))
-	var maxTimestamp uint32
-	for i, groupmember := range groupmembers {
-		nfts[i] = &im.NFT{
-			OwnerAddress:       []byte(groupmember.Address),
-			MileStoneTimestamp: groupmember.Timestamp,
-		}
-		if groupmember.Timestamp > maxTimestamp {
-			maxTimestamp = groupmember.Timestamp
-		}
+	// log first address and length
+	var firstAddress string
+	if len(groupmembers) > 0 {
+		firstAddress = groupmembers[0].Address
+	} else {
+		return nil, nil
 	}
-	CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d, maxTimestamp:%d", iotago.EncodeHex(groupId), len(nfts), maxTimestamp)
-	resp, err := deps.IMManager.FullfillNFTsWithPublickKey(nfts, im.PublicKeyDrainer, CoreComponent.Logger())
-	if err != nil {
-		return nil, err
+	CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d, first address:%s", iotago.EncodeHex(groupId), len(groupmembers), firstAddress)
+	// check if first address evm address
+	var isEvmAddress bool
+	if len(groupmembers) > 0 {
+		isEvmAddress = im.IsEvmAddress(groupmembers[0].Address)
 	}
-	return resp, nil
+	if isEvmAddress {
+		var resp []*im.NFTResponse
+		for _, groupmember := range groupmembers {
+			publicKey, err := deps.IMManager.ReadOnePublicKey(groupmember.Address)
+			if err != nil {
+				// log error then continue
+				CoreComponent.LogWarnf("getGroupMembersFromGroupId ReadOnePublicKey failed:%s", err)
+				continue
+			}
+			var publicKeyHex string
+			if publicKey != nil {
+				publicKeyHex = iotago.EncodeHex(publicKey)
+			}
+			resp = append(resp, &im.NFTResponse{
+				OwnerAddress: groupmember.Address,
+				PublicKey:    publicKeyHex,
+				Timestamp:    groupmember.Timestamp,
+			})
+		}
+		return resp, nil
+	} else {
+		// map addresses to nfts, nft should be created with owner address only
+		nfts := make([]*im.NFT, len(groupmembers))
+		var maxTimestamp uint32
+		for i, groupmember := range groupmembers {
+			nfts[i] = &im.NFT{
+				OwnerAddress:       []byte(groupmember.Address),
+				MileStoneTimestamp: groupmember.Timestamp,
+			}
+			if groupmember.Timestamp > maxTimestamp {
+				maxTimestamp = groupmember.Timestamp
+			}
+		}
+		CoreComponent.LogInfof("get group member addresses from groupId:%s,found addresses:%d, maxTimestamp:%d", iotago.EncodeHex(groupId), len(nfts), maxTimestamp)
+		resp, err := deps.IMManager.FullfillNFTsWithPublickKey(nfts, im.PublicKeyDrainer, CoreComponent.Logger())
+		if err != nil {
+			return nil, err
+		}
+		return resp, nil
+	}
 }
 
 // get all group votes from groupId
@@ -505,6 +653,51 @@ func getGroupVotes(c echo.Context) ([]*VoteResponse, error) {
 		}
 	}
 	return voteResponseArr, nil
+}
+
+// getAddressVotes
+func getAddressVotes(c echo.Context) ([]*VoteResponse, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address votes from address:%s", address)
+	addressSha256 := im.Sha256HashFixed(address)
+	votes, err := deps.IMManager.GetAllVotesFromAddressSha256Hash(addressSha256, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address votes from address:%s,found votes:%d", address, len(votes))
+	voteResponseArr := make([]*VoteResponse, len(votes))
+	for i, vote := range votes {
+		voteResponseArr[i] = &VoteResponse{
+			GroupId: iotago.EncodeHex(vote.GroupId[:]),
+			Vote:    int(vote.Vote),
+		}
+	}
+	return voteResponseArr, nil
+}
+
+// getAddressMutes
+func getAddressMutes(c echo.Context) ([]*MuteResponse, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	addressSha256 := im.Sha256HashFixed(address)
+	mutes, err := deps.IMManager.GetAllMuteGroupMembersFromAddress(addressSha256, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address mutes from address:%s,found mutes:%d", address, len(mutes))
+	muteResponseArr := make([]*MuteResponse, len(mutes))
+	for i, mute := range mutes {
+		muteResponseArr[i] = &MuteResponse{
+			GroupId:                iotago.EncodeHex(mute.GroupId[:]),
+			MutedAddressSha256Hash: iotago.EncodeHex(mute.MutedAddrSha256Hash[:]),
+		}
+	}
+	return muteResponseArr, nil
 }
 
 // getGroupVotesCount
@@ -568,8 +761,7 @@ func getAddressMarkGroups(c echo.Context) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	CoreComponent.LogInfof("get address mark groups from address:%s", address)
-	marks, err := deps.IMManager.GetMarksFromAddress(address, CoreComponent.Logger())
+	marks, err := getAddressMarkGroupMarks(address)
 	if err != nil {
 		return nil, err
 	}
@@ -579,6 +771,51 @@ func getAddressMarkGroups(c echo.Context) ([]string, error) {
 	}
 	CoreComponent.LogInfof("get address mark groups from address:%s,found groupIds:%d", address, len(groupIds))
 	return groupIds, nil
+}
+
+// getAddressMarkGroupDetails
+func getAddressMarkGroupDetails(c echo.Context) ([]*AddressGroupDetailsResponseLite, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	marks, err := getAddressMarkGroupMarks(address)
+	if err != nil {
+		return nil, err
+	}
+	groupDetails := make([]*AddressGroupDetailsResponseLite, len(marks))
+	for i, mark := range marks {
+		groupDetails[i] = &AddressGroupDetailsResponseLite{
+			GroupId:   iotago.EncodeHex(mark.GroupId[:]),
+			Timestamp: im.BytesToUint32(mark.Timestamp[:]),
+		}
+	}
+	return groupDetails, nil
+}
+
+// getAddressMarkGroupMarks
+func getAddressMarkGroupMarks(address string) ([]*im.Mark, error) {
+	CoreComponent.LogInfof("get address mark group marks from address:%s", address)
+	marks, err := deps.IMManager.GetMarksFromAddress(address, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	isEvmAddress := im.IsEvmAddress(address)
+	var filteredMarks []*im.Mark
+	for _, mark := range marks {
+		canAppend := true
+		groupIdStr := iotago.EncodeHex(mark.GroupId[:])
+		if isEvmAddress {
+			groupConfig := im.ConfigStoreGroupIdToGroupConfig[groupIdStr]
+			if groupConfig == nil || groupConfig.ChainName == "smr" {
+				canAppend = false
+			}
+		}
+		if canAppend {
+			filteredMarks = append(filteredMarks, mark)
+		}
+	}
+	return filteredMarks, nil
 }
 
 // getGroupUserReputation
@@ -672,13 +909,11 @@ func getInboxList(c echo.Context) (*InboxItemsResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	CoreComponent.LogInfof("get inbox message from address:%s,token:%d", address, token)
 	// get inbox message
 	inboxItems, err := deps.IMManager.ReadInbox(im.Sha256Hash(address), token, size, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
-	CoreComponent.LogInfof("get inbox items from address:%s,token:%d,found inbox items:%d", address, token, len(inboxItems))
 	// make inbox message response
 	inboxItemsResponse := makeInboxItemsResponse(inboxItems)
 	return inboxItemsResponse, nil
@@ -774,17 +1009,37 @@ func getEvmAddressPair(address string) (*EvmAddressPairResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	if pairX == nil {
+		return nil, nil
+	}
 	mmProxyAddress, tpProxyAddress, err := deps.IMManager.GetPairXProxyAddressFromEvmAddress(address)
 	if err != nil {
 		return nil, err
 	}
-	hasMM := mmProxyAddress != ""
-	hasTP := tpProxyAddress != ""
 	resp := &EvmAddressPairResponse{
-		PublicKey:  pairX.PublicKey,
-		PrivateKey: pairX.PrivateKey,
-		HasMM:      hasMM,
-		HasTP:      hasTP,
+		PublicKey:      pairX.PublicKey,
+		PrivateKey:     pairX.PrivateKey,
+		MMProxyAddress: mmProxyAddress,
+		TPProxyAddress: tpProxyAddress,
 	}
 	return resp, nil
+}
+
+// batchSmrAddressToEvmAddress
+func batchSmrAddressToEvmAddress(c echo.Context) ([]string, error) {
+	addresses, err := parseAddressesFromBody(c)
+	if err != nil {
+		return nil, err
+	}
+	evmAddresses := make([]string, len(addresses))
+	for i, address := range addresses {
+		evmAddress, err := deps.IMManager.GetPairXEvmAddressFromProxyAddress(address)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("batch smr address to evm address from addresses:%s failed:%s", addresses, err)
+			continue
+		}
+		evmAddresses[i] = evmAddress
+	}
+	return evmAddresses, nil
 }

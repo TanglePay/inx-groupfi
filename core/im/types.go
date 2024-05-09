@@ -39,6 +39,12 @@ type VoteResponse struct {
 	Vote              int    `json:"vote"`
 }
 
+// MuteResponse
+type MuteResponse struct {
+	GroupId                string `json:"groupId"`
+	MutedAddressSha256Hash string `json:"mutedAddressSha256Hash"`
+}
+
 // VoteCountResponse
 type VoteCountResponse struct {
 	GroupId      string `json:"groupId"`
@@ -52,6 +58,12 @@ type GroupUserReputationResponse struct {
 	GroupId           string  `json:"groupId"`
 	AddressSha256Hash string  `json:"addressSha256Hash"`
 	Reputation        float32 `json:"reputation"`
+}
+
+// AddressGroupDetailsResponse
+type AddressGroupDetailsResponseLite struct {
+	GroupId   string `json:"groupId"`
+	Timestamp uint32 `json:"timestamp"`
 }
 
 // test repuation response
@@ -71,10 +83,10 @@ type DidAddressResponse struct {
 
 // EvmAddressPairResponse
 type EvmAddressPairResponse struct {
-	PublicKey  string `json:"publicKey"`
-	PrivateKey string `json:"privateKeyEncrypted"`
-	HasMM      bool   `json:"hasMM"`
-	HasTP      bool   `json:"hasTP"`
+	PublicKey      string `json:"publicKey"`
+	PrivateKey     string `json:"privateKeyEncrypted"`
+	MMProxyAddress string `json:"mmProxyAddress"`
+	TPProxyAddress string `json:"tpProxyAddress"`
 }
 
 // enum for output type created or consumed

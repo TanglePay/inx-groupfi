@@ -67,6 +67,8 @@ func (im *Manager) FullfillNFTsWithPublickKey(nfts []*NFT, drainer *ItemDrainer,
 	// wrap nfts to {nft *im.NFT, respChan chan interface{}} and drain
 	nftsInterface := make([]interface{}, len(nfts))
 	for i, nft := range nfts {
+		// log nft address
+		logger.Infof("FullfillNFTsWithPublickKey nft address:%s", nft.OwnerAddress)
 		nftsInterface[i] = &NFTWithRespChan{
 			NFT:      nft,
 			RespChan: respChan,

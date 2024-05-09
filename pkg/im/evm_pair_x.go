@@ -27,9 +27,12 @@ type PairX struct {
 	PrivateKey   string
 	Signature    string
 	ProxyAddress string
-	Scenery      int // 1 for mm 2 for tp
+	Scenery      int // 1 for tp 2 for mm
 	Timestamp    int
 }
+
+const TPScenery = 1
+const MMScenery = 2
 
 // new PairX
 func NewPairX(evmAddress string, publicKey string, privateKey string, signature string, scenery int, proxyAddress string, timestamp int) *PairX {
@@ -164,6 +167,12 @@ func (im *Manager) StorePairX(pairX *PairX) error {
 	if err := im.imStore.Set(keyForPairXProxyAddressEvmAddress, valueForPairXProxyAddressEvmAddress); err != nil {
 		return err
 	}
+	// store evm address publickey
+	publicKeyBytes, err := iotago.DecodeHex(pairX.PublicKey)
+	if err != nil {
+		return err
+	}
+	im.StoreOnePublickKey(pairX.EvmAddress, publicKeyBytes)
 	return nil
 }
 
@@ -172,6 +181,10 @@ func (im *Manager) GetPairXFromEvmAddress(evmAddress string) (*PairX, error) {
 	key := im.PairXKey(NewPairX(evmAddress, "", "", "", 0, "", 0))
 	value, err := im.imStore.Get(key)
 	if err != nil {
+		// return nil for key not found
+		if errors.Is(err, kvstore.ErrKeyNotFound) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	return im.PairXFromKeyAndValue(key, value), nil
@@ -180,7 +193,7 @@ func (im *Manager) GetPairXFromEvmAddress(evmAddress string) (*PairX, error) {
 // get proxy address from evm address for both mm and tp
 func (im *Manager) GetPairXProxyAddressFromEvmAddress(evmAddress string) (string, string, error) {
 	// pairX from evm address
-	pairXMM := NewPairX(evmAddress, "", "", "", 1, "", 0)
+	pairXMM := NewPairX(evmAddress, "", "", "", MMScenery, "", 0)
 
 	// mm
 	var mmPairX *PairX
@@ -196,7 +209,7 @@ func (im *Manager) GetPairXProxyAddressFromEvmAddress(evmAddress string) (string
 	}
 	// tp
 	var tpPairX *PairX
-	pairXTP := NewPairX(evmAddress, "", "", "", 2, "", 0)
+	pairXTP := NewPairX(evmAddress, "", "", "", TPScenery, "", 0)
 	pairXEvmAddressSceneryProxyAddressKey = im.PairXEvmAddressSceneryProxyAddressKey(pairXTP)
 	pairXEvmAddressSceneryProxyAddressValue, err = im.imStore.Get(pairXEvmAddressSceneryProxyAddressKey)
 	if errors.Is(err, kvstore.ErrKeyNotFound) {
@@ -231,7 +244,7 @@ func (im *Manager) GetPairXEvmAddressFromProxyAddress(proxyAddress string) (stri
 }
 
 // filter pairX from LedgerOutput
-func (im *Manager) FilterPairXFromLedgerOutput(inxOutput *inx.LedgerOutput) (*PairX, error) {
+func (im *Manager) FilterPairXFromLedgerOutput(inxOutput *inx.LedgerOutput, logger *logger.Logger) (*PairX, error) {
 	if inxOutput == nil {
 		return nil, nil
 	}
@@ -240,11 +253,11 @@ func (im *Manager) FilterPairXFromLedgerOutput(inxOutput *inx.LedgerOutput) (*Pa
 		return nil, err
 	}
 	outputID := inxOutput.UnwrapOutputID()
-	return im.FilterPairXFromOutput(output, outputID)
+	return im.FilterPairXFromOutput(output, outputID, logger)
 }
 
 // filter pairX from output
-func (im *Manager) FilterPairXFromOutput(output iotago.Output, outputID iotago.OutputID) (*PairX, error) {
+func (im *Manager) FilterPairXFromOutput(output iotago.Output, outputID iotago.OutputID, logger *logger.Logger) (*PairX, error) {
 	if output == nil {
 		return nil, nil
 	}
@@ -252,20 +265,31 @@ func (im *Manager) FilterPairXFromOutput(output iotago.Output, outputID iotago.O
 	if !ok {
 		return nil, nil
 	}
-	return im.FilterPairXFromNFTOutput(nftOutput, outputID)
+	return im.FilterPairXFromNFTOutput(nftOutput, outputID, logger)
+}
+
+type PairXData struct {
+	EncryptedPrivateKey string `json:"encryptedPrivateKey"`
+	PairXPublicKey      string `json:"pairXPublicKey"`
+	EvmAddress          string `json:"evmAddress"`
+	Timestamp           int64  `json:"timestamp"`
+	Scenery             int    `json:"scenery"`
+	Signature           string `json:"signature"`
 }
 
 // filter pairX from nftOutput
-func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID iotago.OutputID) (*PairX, error) {
+func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID iotago.OutputID, logger *logger.Logger) (*PairX, error) {
 	if output == nil {
 		return nil, nil
 	}
 	// get tag
-	if output.ImmutableFeatureSet().TagFeature() == nil ||
-		output.ImmutableFeatureSet().TagFeature().Tag == nil ||
-		!bytes.Equal(output.ImmutableFeatureSet().TagFeature().Tag, pairXTag) {
+	if output.FeatureSet().TagFeature() == nil ||
+		output.FeatureSet().TagFeature().Tag == nil ||
+		!bytes.Equal(output.FeatureSet().TagFeature().Tag, pairXTag) {
 		return nil, nil
 	}
+	// log tag match
+	logger.Infof("FilterPairXFromNFTOutput ... tag match:%s", PairXTagStr)
 	// get metadata
 	if output.ImmutableFeatureSet().MetadataFeature() == nil || output.ImmutableFeatureSet().MetadataFeature().Data == nil {
 		return nil, nil
@@ -280,43 +304,55 @@ func (im *Manager) FilterPairXFromNFTOutput(output *iotago.NFTOutput, outputID i
 		  "signature": "0xccec1e146ff48198566e706d548536c4cc3e6afa3ac351c740fb9f951912b90f1fb064f33682ac12f9e9fad446e3a9dc7ce53dd81c36729fa41cf946f4d1138c1b"
 		}*/
 	// unmarshal metadata as json, using go library
-	metaMap := make(map[string]interface{})
-	err := json.Unmarshal(output.ImmutableFeatureSet().MetadataFeature().Data, &metaMap)
+	var data PairXData
+	// log unmarshal metadata
+	logger.Infof("FilterPairXFromNFTOutput ... metadata:%s", string(output.ImmutableFeatureSet().MetadataFeature().Data))
+	err := json.Unmarshal(output.ImmutableFeatureSet().MetadataFeature().Data, &data)
 	if err != nil {
 		return nil, err
 	}
 	// get each field of pairX, check nil then get from metaMap
-	evmAddress, ok := metaMap["evmAddress"].(string)
-	if !ok {
+	evmAddress := data.EvmAddress
+	if evmAddress == "" {
+		// log evm address nil
+		logger.Infof("FilterPairXFromNFTOutput ... evmAddress nil")
 		return nil, nil
 	}
-	publicKey, ok := metaMap["pairXPublicKey"].(string)
-	if !ok {
+	// to lower
+	evmAddress = strings.ToLower(evmAddress)
+	pairXPublicKey := data.PairXPublicKey
+	if pairXPublicKey == "" {
+		// log public key nil
+		logger.Infof("FilterPairXFromNFTOutput ... pairXPublicKey nil")
 		return nil, nil
 	}
-	privateKey, ok := metaMap["encryptedPrivateKey"].(string)
-	if !ok {
+	encryptedPrivateKey := data.EncryptedPrivateKey
+	if encryptedPrivateKey == "" {
+		// log encrypted private key nil
+		logger.Infof("FilterPairXFromNFTOutput ... encryptedPrivateKey nil")
 		return nil, nil
 	}
-	signature, ok := metaMap["signature"].(string)
-	if !ok {
+	signature := data.Signature
+	if signature == "" {
+		// log signature nil
+		logger.Infof("FilterPairXFromNFTOutput ... signature nil")
 		return nil, nil
 	}
-	scenery, ok := metaMap["scenery"].(int)
-	if !ok {
-		return nil, nil
-	}
-	timestamp, ok := metaMap["timestamp"].(int)
-	if !ok {
-		return nil, nil
-	}
+	scenery := data.Scenery
+	timestamp := int(data.Timestamp)
+	// log each field
+	logger.Infof("FilterPairXFromNFTOutput ... evmAddress:%s, pairXPublicKey:%s, encryptedPrivateKey:%s, signature:%s, scenery:%d, timestamp:%d",
+		evmAddress, pairXPublicKey, encryptedPrivateKey, signature, scenery, timestamp)
+
 	// get proxy address from unlock condition
 	unlockConditionSet := output.UnlockConditionSet()
 	if unlockConditionSet == nil {
 		return nil, nil
 	}
 	proxyAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
-	pairX := NewPairX(evmAddress, publicKey, privateKey, signature, int(scenery), proxyAddress, timestamp)
+	// log proxy address
+	logger.Infof("FilterPairXFromNFTOutput ... proxyAddress:%s", proxyAddress)
+	pairX := NewPairX(evmAddress, pairXPublicKey, encryptedPrivateKey, signature, scenery, proxyAddress, timestamp)
 
 	return pairX, nil
 }
@@ -367,8 +403,24 @@ func (im *Manager) VerifyPairXSignature(pairX *PairX) bool {
 
 // handle pairX created
 func (im *Manager) HandlePairXCreated(pairx *PairX, logger *logger.Logger) {
+	// log pairX creation
+	logger.Infof("HandlePairXCreated ... pairX:%+v", pairx)
 	//TODO validate signature
 	if err := im.StorePairX(pairx); err != nil {
 		logger.Warnf("HandlePairXCreated ... StorePairX failed:%s", err)
 	}
+}
+// convert address to actual address if a mapping exists
+func (im *Manager) ConvertAddressToActualAddress(address string) string {
+	// get pairX from evm address
+	evmAddress, err := im.GetPairXEvmAddressFromProxyAddress(address)
+	if err != nil {
+		return ""
+	}
+	if evmAddress == "" {
+		return address
+	}
+	// to lower
+	evmAddress = strings.ToLower(evmAddress)
+	return evmAddress
 }

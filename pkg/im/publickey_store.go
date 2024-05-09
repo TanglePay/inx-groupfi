@@ -28,8 +28,8 @@ func (im *Manager) DeleteOnePublicKey(bech32Address string) error {
 	return im.imStore.Delete(key)
 }
 
-func (im *Manager) ReadOnePublicKey(bech32Address string) ([]byte, error) {
-	key := keyFromAddressPublicKey(bech32Address)
+func (im *Manager) ReadOnePublicKey(address string) ([]byte, error) {
+	key := keyFromAddressPublicKey(address)
 	publicKey, err := im.imStore.Get(key)
 	if err != nil {
 		return nil, err
@@ -214,7 +214,7 @@ func (im *Manager) GetAddressPublicKey(ctx context.Context, client *nodeclient.C
 		publicKey, err := im.GetAddressPublicKeyFromTransactionId(ctx, client, transactionId, address, logger)
 		if err != nil {
 			// log error then continue
-			logger.Warnf("GetAddressPublicKeyFromTransactionId failed:%s", err)
+			// logger.Warnf("GetAddressPublicKeyFromTransactionId failed:%s", err)
 			continue
 		}
 		if publicKey != nil {
@@ -232,7 +232,7 @@ type OutputIdHexAndAddressPair struct {
 func (im *Manager) GetAddressPublicKeyFromTransactionId(ctx context.Context, client *nodeclient.Client, transactionId string, address string, logger *logger.Logger) ([]byte, error) {
 
 	// log transaction id
-	logger.Infof("GetAddressPublicKey, address:%s, transactionId:%s", address, transactionId)
+	// logger.Infof("GetAddressPublicKey, address:%s, transactionId:%s", address, transactionId)
 	publicKey, err := GetPublicKeyViaTransactionId(ctx, client, transactionId, address)
 	if err != nil {
 		return nil, err

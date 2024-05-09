@@ -203,6 +203,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	createdDid := dataFromListenning.CreatedDid
 	consumedDid := dataFromListenning.ConsumedDid
 	createdPairX := dataFromListenning.CreatedPairX
+	createdEvmQualify := dataFromListenning.CreatedEvmQualify
 	if len(createdMessage) > 0 {
 		msg := createdMessage[0]
 		logger.Infof("store new message: groupId:%s, outputId:%s, milestoneindex:%d, milestonetimestamp:%d", msg.GetGroupIdStr(), msg.GetOutputIdStr(), msg.MileStoneIndex, msg.MileStoneTimestamp)
@@ -239,7 +240,7 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 	}
 	// for each outputPair, call HandleGroupMarkBasicOutputConsumedAndCreated
 	for _, outputPair := range outputPairMap {
-		im.HandleGroupMarkBasicOutputConsumedAndCreated(outputPair.ConsumedOutput, outputPair.CreatedOutput, logger)
+		im.HandleGroupMarkBasicOutputConsumedAndCreated(outputPair.CreatedOutput, logger)
 	}
 	if len(consumedMute) > 0 {
 		for _, mute := range consumedMute {
@@ -281,6 +282,11 @@ func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromLis
 			im.HandlePairXCreated(pairX, logger)
 		}
 	}
+	if len(createdEvmQualify) > 0 {
+		for _, evmQualify := range createdEvmQualify {
+			im.HandleEvmQualifyCreated(evmQualify, logger)
+		}
+	}
 	return nil
 
 }
@@ -317,4 +323,5 @@ type DataFromListenning struct {
 	ConsumedDid                                []*Did
 	CreatedDid                                 []*Did
 	CreatedPairX                               []*PairX
+	CreatedEvmQualify                          []*EvmQualify
 }

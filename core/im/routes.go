@@ -46,6 +46,12 @@ const (
 	// group qualified addresses
 	RouteGroupQualifiedAddresses = "/groupqualifiedaddresses"
 
+
+	// groupqualifiedaddresspublickeypairs
+	RouteGroupQualifiedAddressPublicKeyPairs = "/groupqualifiedaddresspublickeypairs"
+	// is address qualified group
+	RouteIsAddressQualifiedGroup = "/isaddressqualifiedgroup"
+
 	// group marked addresses
 	RouteGroupMarkedAddresses = "/groupmarkedaddresses"
 
@@ -54,6 +60,12 @@ const (
 
 	// get group votes
 	RouteGroupVotes = "/groupvotes"
+
+	// get address votes
+	RouteAddressVotes = "/addressvotes"
+
+	// get address mutes
+	RouteAddressMutes = "/addressmutes"
 
 	// get group votes count
 	RouteGroupVotesCount = "/groupvotescount"
@@ -66,6 +78,9 @@ const (
 
 	// get address mark groups
 	RouteAddressMarkGroups = "/addressmarkgroups"
+
+	// get address mark group details
+	RouteAddressMarkGroupDetails = "/addressmarkgroupdetails"
 
 	// get group user reputation
 	RouteGroupUserReputation = "/groupuserreputation"
@@ -83,7 +98,10 @@ const (
 	RouteAddressDid = "/addressdid"
 
 	// get evm address pairx
-	RouteEvmAddressPair = "/saddresspairx"
+	RouteEvmAddressPair = "/addresspairx"
+
+	// batch smr address to evm address conversion
+	RouteBatchSmrAddressToEvmAddress = "/batchsmraddresstoevmaddress"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -383,6 +401,25 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
+
+	// group qualified (addresse, public key) pairs
+	e.GET(RouteGroupQualifiedAddressPublicKeyPairs, func(c echo.Context) error {
+		resp, err := getQualifiedAddressPublicKeyPairsForGroupId(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// RouteIsAddressQualifiedGroup
+	e.GET(RouteIsAddressQualifiedGroup, func(c echo.Context) error {
+		resp, err := isAddressQualifiedGroup(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
 	// group marked addresses
 	e.GET(RouteGroupMarkedAddresses, func(c echo.Context) error {
 		resp, err := getMarkedAddressesFromGroupId(c)
@@ -410,6 +447,23 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
+	// get address votes
+	e.GET(RouteAddressVotes, func(c echo.Context) error {
+		resp, err := getAddressVotes(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// RouteAddressMutes
+	e.GET(RouteAddressMutes, func(c echo.Context) error {
+		resp, err := getAddressMutes(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 	// RouteHealthCheck
 	e.GET(RouteHealthCheck, func(c echo.Context) error {
 		bootTime := im.BootTime
@@ -468,13 +522,20 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, groupIds)
 	})
 
+	// get address mark group details
+	e.GET(RouteAddressMarkGroupDetails, func(c echo.Context) error {
+		resp, err := getAddressMarkGroupDetails(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 	// get public key of one address
 	e.GET("/getaddresspublickey", func(c echo.Context) error {
 		address, err := parseAddressQueryParam(c)
 		if err != nil {
 			return err
 		}
-		CoreComponent.LogInfof("get address public key from address:%s", address)
 		publicKeyBytes, err := deps.IMManager.GetAddressPublicKey(ctx, client, address, false, CoreComponent.Logger())
 		if err != nil {
 			return err
@@ -572,5 +633,12 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
-
+	// RouteBatchSmrAddressToEvmAddress
+	e.POST(RouteBatchSmrAddressToEvmAddress, func(c echo.Context) error {
+		resp, err := batchSmrAddressToEvmAddress(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 }

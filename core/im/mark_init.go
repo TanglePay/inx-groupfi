@@ -25,7 +25,7 @@ func handleMarkInit(initCtx *InitContext) {
 				Output:   basicOutput,
 				OutputId: outputIdIota,
 			}
-			deps.IMManager.HandleGroupMarkBasicOutputConsumedAndCreated(nil, outputAndOutputId, initCtx.Logger)
+			deps.IMManager.HandleGroupMarkBasicOutputConsumedAndCreated(outputAndOutputId, initCtx.Logger)
 			return nil
 		},
 	}

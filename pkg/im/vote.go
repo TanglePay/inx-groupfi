@@ -19,6 +19,7 @@ type Vote struct {
 const (
 	VotePublic = iota
 	VotePrivate
+	VoteUnvote
 )
 
 // newVote creates a new Vote.
@@ -42,6 +43,16 @@ func (im *Manager) VoteKey(vote *Vote) []byte {
 	return key
 }
 
+// address vote key = prefix + addressSha256Hash + groupid, value = vote value
+func (im *Manager) AddressVoteKey(vote *Vote) []byte {
+	var key []byte
+	index := 0
+	AppendBytesWithUint16Len(&key, &index, []byte{ImStoreKeyPrefixAddressVote}, false)
+	AppendBytesWithUint16Len(&key, &index, vote.AddressSha256[:], false)
+	AppendBytesWithUint16Len(&key, &index, vote.GroupId[:], false)
+	return key
+}
+
 // store vote, check if user has group member, if not, return error
 func (im *Manager) StoreVote(vote *Vote, logger *logger.Logger) error {
 	if !IsIniting {
@@ -54,10 +65,15 @@ func (im *Manager) StoreVote(vote *Vote, logger *logger.Logger) error {
 		}
 	}
 	key := im.VoteKey(vote)
+	addressKey := im.AddressVoteKey(vote)
 	value := []byte{vote.Vote}
 	// log vote key and value
 	logger.Infof("StoreVote,key:%s,value:%s", iotago.EncodeHex(key), iotago.EncodeHex(value))
 	err := im.imStore.Set(key, value)
+	if err != nil {
+		return err
+	}
+	err = im.imStore.Set(addressKey, value)
 	groupId := vote.GroupId
 	im.TryCalculateIfGroupIsPublic(groupId, logger)
 	return err
@@ -66,9 +82,14 @@ func (im *Manager) StoreVote(vote *Vote, logger *logger.Logger) error {
 // delete vote
 func (im *Manager) DeleteVote(vote *Vote, logger *logger.Logger) error {
 	key := im.VoteKey(vote)
+	addressKey := im.AddressVoteKey(vote)
 	// log vote key
 	logger.Infof("DeleteVote,key:%s", iotago.EncodeHex(key))
 	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	err = im.imStore.Delete(addressKey)
 	groupId := vote.GroupId
 	im.TryCalculateIfGroupIsPublic(groupId, logger)
 	return err
@@ -84,12 +105,31 @@ func (im *Manager) VoteKeyPrefix(groupId [GroupIdLen]byte) []byte {
 	return key
 }
 
+// address vote key prefix
+func (im *Manager) AddressVoteKeyPrefix(addressSha256 [Sha256HashLen]byte) []byte {
+	var key []byte
+	index := 0
+	AppendBytesWithUint16Len(&key, &index, []byte{ImStoreKeyPrefixAddressVote}, false)
+	AppendBytesWithUint16Len(&key, &index, addressSha256[:], false)
+	return key
+}
+
 // get Vote from key and value
 func (im *Manager) GetVoteFromKeyAndValue(key kvstore.Key, value kvstore.Value) *Vote {
 	var groupId [GroupIdLen]byte
 	copy(groupId[:], key[1:1+GroupIdLen])
 	var addressSha256 [Sha256HashLen]byte
 	copy(addressSha256[:], key[1+GroupIdLen:])
+	return NewVote(groupId, addressSha256, value[0])
+}
+
+// get vote from address key and value
+// address vote key = prefix + addressSha256Hash + groupid,
+func (im *Manager) GetVoteFromAddressKeyAndValue(key kvstore.Key, value kvstore.Value) *Vote {
+	var addressSha256 [Sha256HashLen]byte
+	copy(addressSha256[:], key[1:1+Sha256HashLen])
+	var groupId [GroupIdLen]byte
+	copy(groupId[:], key[1+Sha256HashLen:])
 	return NewVote(groupId, addressSha256, value[0])
 }
 
@@ -104,6 +144,17 @@ func (im *Manager) GetAllVotesFromGroupId(groupId [GroupIdLen]byte, logger *logg
 	return votes, err
 }
 
+// get all votes from address sha256 hash
+func (im *Manager) GetAllVotesFromAddressSha256Hash(addressSha256 [Sha256HashLen]byte, logger *logger.Logger) ([]*Vote, error) {
+	prefix := im.AddressVoteKeyPrefix(addressSha256)
+	var votes []*Vote
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		votes = append(votes, im.GetVoteFromAddressKeyAndValue(key, value))
+		return true
+	})
+	return votes, err
+}
+
 // count votes for group
 func (im *Manager) CountVotesForGroup(groupId [GroupIdLen]byte) (int, int, error) {
 	prefix := im.VoteKeyPrefix(groupId)
@@ -112,7 +163,7 @@ func (im *Manager) CountVotesForGroup(groupId [GroupIdLen]byte) (int, int, error
 	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
 		if value[0] == VotePublic {
 			publicCt++
-		} else {
+		} else if value[0] == VotePrivate {
 			privateCt++
 		}
 		return true
@@ -122,7 +173,14 @@ func (im *Manager) CountVotesForGroup(groupId [GroupIdLen]byte) (int, int, error
 
 func (im *Manager) deserializeUserVoteGroup(address string, data []byte) []*Vote {
 	userVoteGroups := make([]*Vote, 0)
-	idx := 1
+	idx := 0
+	commonHeader, err := DeserializeCommonHeader(data, &idx)
+	if err != nil {
+		return nil
+	}
+	if !commonHeader.IsActAsSelf {
+		address = im.ConvertAddressToActualAddress(address)
+	}
 	for idx < len(data) {
 		groupId, err := ReadBytesWithUint16Len(data, &idx, GroupIdLen)
 		if err != nil {

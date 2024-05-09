@@ -1,7 +1,6 @@
 package im
 
 import (
-	"github.com/TanglePay/inx-groupfi/pkg/im"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -28,15 +27,15 @@ func ProcessAllNftFirstPass(initCtx *InitContext) {
 		func(outputId []byte, output iotago.Output, milestoneIndex uint32, milestoneTimestamp uint32, initCtx *InitContext) error {
 			var outputIDIota iotago.OutputID
 			copy(outputIDIota[:], outputId)
-			did, err := deps.IMManager.FilterOutputForDid(output, outputIDIota)
+			dids, err := deps.IMManager.FilterOutputForDid(output, outputIDIota)
 			if err != nil {
 				// log error
 				initCtx.Logger.Warnf("LedgerInit ... FilterOutputForDid failed:%s", err)
 				return err
 			}
-			if did != nil {
+			if dids != nil {
 				// handle did
-				createdDid := []*im.Did{did}
+				createdDid := dids
 				deps.IMManager.HandleDidConsumedAndCreated(nil, createdDid, initCtx.Logger)
 			}
 			return nil
@@ -45,7 +44,7 @@ func ProcessAllNftFirstPass(initCtx *InitContext) {
 		func(outputId []byte, output iotago.Output, milestoneIndex uint32, milestoneTimestamp uint32, initCtx *InitContext) error {
 			var outputIDIota iotago.OutputID
 			copy(outputIDIota[:], outputId)
-			pairX, err := deps.IMManager.FilterPairXFromOutput(output, outputIDIota)
+			pairX, err := deps.IMManager.FilterPairXFromOutput(output, outputIDIota, initCtx.Logger)
 			if err != nil {
 				return err
 			}
