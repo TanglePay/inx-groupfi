@@ -79,6 +79,14 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if pairX != nil {
 				createdPairX = append(createdPairX, pairX)
 			}
+			pairX, err := deps.IMManager.FilterPairXFromLedgerOutput(output)
+			if err != nil {
+				// log error
+				CoreComponent.LogErrorf("LedgerUpdate FilterPairXFromLedgerOutput error:%s", err.Error())
+			}
+			if pairX != nil {
+				createdPairX = append(createdPairX, pairX)
+			}
 		}
 		for _, spent := range update.Consumed {
 			output := spent.GetOutput()

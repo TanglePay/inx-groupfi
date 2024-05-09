@@ -410,7 +410,6 @@ func (im *Manager) HandlePairXCreated(pairx *PairX, logger *logger.Logger) {
 		logger.Warnf("HandlePairXCreated ... StorePairX failed:%s", err)
 	}
 }
-
 // convert address to actual address if a mapping exists
 func (im *Manager) ConvertAddressToActualAddress(address string) string {
 	// get pairX from evm address
