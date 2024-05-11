@@ -74,6 +74,8 @@ func (im *Manager) StoreEventToInbox(addressSha256Hash []byte, mileStoneIndex ui
 		logger.Errorf("StoreEventToInbox error %v", err)
 		return err
 	}
+	// log key value
+	logger.Infof("StoreEventToInbox key %s value %s", iotago.EncodeHex(key), iotago.EncodeHex(eventPayload))
 	return im.imStore.Set(key, eventPayload)
 }
 
