@@ -77,6 +77,35 @@ func NewGroupMemberChangedEvent(groupID [GroupIdLen]byte, mileStoneIndex uint32,
 	}
 }
 
+// get key of GroupMemberChangedEvent
+func GetTopicOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent) string {
+	return iotago.EncodeHex(groupMemberChangedEvent.GroupID[:])
+}
+
+// get payload of GroupMemberChangedEvent
+func GetPayloadOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent) []byte {
+	eventBytes := SerializeGroupMemberChangedEvent(groupMemberChangedEvent)
+	return append([]byte{ImInboxEventTypeGroupMemberChanged}, eventBytes...)
+}
+
+// getInbox func(*T) []byte, getEventType func(*T) byte,
+func getInboxOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent) []byte {
+	return Sha256Hash(groupMemberChangedEvent.Address)
+}
+
+func getEventTypeOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent) byte {
+	return ImInboxEventTypeGroupMemberChanged
+}
+
+// push event
+func GenAndPushGroupMemberChangedEvent(groupMember *GroupMember, isNewMember bool, im *Manager, logger *logger.Logger) error {
+	// get group member changed event
+	groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp, isNewMember, groupMember.Address)
+	// push event
+	return PushData(groupMemberChangedEvent, GetTopicOfGroupMemberChangedEvent, getInboxOfGroupMemberChangedEvent, getEventTypeOfGroupMemberChangedEvent,
+		GetPayloadOfGroupMemberChangedEvent, im, logger)
+}
+
 // inbox
 // inbox key from groupmemberchangedevent
 func (im *Manager) InboxKeyFromGroupMemberChangedEvent(receiverAddressSha256 []byte, groupMemberChangedEvent *GroupMemberChangedEvent) []byte {

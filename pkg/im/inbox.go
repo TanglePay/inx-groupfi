@@ -11,9 +11,10 @@ import (
 // inbox event types
 const (
 	// plain text, new message
-	ImInboxEventTypeNewMessage         byte = 1
-	ImInboxEventTypeGroupMemberChanged byte = 2
-	ImInboxEventTypeMarkChanged        byte = 4
+	ImInboxEventTypeNewMessage         byte   = 1
+	ImInboxEventTypeGroupMemberChanged byte   = 2
+	ImInboxEventTypeMarkChanged        byte   = 4
+	DefaultEventTtl                    uint32 = 30 // 30 seconds
 )
 
 type EventCommonFields struct {
@@ -45,6 +46,35 @@ type InboxItem interface {
 
 // prefix is ImStoreKeyPrefixInbox
 // inbox key from message, key = prefix + addressSha256Hash + mileStoneIndex + mileStoneTimestamp + metaSha256 + event type
+
+func (im *Manager) InboxKeyFromEventPayload(addressSha256Hash []byte, mileStoneIndex uint32, mileStoneTimestamp uint32, eventPayloadHash []byte, eventType byte) []byte {
+	index := 0
+	key := make([]byte, 1+Sha256HashLen+4+4+Sha256HashLen+1)
+	key[index] = ImStoreKeyPrefixInbox
+	index++
+	copy(key[index:], addressSha256Hash)
+	index += Sha256HashLen
+	binary.BigEndian.PutUint32(key[index:], mileStoneIndex)
+	index += 4
+	binary.BigEndian.PutUint32(key[index:], mileStoneTimestamp)
+	index += 4
+	copy(key[index:], eventPayloadHash)
+	index += Sha256HashLen
+	key[index] = eventType
+	return key
+}
+
+// store event to inbox, given addressSha256Hash, mileStoneIndex, mileStoneTimestamp, eventPayloadHash, eventType
+func (im *Manager) StoreEventToInbox(addressSha256Hash []byte, mileStoneIndex uint32, mileStoneTimestamp uint32, eventPayload []byte, eventType byte, logger *logger.Logger) error {
+	eventPayloadHash := Sha256HashBytes(eventPayload)
+	key := im.InboxKeyFromEventPayload(addressSha256Hash, mileStoneIndex, mileStoneTimestamp, eventPayloadHash, eventType)
+	err := StoreKeyAndValueToTtlStore(key, eventPayload, DefaultEventTtl, im)
+	if err != nil {
+		logger.Errorf("StoreEventToInbox error %v", err)
+		return err
+	}
+	return im.imStore.Set(key, eventPayload)
+}
 
 // inbox key from addressSha256Hash mileStoneIndex mileStoneTimestamp  metaSha256 event type
 func (im *Manager) InboxKeyFromValues(addressSha256Hash []byte, mileStoneIndex uint32, mileStoneTimestamp uint32, metaSha256 []byte, eventType byte) []byte {
