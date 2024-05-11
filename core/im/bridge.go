@@ -26,7 +26,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		im.CurrentMilestoneIndex = index
 		im.LastTimeReceiveEventFromHornet = im.GetCurrentEpochTimestamp()
 		// log
-		CoreComponent.LogInfof("LedgerUpdate start:%d, end::%d, milestoneIndex:%d", startIndex, endIndex, index)
+		CoreComponent.LogInfof("LedgerUpdate start:%d, end::%d, milestoneIndex:%d, milestoneTimestamp:%d", startIndex, endIndex, index, im.CurrentMilestoneTimestamp)
 		var createdMessage []*im.Message
 		var createdNft []*im.NFT
 		var createdShared []*im.GroupShared
