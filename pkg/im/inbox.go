@@ -152,7 +152,7 @@ func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte,
 
 		}
 		if eventType == ImInboxEventTypeGroupMemberChanged {
-			groupMemberChangedEvent, err := im.UnserializeGroupMemberChangedEvent(value)
+			groupMemberChangedEvent, err := im.UnserializeGroupMemberChangedEvent(value, logger)
 			if err != nil {
 				// log and continue
 				logger.Errorf("UnserializeGroupMemberChangedEvent error %v", err)
