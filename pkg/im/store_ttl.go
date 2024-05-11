@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hive.go/core/logger"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // get key for ttl store, key = prefix + timetoexpire + hash of data value
@@ -41,13 +43,15 @@ func GetTtlPrefix() []byte {
 }
 
 // iterate ttl store, get all keys that expired, and delete them
-func CleanTtlStoreUntilNow(im *Manager) error {
+func CleanTtlStoreUntilNow(im *Manager, logger *logger.Logger) error {
 	keyForCurrentTime := GetTimestampKey(CurrentMilestoneTimestamp)
 	// iterate ttl store
 	prefix := GetTtlPrefix()
 	return im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
 		// if key is expired, delete it, compare key with keyForCurrentTime
 		if bytes.Compare(key, keyForCurrentTime) < 0 {
+			// log key
+			logger.Infof("CleanTtlStoreUntilNow delete key %s", iotago.EncodeHex(key))
 			im.imStore.Delete(key)
 			return true
 		} else {
@@ -56,7 +60,7 @@ func CleanTtlStoreUntilNow(im *Manager) error {
 	})
 }
 
-func CleanTtlStore(ctx context.Context, im *Manager) error {
+func CleanTtlStore(ctx context.Context, im *Manager, logger *logger.Logger) error {
 	ticker := time.NewTicker(2 * time.Second) // Set the timer for 2 seconds
 	defer ticker.Stop()
 
@@ -66,7 +70,7 @@ func CleanTtlStore(ctx context.Context, im *Manager) error {
 			fmt.Println("Clean Ttl Timer stopped:", ctx.Err())
 			return nil
 		case <-ticker.C:
-			CleanTtlStoreUntilNow(im)
+			CleanTtlStoreUntilNow(im, logger)
 		}
 	}
 }

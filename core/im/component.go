@@ -256,7 +256,7 @@ func startTTLCleaningWorker() {
 	if err := CoreComponent.Daemon().BackgroundWorker("TTLCleaning", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting TTLCleaning ... done")
 
-		if err := im.CleanTtlStore(ctx, deps.IMManager); err != nil {
+		if err := im.CleanTtlStore(ctx, deps.IMManager, CoreComponent.Logger()); err != nil {
 			CoreComponent.LogWarnf("Listening to TTLCleaning failed: %s", err)
 			deps.ShutdownHandler.SelfShutdown("disconnected from INX", false)
 		}

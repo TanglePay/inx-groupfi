@@ -127,7 +127,7 @@ func SerializeGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChange
 }
 
 // unserialize group member changed event
-func (im *Manager) UnserializeGroupMemberChangedEvent(bytes []byte) (*GroupMemberChangedEvent, error) {
+func (im *Manager) UnserializeGroupMemberChangedEvent(bytes []byte, logger *logger.Logger) (*GroupMemberChangedEvent, error) {
 	idx := 0
 	groupIDBytes, err := ReadBytesWithUint16Len(bytes, &idx, GroupIdLen)
 	if err != nil {
@@ -135,26 +135,36 @@ func (im *Manager) UnserializeGroupMemberChangedEvent(bytes []byte) (*GroupMembe
 	}
 	groupID := [GroupIdLen]byte{}
 	copy(groupID[:], groupIDBytes)
+	// log groupID
+	logger.Infof("UnserializeGroupMemberChangedEvent groupID: %s", iotago.EncodeHex(groupID[:]))
 	milestoneIndexBytes, err := ReadBytesWithUint16Len(bytes, &idx, 4)
 	if err != nil {
 		return nil, err
 	}
 	milestoneIndex := BytesToUint32(milestoneIndexBytes)
+	// log milestoneIndex
+	logger.Infof("UnserializeGroupMemberChangedEvent milestoneIndex: %d", milestoneIndex)
 	milestoneTimestampBytes, err := ReadBytesWithUint16Len(bytes, &idx, 4)
 	if err != nil {
 		return nil, err
 	}
 	milestoneTimestamp := BytesToUint32(milestoneTimestampBytes)
+	// log milestoneTimestamp
+	logger.Infof("UnserializeGroupMemberChangedEvent milestoneTimestamp: %d", milestoneTimestamp)
 	isNewMemberBytes, err := ReadBytesWithUint16Len(bytes, &idx, 1)
 	if err != nil {
 		return nil, err
 	}
 	isNewMember := BytesToBool(isNewMemberBytes)
+	// log isNewMember
+	logger.Infof("UnserializeGroupMemberChangedEvent isNewMember: %v", isNewMember)
 	addressBytes, err := ReadBytesWithUint16Len(bytes, &idx)
 	if err != nil {
 		return nil, err
 	}
 	address := string(addressBytes)
+	// log address
+	logger.Infof("UnserializeGroupMemberChangedEvent address: %s", address)
 	return NewGroupMemberChangedEvent(groupID, milestoneIndex, milestoneTimestamp, isNewMember, address), nil
 }
 
