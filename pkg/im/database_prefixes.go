@@ -72,4 +72,6 @@ const (
 	ImStoreKeyPrefixAddressVote byte = 36
 
 	ImStoreKeyPrefixAddressMute byte = 37
+
+	ImStoreKeyPrefixTtl byte = 38
 )

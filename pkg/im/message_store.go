@@ -324,19 +324,6 @@ func (im *Manager) storeNewMessages(messages []*Message, logger *logger.Logger, 
 		logger.Infof("storeNewMessages : isPush %v", isPush)
 	}
 	for _, message := range messages {
-
-		/*
-			if isPush {
-				groupId := message.GroupId
-				// value = one byte type + groupId + outputId
-				value := make([]byte, 1+GroupIdLen+OutputIdLen)
-				value[0] = ImInboxMessageTypeNewMessage
-				copy(value[1:], message.GroupId)
-				copy(value[1+GroupIdLen:], message.OutputId)
-
-				go im.PushInbox(groupId, value, logger)
-			}
-		*/
 		err := im.storeSingleMessage(message, logger)
 		if err != nil {
 			return err

@@ -101,10 +101,10 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 		// only mark changed, push mark changed event
 		if isActuallyMarked {
 			// push mark changed event
-			markChangedEvent := NewMarkChangedEvent(Sha256HashFixed(mark.Address), mark.GroupId, true, CurrentMilestoneTimestamp)
-			// log push mark changed event, address, topic
-			logger.Infof("StoreMark,push mark changed event,address:%s,topic:%s", mark.Address, iotago.EncodeHex(markChangedEvent.ToPushTopic()))
-			im.PushInbox(markChangedEvent.ToPushTopic(), markChangedEvent.ToPushPayload(), logger)
+			err := GenAndPushMarkChangedEvent(mark, true, im)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
@@ -140,8 +140,10 @@ func (im *Manager) DeleteMark(mark *Mark, isActuallyUnmarked bool, logger *logge
 		// only mark changed, push mark changed event
 		if isActuallyUnmarked {
 			// push mark changed event
-			markChangedEvent := NewMarkChangedEvent(Sha256HashFixed(mark.Address), mark.GroupId, false, CurrentMilestoneTimestamp)
-			im.PushInbox(markChangedEvent.ToPushTopic(), markChangedEvent.ToPushPayload(), logger)
+			err := GenAndPushMarkChangedEvent(mark, false, im)
+			if err != nil {
+				return err
+			}
 		}
 
 	}

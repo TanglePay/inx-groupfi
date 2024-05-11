@@ -176,6 +176,10 @@ func (im *Manager) GetImStore() kvstore.KVStore {
 	return im.imStore
 }
 
+// get mqtt server
+func (im *Manager) GetMqttServer() *MQTTServer {
+	return im.mqttServer
+}
 func (im *Manager) ApplyNewLedgerUpdate(index iotago.MilestoneIndex, dataFromListenning *DataFromListenning, logger *logger.Logger, isSkipUpdate bool) error {
 	// Lock the state to avoid anyone reading partial results while we apply the state
 	im.Lock()
