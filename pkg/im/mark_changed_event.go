@@ -1,6 +1,9 @@
 package im
 
-import iotago "github.com/iotaledger/iota.go/v3"
+import (
+	"github.com/iotaledger/hive.go/core/logger"
+	iotago "github.com/iotaledger/iota.go/v3"
+)
 
 type MarkChangedEvent struct {
 	EventCommonFields
@@ -85,8 +88,16 @@ func GetPayloadOfMarkChangedEvent(m *MarkChangedEvent) []byte {
 	return append([]byte{ImInboxEventTypeMarkChanged}, eventBytes...)
 }
 
+func getInboxOfMarkChangedEvent(m *MarkChangedEvent) []byte {
+	return m.AddressSha256Hash[:]
+}
+
+func getEventTypeOfMarkChangedEvent(m *MarkChangedEvent) byte {
+	return ImInboxEventTypeMarkChanged
+}
+
 // gen and push MarkChangedEvent
-func GenAndPushMarkChangedEvent(mark *Mark, isNewMark bool, im *Manager) error {
+func GenAndPushMarkChangedEvent(mark *Mark, isNewMark bool, im *Manager, logger *logger.Logger) error {
 	event := NewMarkChangedEvent(Sha256HashFixed(mark.Address), mark.GroupId, isNewMark, CurrentMilestoneTimestamp)
-	return PushData(event, GetTopicOfMarkChangedEvent, GetPayloadOfMarkChangedEvent, im)
+	return PushData(event, GetTopicOfMarkChangedEvent, getInboxOfMarkChangedEvent, getEventTypeOfMarkChangedEvent, GetPayloadOfMarkChangedEvent, im, logger)
 }

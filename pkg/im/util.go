@@ -299,11 +299,15 @@ func PushData[T any](data *T, getTopic func(*T) string,
 	payload := getPayload(data)
 	inbox := getInbox(data)
 	eventType := getEventType(data)
-	err := manager.GetMqttServer().Publish("inbox/"+topic, payload)
+	// store to ttl store
+	err := manager.StoreEventToInbox(inbox, CurrentMilestoneIndex, CurrentMilestoneTimestamp, payload, eventType, logger)
 	if err != nil {
 		return err
 	}
-	// store to ttl store
-	err = manager.StoreEventToInbox(inbox, CurrentMilestoneIndex, CurrentMilestoneTimestamp, payload, eventType, logger)
+	err = manager.GetMqttServer().Publish("inbox/"+topic, payload)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }

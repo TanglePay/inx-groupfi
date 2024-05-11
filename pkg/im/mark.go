@@ -101,7 +101,7 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 		// only mark changed, push mark changed event
 		if isActuallyMarked {
 			// push mark changed event
-			err := GenAndPushMarkChangedEvent(mark, true, im)
+			err := GenAndPushMarkChangedEvent(mark, true, im, logger)
 			if err != nil {
 				return err
 			}
@@ -140,7 +140,7 @@ func (im *Manager) DeleteMark(mark *Mark, isActuallyUnmarked bool, logger *logge
 		// only mark changed, push mark changed event
 		if isActuallyUnmarked {
 			// push mark changed event
-			err := GenAndPushMarkChangedEvent(mark, false, im)
+			err := GenAndPushMarkChangedEvent(mark, false, im, logger)
 			if err != nil {
 				return err
 			}

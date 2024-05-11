@@ -88,12 +88,22 @@ func GetPayloadOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberCha
 	return append([]byte{ImInboxEventTypeGroupMemberChanged}, eventBytes...)
 }
 
+// getInbox func(*T) []byte, getEventType func(*T) byte,
+func getInboxOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent) []byte {
+	return Sha256Hash(groupMemberChangedEvent.Address)
+}
+
+func getEventTypeOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent) byte {
+	return ImInboxEventTypeGroupMemberChanged
+}
+
 // push event
-func GenAndPushGroupMemberChangedEvent(groupMember *GroupMember, isNewMember bool, im *Manager) error {
+func GenAndPushGroupMemberChangedEvent(groupMember *GroupMember, isNewMember bool, im *Manager, logger *logger.Logger) error {
 	// get group member changed event
 	groupMemberChangedEvent := NewGroupMemberChangedEvent(groupMember.GroupId, groupMember.MilestoneIndex, groupMember.Timestamp, isNewMember, groupMember.Address)
 	// push event
-	return PushData(groupMemberChangedEvent, GetTopicOfGroupMemberChangedEvent, GetPayloadOfGroupMemberChangedEvent, im)
+	return PushData(groupMemberChangedEvent, GetTopicOfGroupMemberChangedEvent, getInboxOfGroupMemberChangedEvent, getEventTypeOfGroupMemberChangedEvent,
+		GetPayloadOfGroupMemberChangedEvent, im, logger)
 }
 
 // inbox

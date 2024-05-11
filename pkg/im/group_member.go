@@ -108,7 +108,7 @@ func (im *Manager) StoreGroupMember(groupMember *GroupMember, logger *logger.Log
 		debouncer.Debounce(key, 100*time.Millisecond, func() {
 			// log
 			logger.Infof("GroupMemberChangedEvent, debouncer.Debounce, key:%s", key)
-			GenAndPushGroupMemberChangedEvent(groupMember, true, im)
+			GenAndPushGroupMemberChangedEvent(groupMember, true, im, logger)
 		})
 		im.TryCalculateIfGroupIsPublic(groupMember.GroupId, logger)
 	}
@@ -150,7 +150,7 @@ func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Lo
 			logger.Infof("GroupMemberChangedEvent, debouncer.Debounce, key:%s", key)
 
 			// create group member changed event
-			GenAndPushGroupMemberChangedEvent(groupMember, true, im)
+			GenAndPushGroupMemberChangedEvent(groupMember, true, im, logger)
 		})
 
 		im.TryCalculateIfGroupIsPublic(groupMember.GroupId, logger)
