@@ -76,7 +76,7 @@ func GetTopicOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChang
 // get payload of GroupMemberChangedEvent
 func GetPayloadOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent) []byte {
 	eventBytes := SerializeGroupMemberChangedEvent(groupMemberChangedEvent, Logger)
-	return append([]byte{ImInboxEventTypeGroupMemberChanged}, eventBytes...)
+	return eventBytes
 }
 
 // getInbox func(*T) []byte, getEventType func(*T) byte,
@@ -109,9 +109,8 @@ func SerializeGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChange
 	// using func AppendBytesWithUint16Len(bytes *[]byte, idx *int, slice []byte, appendLength bool) {
 	bytes := make([]byte, 0)
 	idx := 0
-	// log all fields
-	logger.Infof("SerializeGroupMemberChangedEvent groupID: %s, milestoneIndex: %d, milestoneTimestamp: %d, isNewMember: %v, address: %s",
-		iotago.EncodeHex(groupMemberChangedEvent.GroupID[:]), groupMemberChangedEvent.MilestoneIndex, groupMemberChangedEvent.MilestoneTimestamp, groupMemberChangedEvent.IsNewMember, groupMemberChangedEvent.Address)
+	// add prefix ImInboxEventTypeGroupMemberChanged
+	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImInboxEventTypeGroupMemberChanged}, false)
 	AppendBytesWithUint16Len(&bytes, &idx, groupMemberChangedEvent.GroupID[:], false)
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(groupMemberChangedEvent.MilestoneIndex), false)
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(groupMemberChangedEvent.MilestoneTimestamp), false)
@@ -125,6 +124,11 @@ func (im *Manager) UnserializeGroupMemberChangedEvent(bytes []byte, logger *logg
 	// log bytes
 	logger.Infof("UnserializeGroupMemberChangedEvent bytes: %s", iotago.EncodeHex(bytes))
 	idx := 0
+	// prefix
+	_, err := ReadBytesWithUint16Len(bytes, &idx, 1)
+	if err != nil {
+		return nil, err
+	}
 	groupIDBytes, err := ReadBytesWithUint16Len(bytes, &idx, GroupIdLen)
 	if err != nil {
 		return nil, err
