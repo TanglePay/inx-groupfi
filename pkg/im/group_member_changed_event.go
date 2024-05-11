@@ -44,15 +44,6 @@ func (g *GroupMemberChangedEvent) Jsonable() InboxItemJson {
 	return json
 }
 
-// implements InboxItem
-func (g *GroupMemberChangedEvent) ToPushTopic() []byte {
-	return g.GroupID[:]
-}
-func (g *GroupMemberChangedEvent) ToPushPayload() []byte {
-	eventBytes := SerializeGroupMemberChangedEvent(g)
-	return append([]byte{ImInboxEventTypeGroupMemberChanged}, eventBytes...)
-}
-
 type GroupMemberChangedEventJson struct {
 	EventJsonCommonFields
 	GroupID     string `json:"groupId"`
@@ -84,7 +75,7 @@ func GetTopicOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChang
 
 // get payload of GroupMemberChangedEvent
 func GetPayloadOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent) []byte {
-	eventBytes := SerializeGroupMemberChangedEvent(groupMemberChangedEvent)
+	eventBytes := SerializeGroupMemberChangedEvent(groupMemberChangedEvent, Logger)
 	return append([]byte{ImInboxEventTypeGroupMemberChanged}, eventBytes...)
 }
 

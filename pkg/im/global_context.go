@@ -3,6 +3,7 @@ package im
 import (
 	"context"
 
+	"github.com/iotaledger/hive.go/core/logger"
 	iotago "github.com/iotaledger/iota.go/v3"
 	"github.com/iotaledger/iota.go/v3/nodeclient"
 )
@@ -20,4 +21,5 @@ var (
 	NodeIndexerAPIClient           nodeclient.IndexerClient
 	ListeningCtx                   context.Context
 	CurrentNodeProtocol            *iotago.ProtocolParameters = nil
+	Logger                         *logger.Logger             = nil
 )
