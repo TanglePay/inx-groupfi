@@ -62,10 +62,38 @@ func (m *MarkChangedEventJson) SetEventType(eventType byte) {
 func SerializeMarkChangedEvent(m *MarkChangedEvent) []byte {
 	bytes := make([]byte, 0)
 	idx := 0
+	// add prefix
+	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImInboxEventTypeMarkChanged}, false)
 	AppendBytesWithUint16Len(&bytes, &idx, m.GroupID[:], false)
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(m.MilestoneTimestamp), false)
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{BoolToByte(m.IsNewMark)}, false)
 	return bytes
+}
+
+// unserialize MarkChangedEvent from bytes
+func (im *Manager) UnserializeMarkChangedEvent(bytes []byte) (*MarkChangedEvent, error) {
+	idx := 0
+	_, err := ReadBytesWithUint16Len(bytes, &idx, 1)
+	if err != nil {
+		return nil, err
+	}
+	groupID, err := ReadBytesWithUint16Len(bytes, &idx, GroupIdLen)
+	if err != nil {
+		return nil, err
+	}
+	var groupIDFixed [GroupIdLen]byte
+	copy(groupIDFixed[:], groupID)
+	milestoneTimestampBytes, err := ReadBytesWithUint16Len(bytes, &idx, 4)
+	if err != nil {
+		return nil, err
+	}
+	milestoneTimestamp := BytesToUint32(milestoneTimestampBytes)
+	isNewMarkBytes, err := ReadBytesWithUint16Len(bytes, &idx, 1)
+	if err != nil {
+		return nil, err
+	}
+	isNewMark := BytesToBool(isNewMarkBytes)
+	return NewMarkChangedEvent(groupIDFixed, groupIDFixed, isNewMark, milestoneTimestamp), nil
 }
 
 // implements InboxItem
@@ -85,7 +113,7 @@ func (m *MarkChangedEvent) ToPushPayload() []byte {
 // get payload of MarkChangedEvent
 func GetPayloadOfMarkChangedEvent(m *MarkChangedEvent) []byte {
 	eventBytes := SerializeMarkChangedEvent(m)
-	return append([]byte{ImInboxEventTypeMarkChanged}, eventBytes...)
+	return eventBytes
 }
 
 func getInboxOfMarkChangedEvent(m *MarkChangedEvent) []byte {

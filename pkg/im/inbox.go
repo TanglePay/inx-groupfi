@@ -165,6 +165,17 @@ func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte,
 			}
 			eventItem = groupMemberChangedEvent
 		}
+		if eventType == ImInboxEventTypeMarkChanged {
+			// log
+			logger.Infof("ReadInbox MarkChangedEvent key %s", iotago.EncodeHex(key))
+			markChangedEvent, err := im.UnserializeMarkChangedEvent(value)
+			if err != nil {
+				// log and continue
+				logger.Errorf("UnserializeMarkChangedEvent error %v", err)
+				return true
+			}
+			eventItem = markChangedEvent
+		}
 		eventItem.SetToken(token)
 		eventItem.SetEventType(eventType)
 		res = append(res, eventItem)
