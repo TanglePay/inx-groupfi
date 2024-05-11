@@ -6,6 +6,7 @@ import (
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // inbox event types
@@ -152,6 +153,8 @@ func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte,
 
 		}
 		if eventType == ImInboxEventTypeGroupMemberChanged {
+			// log
+			logger.Infof("ReadInbox GroupMemberChangedEvent key %s", iotago.EncodeHex(key))
 			groupMemberChangedEvent, err := im.UnserializeGroupMemberChangedEvent(value, logger)
 			if err != nil {
 				// log and continue

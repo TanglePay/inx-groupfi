@@ -50,8 +50,10 @@ func CleanTtlStoreUntilNow(im *Manager, logger *logger.Logger) error {
 	return im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
 		// if key is expired, delete it, compare key with keyForCurrentTime
 		if bytes.Compare(key, keyForCurrentTime) < 0 {
-			// log key
-			logger.Infof("CleanTtlStoreUntilNow delete key %s", iotago.EncodeHex(key))
+			// log key, current time, and delete key time
+			// key = prefix + timestamp + hash of data value
+			deletedKeyTime := BytesToUint32(key[1:(1 + 4)])
+			logger.Infof("CleanTtlStoreUntilNow delete key %s, current time %d, delete key time %d", iotago.EncodeHex(key), CurrentMilestoneTimestamp, deletedKeyTime)
 			im.imStore.Delete(key)
 			return true
 		} else {

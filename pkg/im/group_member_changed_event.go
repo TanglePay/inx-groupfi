@@ -108,13 +108,13 @@ func GenAndPushGroupMemberChangedEvent(groupMember *GroupMember, isNewMember boo
 
 // inbox
 // inbox key from groupmemberchangedevent
-func (im *Manager) InboxKeyFromGroupMemberChangedEvent(receiverAddressSha256 []byte, groupMemberChangedEvent *GroupMemberChangedEvent) []byte {
-	contentBytes := SerializeGroupMemberChangedEvent(groupMemberChangedEvent)
-	return im.InboxKeyFromValues(receiverAddressSha256, groupMemberChangedEvent.MilestoneIndex, groupMemberChangedEvent.MilestoneTimestamp, Sha256HashBytes(contentBytes), ImInboxEventTypeGroupMemberChanged)
+func (im *Manager) InboxKeyFromGroupMemberChangedEvent(receiverAddressSha256 []byte, groupMemberChangedEvent *GroupMemberChangedEvent,
+	contentHash []byte) []byte {
+	return im.InboxKeyFromValues(receiverAddressSha256, groupMemberChangedEvent.MilestoneIndex, groupMemberChangedEvent.MilestoneTimestamp, contentHash, ImInboxEventTypeGroupMemberChanged)
 }
 
 // serialize group member changed event
-func SerializeGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent) []byte {
+func SerializeGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent, logger *logger.Logger) []byte {
 	// using func AppendBytesWithUint16Len(bytes *[]byte, idx *int, slice []byte, appendLength bool) {
 	bytes := make([]byte, 0)
 	idx := 0
@@ -128,6 +128,8 @@ func SerializeGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChange
 
 // unserialize group member changed event
 func (im *Manager) UnserializeGroupMemberChangedEvent(bytes []byte, logger *logger.Logger) (*GroupMemberChangedEvent, error) {
+	// log bytes
+	logger.Infof("UnserializeGroupMemberChangedEvent bytes: %s", iotago.EncodeHex(bytes))
 	idx := 0
 	groupIDBytes, err := ReadBytesWithUint16Len(bytes, &idx, GroupIdLen)
 	if err != nil {
@@ -171,9 +173,10 @@ func (im *Manager) UnserializeGroupMemberChangedEvent(bytes []byte, logger *logg
 // store group member changed event to inbox
 func (im *Manager) StoreGroupMemberChangedEventToInbox(receiverAddressSha256 []byte, groupMemberChangedEvent *GroupMemberChangedEvent, logger *logger.Logger) error {
 	// serialize group member changed event
-	bytes := SerializeGroupMemberChangedEvent(groupMemberChangedEvent)
+	bytes := SerializeGroupMemberChangedEvent(groupMemberChangedEvent, logger)
+	hashOfBytes := Sha256HashBytes(bytes)
 	// get inbox key
-	key := im.InboxKeyFromGroupMemberChangedEvent(receiverAddressSha256, groupMemberChangedEvent)
+	key := im.InboxKeyFromGroupMemberChangedEvent(receiverAddressSha256, groupMemberChangedEvent, hashOfBytes)
 	// store to inbox
 	err := im.imStore.Set(key, bytes)
 	if err != nil {
