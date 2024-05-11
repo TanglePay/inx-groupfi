@@ -109,6 +109,9 @@ func SerializeGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChange
 	// using func AppendBytesWithUint16Len(bytes *[]byte, idx *int, slice []byte, appendLength bool) {
 	bytes := make([]byte, 0)
 	idx := 0
+	// log all fields
+	logger.Infof("SerializeGroupMemberChangedEvent groupID: %s, milestoneIndex: %d, milestoneTimestamp: %d, isNewMember: %v, address: %s",
+		iotago.EncodeHex(groupMemberChangedEvent.GroupID[:]), groupMemberChangedEvent.MilestoneIndex, groupMemberChangedEvent.MilestoneTimestamp, groupMemberChangedEvent.IsNewMember, groupMemberChangedEvent.Address)
 	AppendBytesWithUint16Len(&bytes, &idx, groupMemberChangedEvent.GroupID[:], false)
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(groupMemberChangedEvent.MilestoneIndex), false)
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(groupMemberChangedEvent.MilestoneTimestamp), false)
