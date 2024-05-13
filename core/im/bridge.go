@@ -71,22 +71,6 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeCreated)
 
-			pairX, err := deps.IMManager.FilterPairXFromLedgerOutput(output, CoreComponent.Logger())
-			if err != nil {
-				// log error
-				CoreComponent.LogErrorf("LedgerUpdate FilterPairXFromLedgerOutput error:%s", err.Error())
-			}
-			if pairX != nil {
-				createdPairX = append(createdPairX, pairX)
-			}
-			pairX, err = deps.IMManager.FilterPairXFromLedgerOutput(output, CoreComponent.Logger())
-			if err != nil {
-				// log error
-				CoreComponent.LogErrorf("LedgerUpdate FilterPairXFromLedgerOutput error:%s", err.Error())
-			}
-			if pairX != nil {
-				createdPairX = append(createdPairX, pairX)
-			}
 		}
 		for _, spent := range update.Consumed {
 			output := spent.GetOutput()
@@ -223,6 +207,15 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 				if is {
 					deps.IMManager.HandleUserVoteGroupBasicOutputCreated(vote, CoreComponent.Logger())
 				}
+				pairX, err := deps.IMManager.FilterPairXFromOutput(output, outputId, CoreComponent.Logger())
+				if err != nil {
+					// log error
+					CoreComponent.LogErrorf("LedgerUpdate FilterPairXFromLedgerOutput error:%s", err.Error())
+				}
+				if pairX != nil {
+					deps.IMManager.HandlePairXCreated(pairX, CoreComponent.Logger())
+				}
+
 			}
 		}
 	}
