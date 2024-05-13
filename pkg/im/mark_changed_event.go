@@ -62,8 +62,10 @@ func (m *MarkChangedEventJson) SetEventType(eventType byte) {
 func SerializeMarkChangedEvent(m *MarkChangedEvent) []byte {
 	bytes := make([]byte, 0)
 	idx := 0
+
 	// add prefix
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImInboxEventTypeMarkChanged}, false)
+
 	AppendBytesWithUint16Len(&bytes, &idx, m.GroupID[:], false)
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(m.MilestoneTimestamp), false)
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{BoolToByte(m.IsNewMark)}, false)
@@ -95,6 +97,7 @@ func (im *Manager) UnserializeMarkChangedEvent(bytes []byte) (*MarkChangedEvent,
 	isNewMark := BytesToBool(isNewMarkBytes)
 	return NewMarkChangedEvent(groupIDFixed, groupIDFixed, isNewMark, milestoneTimestamp), nil
 }
+
 
 // implements InboxItem
 func (m *MarkChangedEvent) ToPushTopic() []byte {

@@ -105,6 +105,7 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 			if err != nil {
 				return err
 			}
+
 		}
 	}
 	return nil
