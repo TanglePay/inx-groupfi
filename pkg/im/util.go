@@ -13,6 +13,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/iotaledger/hive.go/core/logger"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -288,4 +289,25 @@ func CalculateDiff[T any](created, existing []*T, getKey func(*T) string) (toCre
 	}
 
 	return toCreate, toDelete
+}
+
+// push data
+func PushData[T any](data *T, getTopic func(*T) string,
+	getInbox func(*T) []byte, getEventType func(*T) byte,
+	getPayload func(*T) []byte, manager *Manager, logger *logger.Logger) error {
+	topic := getTopic(data)
+	payload := getPayload(data)
+	inbox := getInbox(data)
+	eventType := getEventType(data)
+	// store to ttl store
+	err := manager.StoreEventToInbox(inbox, CurrentMilestoneIndex, CurrentMilestoneTimestamp, payload, eventType, logger)
+	if err != nil {
+		return err
+	}
+	err = manager.GetMqttServer().Publish("inbox/"+topic, payload)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

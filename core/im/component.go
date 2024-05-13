@@ -250,7 +250,25 @@ func startListeningToLedgerUpdate() {
 	}
 }
 
+// start ttl cleaning worker
+func startTTLCleaningWorker() {
+	// create a background worker that handles the ttl cleaning
+	if err := CoreComponent.Daemon().BackgroundWorker("TTLCleaning", func(ctx context.Context) {
+		CoreComponent.LogInfo("Starting TTLCleaning ... done")
+
+		if err := im.CleanTtlStore(ctx, deps.IMManager, CoreComponent.Logger()); err != nil {
+			CoreComponent.LogWarnf("Listening to TTLCleaning failed: %s", err)
+			deps.ShutdownHandler.SelfShutdown("disconnected from INX", false)
+		}
+
+		CoreComponent.LogInfo("Stopping TTLCleaning ... done")
+	}, daemon.PriorityStopIMTTLCleaning); err != nil {
+		CoreComponent.LogPanicf("failed to start worker: %s", err)
+	}
+}
+
 func run() error {
+	im.Logger = CoreComponent.Logger()
 	im.IsIniting = true
 	im.BootTime = im.GetCurrentEpochTimestamp()
 	// load .groupfi-env file
@@ -316,6 +334,7 @@ func run() error {
 		CoreComponent.LogInfo("Finishing LedgerInit ... done")
 		im.IsIniting = false
 		startListeningToLedgerUpdate()
+		startTTLCleaningWorker()
 	}, daemon.PriorityStopIMInit); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}

@@ -1,6 +1,9 @@
 package im
 
-import iotago "github.com/iotaledger/iota.go/v3"
+import (
+	"github.com/iotaledger/hive.go/core/logger"
+	iotago "github.com/iotaledger/iota.go/v3"
+)
 
 type MarkChangedEvent struct {
 	EventCommonFields
@@ -59,18 +62,73 @@ func (m *MarkChangedEventJson) SetEventType(eventType byte) {
 func SerializeMarkChangedEvent(m *MarkChangedEvent) []byte {
 	bytes := make([]byte, 0)
 	idx := 0
+
+	// add prefix
+	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImInboxEventTypeMarkChanged}, false)
+
 	AppendBytesWithUint16Len(&bytes, &idx, m.GroupID[:], false)
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(m.MilestoneTimestamp), false)
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{BoolToByte(m.IsNewMark)}, false)
 	return bytes
 }
 
+// unserialize MarkChangedEvent from bytes
+func (im *Manager) UnserializeMarkChangedEvent(bytes []byte) (*MarkChangedEvent, error) {
+	idx := 0
+	_, err := ReadBytesWithUint16Len(bytes, &idx, 1)
+	if err != nil {
+		return nil, err
+	}
+	groupID, err := ReadBytesWithUint16Len(bytes, &idx, GroupIdLen)
+	if err != nil {
+		return nil, err
+	}
+	var groupIDFixed [GroupIdLen]byte
+	copy(groupIDFixed[:], groupID)
+	milestoneTimestampBytes, err := ReadBytesWithUint16Len(bytes, &idx, 4)
+	if err != nil {
+		return nil, err
+	}
+	milestoneTimestamp := BytesToUint32(milestoneTimestampBytes)
+	isNewMarkBytes, err := ReadBytesWithUint16Len(bytes, &idx, 1)
+	if err != nil {
+		return nil, err
+	}
+	isNewMark := BytesToBool(isNewMarkBytes)
+	return NewMarkChangedEvent(groupIDFixed, groupIDFixed, isNewMark, milestoneTimestamp), nil
+}
+
+
 // implements InboxItem
 func (m *MarkChangedEvent) ToPushTopic() []byte {
 	return m.AddressSha256Hash[:]
 }
 
+// getTopic of MarkChangedEvent
+func GetTopicOfMarkChangedEvent(m *MarkChangedEvent) string {
+	return iotago.EncodeHex(m.AddressSha256Hash[:])
+}
 func (m *MarkChangedEvent) ToPushPayload() []byte {
 	eventBytes := SerializeMarkChangedEvent(m)
 	return append([]byte{ImInboxEventTypeMarkChanged}, eventBytes...)
+}
+
+// get payload of MarkChangedEvent
+func GetPayloadOfMarkChangedEvent(m *MarkChangedEvent) []byte {
+	eventBytes := SerializeMarkChangedEvent(m)
+	return eventBytes
+}
+
+func getInboxOfMarkChangedEvent(m *MarkChangedEvent) []byte {
+	return m.AddressSha256Hash[:]
+}
+
+func getEventTypeOfMarkChangedEvent(m *MarkChangedEvent) byte {
+	return ImInboxEventTypeMarkChanged
+}
+
+// gen and push MarkChangedEvent
+func GenAndPushMarkChangedEvent(mark *Mark, isNewMark bool, im *Manager, logger *logger.Logger) error {
+	event := NewMarkChangedEvent(Sha256HashFixed(mark.Address), mark.GroupId, isNewMark, CurrentMilestoneTimestamp)
+	return PushData(event, GetTopicOfMarkChangedEvent, getInboxOfMarkChangedEvent, getEventTypeOfMarkChangedEvent, GetPayloadOfMarkChangedEvent, im, logger)
 }
