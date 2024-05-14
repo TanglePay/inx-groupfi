@@ -15,6 +15,9 @@ const (
 	ImInboxEventTypeNewMessage         byte   = 1
 	ImInboxEventTypeGroupMemberChanged byte   = 2
 	ImInboxEventTypeMarkChanged        byte   = 4
+	ImInboxEventTypeEvmQualifyChanged  byte   = 5
+	ImInboxEventTypePairXChanged       byte   = 6
+	ImInboxKeyPrefixDidChangedEvent    byte   = 7
 	DefaultEventTtl                    uint32 = 30 // 30 seconds
 )
 

@@ -172,7 +172,11 @@ func (im *Manager) StorePairX(pairX *PairX) error {
 	if err != nil {
 		return err
 	}
-	im.StoreOnePublickKey(pairX.EvmAddress, publicKeyBytes)
+	err = im.StoreOnePublickKey(pairX.EvmAddress, publicKeyBytes)
+	if err != nil {
+		return err
+	}
+	GenAndPushPairXChangedEvent(pairX, im, Logger)
 	return nil
 }
 
@@ -410,6 +414,7 @@ func (im *Manager) HandlePairXCreated(pairx *PairX, logger *logger.Logger) {
 		logger.Warnf("HandlePairXCreated ... StorePairX failed:%s", err)
 	}
 }
+
 // convert address to actual address if a mapping exists
 func (im *Manager) ConvertAddressToActualAddress(address string) string {
 	// get pairX from evm address
@@ -423,4 +428,84 @@ func (im *Manager) ConvertAddressToActualAddress(address string) string {
 	// to lower
 	evmAddress = strings.ToLower(evmAddress)
 	return evmAddress
+}
+
+// struct for PairX changed event
+type PairXChangedEvent struct {
+	AddressSha256Hash [Sha256HashLen]byte
+	Timestamp         uint32
+}
+
+// new PairXChangedEvent
+func NewPairXChangedEvent(evmAddress string, timestamp uint32) *PairXChangedEvent {
+	var addressSha256Hash [Sha256HashLen]byte
+	copy(addressSha256Hash[:], Sha256Hash(evmAddress))
+	return &PairXChangedEvent{
+		AddressSha256Hash: addressSha256Hash,
+		Timestamp:         timestamp,
+	}
+}
+
+// serialize PairX changed event
+func SerializePairXChangedEvent(pairXChangedEvent *PairXChangedEvent, logger *logger.Logger) []byte {
+	var bytes []byte
+	idx := 0
+	// prefix
+	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImInboxEventTypePairXChanged}, false)
+	// address hash
+	AppendBytesWithUint16Len(&bytes, &idx, pairXChangedEvent.AddressSha256Hash[:], false)
+	// timestamp
+	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(pairXChangedEvent.Timestamp), false)
+	return bytes
+}
+
+// unserialize PairX changed event
+func UnserializePairXChangedEvent(bytes []byte, logger *logger.Logger) *PairXChangedEvent {
+	idx := 0
+	// prefix
+	_, _ = ReadBytesWithUint16Len(bytes, &idx, 1)
+	// address hash
+	addressSha256Hash, _ := ReadBytesWithUint16Len(bytes, &idx, Sha256HashLen)
+	// timestamp
+	timestampBytes, _ := ReadBytesWithUint16Len(bytes, &idx, 4)
+	timestamp := BytesToUint32(timestampBytes)
+	return NewPairXChangedEvent(string(addressSha256Hash), timestamp)
+}
+
+/*
+// gen and push MarkChangedEvent
+func GenAndPushMarkChangedEvent(mark *Mark, isNewMark bool, im *Manager, logger *logger.Logger) error {
+	event := NewMarkChangedEvent(Sha256HashFixed(mark.Address), mark.GroupId, isNewMark, CurrentMilestoneTimestamp)
+	return PushData(event, GetTopicOfMarkChangedEvent, getInboxOfMarkChangedEvent, getEventTypeOfMarkChangedEvent, GetPayloadOfMarkChangedEvent, im, logger)
+}
+*/
+
+// get topic of PairXChangedEvent
+func GetTopicOfPairXChangedEvent(pairXChangedEvent *PairXChangedEvent) string {
+	return iotago.EncodeHex(pairXChangedEvent.AddressSha256Hash[:])
+}
+
+// get payload of PairXChangedEvent
+func GetPayloadOfPairXChangedEvent(pairXChangedEvent *PairXChangedEvent) []byte {
+	eventBytes := SerializePairXChangedEvent(pairXChangedEvent, nil)
+	return eventBytes
+}
+
+// get inbox of PairXChangedEvent
+func getInboxOfPairXChangedEvent(pairXChangedEvent *PairXChangedEvent) [][]byte {
+	return [][]byte{pairXChangedEvent.AddressSha256Hash[:]}
+}
+
+// get event type of PairXChangedEvent
+func getEventTypeOfPairXChangedEvent(pairXChangedEvent *PairXChangedEvent) byte {
+	return ImInboxEventTypePairXChanged
+}
+
+// gen and push PairXChangedEvent
+func GenAndPushPairXChangedEvent(pairX *PairX, im *Manager, logger *logger.Logger) error {
+	// get PairX changed event
+	pairXChangedEvent := NewPairXChangedEvent(pairX.EvmAddress, uint32(pairX.Timestamp))
+	// push event
+	return PushData(pairXChangedEvent, GetTopicOfPairXChangedEvent, getInboxOfPairXChangedEvent, getEventTypeOfPairXChangedEvent,
+		GetPayloadOfPairXChangedEvent, im, logger)
 }
