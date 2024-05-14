@@ -269,6 +269,7 @@ func startTTLCleaningWorker() {
 
 func run() error {
 	im.Logger = CoreComponent.Logger()
+	im.Im = deps.IMManager
 	im.IsIniting = true
 	im.BootTime = im.GetCurrentEpochTimestamp()
 	// load .groupfi-env file

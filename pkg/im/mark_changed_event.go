@@ -98,7 +98,6 @@ func (im *Manager) UnserializeMarkChangedEvent(bytes []byte) (*MarkChangedEvent,
 	return NewMarkChangedEvent(groupIDFixed, groupIDFixed, isNewMark, milestoneTimestamp), nil
 }
 
-
 // implements InboxItem
 func (m *MarkChangedEvent) ToPushTopic() []byte {
 	return m.AddressSha256Hash[:]
@@ -119,8 +118,8 @@ func GetPayloadOfMarkChangedEvent(m *MarkChangedEvent) []byte {
 	return eventBytes
 }
 
-func getInboxOfMarkChangedEvent(m *MarkChangedEvent) []byte {
-	return m.AddressSha256Hash[:]
+func getInboxOfMarkChangedEvent(m *MarkChangedEvent) [][]byte {
+	return [][]byte{m.AddressSha256Hash[:]}
 }
 
 func getEventTypeOfMarkChangedEvent(m *MarkChangedEvent) byte {
