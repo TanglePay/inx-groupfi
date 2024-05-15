@@ -234,8 +234,46 @@ func (im *Manager) HandleEvmQualifyCreated(evmQualify *EvmQualify, logger *logge
 
 // struct for evm qualify changed event, including groupId, timestamp
 type EvmQualifyChangedEvent struct {
+	EventCommonFields
 	GroupId   [GroupIdLen]byte
 	Timestamp uint32
+}
+
+// implements InboxItem
+func (e *EvmQualifyChangedEvent) GetToken() []byte {
+	return e.Token
+}
+
+func (e *EvmQualifyChangedEvent) GetEventType() byte {
+	return e.EventType
+}
+
+func (e *EvmQualifyChangedEvent) SetToken(token []byte) {
+	e.Token = token
+}
+
+func (e *EvmQualifyChangedEvent) SetEventType(eventType byte) {
+	e.EventType = eventType
+}
+
+func (e *EvmQualifyChangedEvent) Jsonable() InboxItemJson {
+	json := &EvmQualifyChangedEventJson{
+		GroupId:   iotago.EncodeHex(e.GroupId[:]),
+		Timestamp: e.Timestamp,
+	}
+	json.SetEventType(e.EventType)
+	return json
+}
+
+type EvmQualifyChangedEventJson struct {
+	EventJsonCommonFields
+	GroupId   string `json:"groupId"`
+	Timestamp uint32 `json:"timestamp"`
+}
+
+// implements InboxItemJson
+func (e *EvmQualifyChangedEventJson) SetEventType(eventType byte) {
+	e.EventType = eventType
 }
 
 // new evm qualify changed event

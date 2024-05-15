@@ -432,8 +432,46 @@ func (im *Manager) ConvertAddressToActualAddress(address string) string {
 
 // struct for PairX changed event
 type PairXChangedEvent struct {
+	EventCommonFields
 	AddressSha256Hash [Sha256HashLen]byte
 	Timestamp         uint32
+}
+
+// implements InboxItem
+func (pairXChangedEvent *PairXChangedEvent) GetToken() []byte {
+	return pairXChangedEvent.Token
+}
+
+func (pairXChangedEvent *PairXChangedEvent) GetEventType() byte {
+	return pairXChangedEvent.EventType
+}
+
+func (pairXChangedEvent *PairXChangedEvent) SetToken(token []byte) {
+	pairXChangedEvent.Token = token
+}
+
+func (pairXChangedEvent *PairXChangedEvent) SetEventType(eventType byte) {
+	pairXChangedEvent.EventType = eventType
+}
+
+func (pairXChangedEvent *PairXChangedEvent) Jsonable() InboxItemJson {
+	json := &PairXChangedEventJson{
+		EvmAddress: iotago.EncodeHex(pairXChangedEvent.AddressSha256Hash[:]),
+		Timestamp:  pairXChangedEvent.Timestamp,
+	}
+	json.SetEventType(pairXChangedEvent.EventType)
+	return json
+}
+
+type PairXChangedEventJson struct {
+	EventJsonCommonFields
+	EvmAddress string `json:"evmAddress"`
+	Timestamp  uint32 `json:"timestamp"`
+}
+
+// implements InboxItemJson
+func (pairXChangedEventJson *PairXChangedEventJson) SetEventType(eventType byte) {
+	pairXChangedEventJson.EventType = eventType
 }
 
 // new PairXChangedEvent
@@ -460,7 +498,7 @@ func SerializePairXChangedEvent(pairXChangedEvent *PairXChangedEvent, logger *lo
 }
 
 // unserialize PairX changed event
-func UnserializePairXChangedEvent(bytes []byte, logger *logger.Logger) *PairXChangedEvent {
+func UnserializePairXChangedEvent(bytes []byte, logger *logger.Logger) (*PairXChangedEvent, error) {
 	idx := 0
 	// prefix
 	_, _ = ReadBytesWithUint16Len(bytes, &idx, 1)
@@ -469,7 +507,7 @@ func UnserializePairXChangedEvent(bytes []byte, logger *logger.Logger) *PairXCha
 	// timestamp
 	timestampBytes, _ := ReadBytesWithUint16Len(bytes, &idx, 4)
 	timestamp := BytesToUint32(timestampBytes)
-	return NewPairXChangedEvent(string(addressSha256Hash), timestamp)
+	return NewPairXChangedEvent(string(addressSha256Hash), timestamp), nil
 }
 
 /*

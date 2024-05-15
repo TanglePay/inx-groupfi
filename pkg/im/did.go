@@ -246,8 +246,86 @@ func (im *Manager) HandleDidConsumedAndCreated(consumedDids []*Did, createdDids 
 
 // struct for did changed event
 type DidChangedEvent struct {
+	EventCommonFields
 	AddressSha256Hash [Sha256HashLen]byte
 	Timestamp         uint32
+}
+
+/*
+/*
+// implements InboxItem
+func (g *GroupMemberChangedEvent) GetToken() []byte {
+	return g.Token
+}
+func (g *GroupMemberChangedEvent) GetEventType() byte {
+	return g.EventType
+}
+func (g *GroupMemberChangedEvent) SetToken(token []byte) {
+	g.Token = token
+}
+func (g *GroupMemberChangedEvent) SetEventType(eventType byte) {
+	g.EventType = eventType
+}
+func (g *GroupMemberChangedEvent) Jsonable() InboxItemJson {
+	json := &GroupMemberChangedEventJson{
+		GroupID:     iotago.EncodeHex(g.GroupID[:]),
+		Timestamp:   g.MilestoneTimestamp,
+		IsNewMember: g.IsNewMember,
+		Address:     g.Address,
+	}
+	json.SetEventType(g.EventType)
+	return json
+}
+
+type GroupMemberChangedEventJson struct {
+	EventJsonCommonFields
+	GroupID     string `json:"groupId"`
+	Timestamp   uint32 `json:"timestamp"`
+	IsNewMember bool   `json:"isNewMember"`
+	Address     string `json:"address"`
+}
+
+// implements InboxItemJson
+func (g *GroupMemberChangedEventJson) SetEventType(eventType byte) {
+	g.EventType = eventType
+}
+*/
+// implements InboxItem
+func (d *DidChangedEvent) GetToken() []byte {
+	return d.Token
+}
+
+func (d *DidChangedEvent) GetEventType() byte {
+	return d.EventType
+}
+
+func (d *DidChangedEvent) SetToken(token []byte) {
+
+	d.Token = token
+}
+
+func (d *DidChangedEvent) SetEventType(eventType byte) {
+	d.EventType = eventType
+}
+
+func (d *DidChangedEvent) Jsonable() InboxItemJson {
+	json := &DidChangedEventJson{
+		Address:   iotago.EncodeHex(d.AddressSha256Hash[:]),
+		Timestamp: d.Timestamp,
+	}
+	json.SetEventType(d.EventType)
+	return json
+}
+
+type DidChangedEventJson struct {
+	EventJsonCommonFields
+	Address   string `json:"address"`
+	Timestamp uint32 `json:"timestamp"`
+}
+
+// implements InboxItemJson
+func (d *DidChangedEventJson) SetEventType(eventType byte) {
+	d.EventType = eventType
 }
 
 // new did changed event
@@ -300,14 +378,6 @@ func UnserializeDidChangedEvent(bytes []byte, logger *logger.Logger) (*DidChange
 		Timestamp:         timestamp,
 	}, nil
 }
-
-/*
-// gen and push MarkChangedEvent
-func GenAndPushMarkChangedEvent(mark *Mark, isNewMark bool, im *Manager, logger *logger.Logger) error {
-	event := NewMarkChangedEvent(Sha256HashFixed(mark.Address), mark.GroupId, isNewMark, CurrentMilestoneTimestamp)
-	return PushData(event, GetTopicOfMarkChangedEvent, getInboxOfMarkChangedEvent, getEventTypeOfMarkChangedEvent, GetPayloadOfMarkChangedEvent, im, logger)
-}
-*/
 
 // get topic of did changed event
 func GetTopicOfDidChangedEvent(didChangedEvent *DidChangedEvent) string {
