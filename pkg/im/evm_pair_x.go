@@ -510,14 +510,6 @@ func UnserializePairXChangedEvent(bytes []byte, logger *logger.Logger) (*PairXCh
 	return NewPairXChangedEvent(string(addressSha256Hash), timestamp), nil
 }
 
-/*
-// gen and push MarkChangedEvent
-func GenAndPushMarkChangedEvent(mark *Mark, isNewMark bool, im *Manager, logger *logger.Logger) error {
-	event := NewMarkChangedEvent(Sha256HashFixed(mark.Address), mark.GroupId, isNewMark, CurrentMilestoneTimestamp)
-	return PushData(event, GetTopicOfMarkChangedEvent, getInboxOfMarkChangedEvent, getEventTypeOfMarkChangedEvent, GetPayloadOfMarkChangedEvent, im, logger)
-}
-*/
-
 // get topic of PairXChangedEvent
 func GetTopicOfPairXChangedEvent(pairXChangedEvent *PairXChangedEvent) string {
 	return iotago.EncodeHex(pairXChangedEvent.AddressSha256Hash[:])
