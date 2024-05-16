@@ -84,13 +84,8 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 	// log group qualification GroupId, address, exists
 	logger.Infof("StoreMark,group qualification exists,groupId:%s,address:%s,exists:%t", iotago.EncodeHex(mark.GroupId[:]), mark.Address, exists)
 	if exists && isActuallyMarked {
-		outputId := mark.OutputId
-		resp, err := NodeHTTPAPIClient.OutputMetadataByID(ListeningCtx, outputId)
-		if err != nil {
-			return err
-		}
 
-		groupMember := NewGroupMember(mark.GroupId, mark.Address, resp.MilestoneIndexBooked, resp.MilestoneTimestampBooked)
+		groupMember := NewGroupMember(mark.GroupId, mark.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
 
 		_, err = im.StoreGroupMember(groupMember, logger)
 		if err != nil {
