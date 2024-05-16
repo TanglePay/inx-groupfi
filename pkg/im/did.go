@@ -251,45 +251,6 @@ type DidChangedEvent struct {
 	Timestamp         uint32
 }
 
-/*
-/*
-// implements InboxItem
-func (g *GroupMemberChangedEvent) GetToken() []byte {
-	return g.Token
-}
-func (g *GroupMemberChangedEvent) GetEventType() byte {
-	return g.EventType
-}
-func (g *GroupMemberChangedEvent) SetToken(token []byte) {
-	g.Token = token
-}
-func (g *GroupMemberChangedEvent) SetEventType(eventType byte) {
-	g.EventType = eventType
-}
-func (g *GroupMemberChangedEvent) Jsonable() InboxItemJson {
-	json := &GroupMemberChangedEventJson{
-		GroupID:     iotago.EncodeHex(g.GroupID[:]),
-		Timestamp:   g.MilestoneTimestamp,
-		IsNewMember: g.IsNewMember,
-		Address:     g.Address,
-	}
-	json.SetEventType(g.EventType)
-	return json
-}
-
-type GroupMemberChangedEventJson struct {
-	EventJsonCommonFields
-	GroupID     string `json:"groupId"`
-	Timestamp   uint32 `json:"timestamp"`
-	IsNewMember bool   `json:"isNewMember"`
-	Address     string `json:"address"`
-}
-
-// implements InboxItemJson
-func (g *GroupMemberChangedEventJson) SetEventType(eventType byte) {
-	g.EventType = eventType
-}
-*/
 // implements InboxItem
 func (d *DidChangedEvent) GetToken() []byte {
 	return d.Token
