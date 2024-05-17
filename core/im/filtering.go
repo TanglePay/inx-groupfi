@@ -93,7 +93,7 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 		milestoneTimestamp,
 	)
 
-	pairs := im.ChainNameAndCollectionIdToGroupIdAndGroupNamePairs(im.HornetChainName, collectionId)
+	pairs := im.ChainIdAndCollectionIdToGroupIdAndGroupNamePairs(im.HornetChainId, collectionId)
 	if len(pairs) == 0 {
 		return nil
 	}
@@ -319,8 +319,8 @@ func handleTokenWhaleEligibilityFromAddressGivenTotalAmount(tokenId []byte, toke
 	tokenTotalAmountFixed := new(big.Int).Add(tokenTotalAmount, big.NewInt(1))
 	percentage := new(big.Float).Quo(new(big.Float).SetInt(addressTotalAmount), new(big.Float).SetInt(tokenTotalAmountFixed))
 	// loop through all token based group
-	if im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName] != nil && im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] != nil {
-		for _, groupId := range im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] {
+	if im.ConfigStoreChainIdAndQualifyTypeToGroupId[im.HornetChainId] != nil && im.ConfigStoreChainIdAndQualifyTypeToGroupId[im.HornetChainId]["token"] != nil {
+		for _, groupId := range im.ConfigStoreChainIdAndQualifyTypeToGroupId[im.HornetChainId]["token"] {
 			groupConfig := im.ConfigStoreGroupIdToGroupConfig[groupId]
 			if groupConfig == nil {
 				continue
@@ -357,8 +357,8 @@ func handleTokenFromNFTOutput(iotaOutput *iotago.NFTOutput, outputId []byte, out
 func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.NativeTokens, output iotago.Output, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
 
 	// loop through all token based group
-	if im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName] != nil && im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] != nil {
-		for _, groupId := range im.ConfigStoreChainNameAndQualifyTypeToGroupId[im.HornetChainName]["token"] {
+	if im.ConfigStoreChainIdAndQualifyTypeToGroupId[im.HornetChainId] != nil && im.ConfigStoreChainIdAndQualifyTypeToGroupId[im.HornetChainId]["token"] != nil {
+		for _, groupId := range im.ConfigStoreChainIdAndQualifyTypeToGroupId[im.HornetChainId]["token"] {
 			groupConfig := im.ConfigStoreGroupIdToGroupConfig[groupId]
 			if groupConfig == nil {
 				continue
