@@ -447,6 +447,28 @@ func getPublicGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 	return groupConfigs, nil
 }
 
+// getMarkedGroupConfigs
+func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
+	// no need to bind groupParam
+	marks, err := deps.IMManager.GetMarksFromAddress()
+	if err != nil {
+		return nil, err
+	}
+	// loop marks, get groupIdHexList
+	var groupIdHexList []string
+	for _, mark := range marks {
+		groupIdHexList = append(groupIdHexList, iotago.EncodeHex(mark.GroupId[:]))
+	}
+	// loop groupIdHexList, get groupConfigs
+	var groupConfigs []*im.MessageGroupMetaJSON
+	for _, groupIdHex := range groupIdHexList {
+		config := deps.IMManager.GroupIdToGroupConfig(groupIdHex)
+		// if config is not nil, append to groupConfigs
+		groupConfigs = append(groupConfigs, config)
+	}
+	return groupConfigs, nil
+}
+
 // getAddressGroupDetails
 func getAddressGroupDetails(c echo.Context) ([]*AddressGroupDetailsResponse, error) {
 	address, err := parseAddressQueryParam(c)
