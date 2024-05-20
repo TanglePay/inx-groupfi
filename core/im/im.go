@@ -432,6 +432,11 @@ func getPublicGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 	if err != nil {
 		// log error
 		CoreComponent.LogWarnf("getPublicGroupConfigs ... Bind failed:%s", err)
+		return nil, err
+	}
+	// if groupParam is empty, return nil
+	if len(groupParam.Includes) == 0 && len(groupParam.Excludes) == 0 {
+		return nil, nil
 	}
 	// all public groupIds
 	publicGroupIds := deps.IMManager.GetAllPublicGroupIds()
