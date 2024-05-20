@@ -449,8 +449,12 @@ func getPublicGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 
 // getMarkedGroupConfigs
 func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
-	// no need to bind groupParam
-	marks, err := deps.IMManager.GetMarksFromAddress()
+	// get address from query param
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	marks, err := deps.IMManager.GetMarksFromAddress(address, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
