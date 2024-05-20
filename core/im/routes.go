@@ -37,6 +37,9 @@ const (
 	// public group configs
 	RouteIMPublicGroupConfigs = "/publicgroupconfigs"
 
+	// marked group configs
+	RouteIMMarkedGroupConfigs = "/markedgroupconfigs"
+
 	// health check
 	RouteHealthCheck = "/healthcheck"
 
@@ -363,6 +366,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// RouteIMPublicGroupConfigs
 	e.POST(RouteIMPublicGroupConfigs, func(c echo.Context) error {
 		groupConfigs, err := getPublicGroupConfigs(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, groupConfigs)
+	})
+
+	//RouteIMMarkedGroupConfigs
+	e.POST(RouteIMMarkedGroupConfigs, func(c echo.Context) error {
+		groupConfigs, err := getMarkedGroupConfigs(c)
 		if err != nil {
 			return err
 		}
