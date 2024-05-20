@@ -34,6 +34,9 @@ const (
 	// address qualified group configs
 	RouteIMAddressQualifiedGroupConfigs = "/addressqualifiedgroupconfigs"
 
+	// public group configs
+	RouteIMPublicGroupConfigs = "/publicgroupconfigs"
+
 	// health check
 	RouteHealthCheck = "/healthcheck"
 
@@ -45,7 +48,6 @@ const (
 
 	// group qualified addresses
 	RouteGroupQualifiedAddresses = "/groupqualifiedaddresses"
-
 
 	// groupqualifiedaddresspublickeypairs
 	RouteGroupQualifiedAddressPublicKeyPairs = "/groupqualifiedaddresspublickeypairs"
@@ -358,6 +360,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, groupConfigs)
 	})
+	// RouteIMPublicGroupConfigs
+	e.POST(RouteIMPublicGroupConfigs, func(c echo.Context) error {
+		groupConfigs, err := getPublicGroupConfigs(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, groupConfigs)
+	})
 	//RouteIMAddressGroupDetails
 	e.GET(RouteIMAddressGroupDetails, func(c echo.Context) error {
 		resp, err := getAddressGroupDetails(c)
@@ -400,7 +410,6 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
-
 
 	// group qualified (addresse, public key) pairs
 	e.GET(RouteGroupQualifiedAddressPublicKeyPairs, func(c echo.Context) error {

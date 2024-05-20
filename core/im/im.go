@@ -425,6 +425,28 @@ func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMeta
 	return groupConfigs, nil
 }
 
+// getPublicGroupConfigs
+func getPublicGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
+	var groupParam GroupParam
+	err := c.Bind(&groupParam)
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("getPublicGroupConfigs ... Bind failed:%s", err)
+	}
+	// all public groupIds
+	publicGroupIds := deps.IMManager.GetAllPublicGroupIds()
+	// filter groupIds from groupParam
+	groupIdHexList := filterGroupIdsFromGroupParam(publicGroupIds, groupParam)
+	// loop groupIdHexList
+	var groupConfigs []*im.MessageGroupMetaJSON
+	for _, groupIdHex := range groupIdHexList {
+		config := deps.IMManager.GroupIdToGroupConfig(groupIdHex)
+		// if config is not nil, append to groupConfigs
+		groupConfigs = append(groupConfigs, config)
+	}
+	return groupConfigs, nil
+}
+
 // getAddressGroupDetails
 func getAddressGroupDetails(c echo.Context) ([]*AddressGroupDetailsResponse, error) {
 	address, err := parseAddressQueryParam(c)
