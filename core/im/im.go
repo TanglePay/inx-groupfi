@@ -473,7 +473,9 @@ func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 	for _, groupIdHex := range groupIdHexList {
 		config := deps.IMManager.GroupIdToGroupConfig(groupIdHex)
 		// if config is not nil, append to groupConfigs
-		groupConfigs = append(groupConfigs, config)
+		if config != nil {
+			groupConfigs = append(groupConfigs, config)
+		}
 	}
 	return groupConfigs, nil
 }
@@ -499,6 +501,10 @@ func getForMeGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSONPlus, error
 	var groupConfigs []*im.MessageGroupMetaJSONPlus
 	for _, groupIdHex := range groupIdHexList {
 		config := im.ConfigStoreGroupIdToGroupConfig[groupIdHex]
+		// if config is nil continue
+		if config == nil {
+			continue
+		}
 		isPublic := deps.IMManager.GetIsGroupPublicWithGroupId(groupIdHex)
 		// copy config to plusConfig, field by field
 		/*
