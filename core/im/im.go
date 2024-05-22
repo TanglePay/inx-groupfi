@@ -478,6 +478,46 @@ func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 	return groupConfigs, nil
 }
 
+// getForMeGroupConfigs
+func getForMeGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSONPlus, error) {
+	var groupParam GroupParam
+	err := c.Bind(&groupParam)
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("getForMeGroupConfigs ... Bind failed:%s", err)
+		return nil, err
+	}
+	// check if groupParam is empty
+	if len(groupParam.Includes) == 0 && len(groupParam.Excludes) == 0 {
+		return nil, nil
+	}
+	// all groupIds
+	groupIds := deps.IMManager.GetAllGroupIds()
+	// filter groupIds from groupParam
+	groupIdHexList := filterGroupIdsFromGroupParam(groupIds, groupParam)
+	// loop groupIdHexList
+	var groupConfigs []*im.MessageGroupMetaJSONPlus
+	for _, groupIdHex := range groupIdHexList {
+		config := im.ConfigStoreGroupIdToGroupConfig[groupIdHex]
+		isPublic := deps.IMManager.GetIsGroupPublicWithGroupId(groupIdHex)
+		// copy config to plusConfig, field by field
+		/*
+				MessageType   int    `json:"messageType"`
+			AuthScheme    int    `json:"authScheme"`
+			QualifyType   string `json:"qualifyType"`
+			CollectionId  string `json:"collectionId"`
+			TokenId       string `json:"tokenId"`
+			TokenThres    string `json:"tokenThres"`
+		*/
+		plusConfig := &im.MessageGroupMetaJSONPlus{
+			MessageGroupMetaJSON: *config,
+			IsPublic:             isPublic,
+		}
+		groupConfigs = append(groupConfigs, plusConfig)
+	}
+	return groupConfigs, nil
+}
+
 // getAddressGroupDetails
 func getAddressGroupDetails(c echo.Context) ([]*AddressGroupDetailsResponse, error) {
 	address, err := parseAddressQueryParam(c)

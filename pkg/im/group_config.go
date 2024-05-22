@@ -120,6 +120,12 @@ type MessageGroupMetaJSON struct {
 	TokenThres    string `json:"tokenThres"`
 }
 
+// struct for MessageGroupMetaJSON plus isPublic
+type MessageGroupMetaJSONPlus struct {
+	MessageGroupMetaJSON
+	IsPublic bool `json:"isPublic"`
+}
+
 // handle group config nft created
 func (im *Manager) HandleGroupNFTOutputCreated(nftOutput *iotago.NFTOutput, logger *logger.Logger) error {
 	// parse name and ipfs link
@@ -381,6 +387,11 @@ func (im *Manager) CalculateIfGroupIsPublicForAllGroups(logger *logger.Logger) e
 // get is group public
 func (im *Manager) GetIsGroupPublic(groupId [GroupIdLen]byte) bool {
 	groupIdHex := iotago.EncodeHex(groupId[:])
+	return im.GetIsGroupPublicWithGroupId(groupIdHex)
+}
+
+// get is group public with groupId string
+func (im *Manager) GetIsGroupPublicWithGroupId(groupIdHex string) bool {
 	for _, groupIdInPublicGroupIds := range ConfigStorePublicGroupIds {
 		if groupIdInPublicGroupIds == groupIdHex {
 			return true

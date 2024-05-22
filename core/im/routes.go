@@ -37,6 +37,9 @@ const (
 	// public group configs
 	RouteIMPublicGroupConfigs = "/publicgroupconfigs"
 
+	// for me group configs
+	RouteIMForMeGroupConfigs = "/formegroupconfigs"
+
 	// marked group configs
 	RouteIMMarkedGroupConfigs = "/markedgroupconfigs"
 
@@ -375,6 +378,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	//RouteIMMarkedGroupConfigs
 	e.POST(RouteIMMarkedGroupConfigs, func(c echo.Context) error {
 		groupConfigs, err := getMarkedGroupConfigs(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, groupConfigs)
+	})
+
+	// RouteIMForMeGroupConfigs
+	e.POST(RouteIMForMeGroupConfigs, func(c echo.Context) error {
+		groupConfigs, err := getForMeGroupConfigs(c)
 		if err != nil {
 			return err
 		}
