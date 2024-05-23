@@ -39,7 +39,7 @@ var (
 		    {"groupName":"staff-developer","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0xdc6c3b0167af767652567523b9240c86095241c622c37cb726efeeb5e102a93c"]},
 		    {"groupName":"dapper-groupfi","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x1fd2407145ef147e0b06f835fef0e2059e56899aa8ce80147506893f837ea606"]},
 			{"groupName":"EtherVisions","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"shimmer-evm","collectionIds":["0xB85bdaf5eFf3f4c84d565923Eb1D62717dE17297"]},
-			{"groupName":"CryptoCatalyst","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"shimmer-evm","collectionIds":[""],"tokenThres":"1","tokenId":"0xfDbc4c5b14A538Aa2F6cD736b525C8e9532C5FA6"},
+			{"groupName":"GRFI","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainName":"shimmer-evm","collectionIds":[""],"tokenThres":"1","tokenId":"0xfDbc4c5b14A538Aa2F6cD736b525C8e9532C5FA6"},
 			{"groupName":"GroupFi Announcement","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x115a9fdca6a2110cc3e4cc7f92555101c3d80addf56984003e51e004ac4f9148"]},
 			{"groupName":"alpha-test","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x23e5f8500132f9dfa8698e3d352f0d57bd79cf57533f273e87e31b6cd0e0a5ef"]},
 		   	{"groupName":"iceberg-1","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainName":"smr","collectionIds":["0x064d0eaefb86a94eb326ff633c22cdf744decca954bb93b1572b449d324ae717"]},
