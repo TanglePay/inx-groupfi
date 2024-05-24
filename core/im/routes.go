@@ -267,7 +267,13 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		// if chainId is 148
 		if chainId == 148 {
-			return httpserver.JSONResponse(c, http.StatusOK, "0")
+			tokenIdHex := iotago.EncodeHex(tokenId)
+			url := "https://api.shimmer.network"
+			balance, err := im.GetSupply(url, tokenIdHex)
+			if err != nil {
+				return err
+			}
+			return httpserver.JSONResponse(c, http.StatusOK, balance.Text(10))
 		}
 		// return not found
 		return httpserver.JSONResponse(c, http.StatusNotFound, "not found")
