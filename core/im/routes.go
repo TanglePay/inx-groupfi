@@ -75,6 +75,8 @@ const (
 	// get address mutes
 	RouteAddressMutes = "/addressmutes"
 
+	// get token total balance
+	RouteTokenTotalBalance = "/tokentotalbalance"
 	// get group votes count
 	RouteGroupVotesCount = "/groupvotescount"
 
@@ -246,6 +248,31 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
+	// RouteTokenTotalBalance
+	e.GET(RouteTokenTotalBalance, func(c echo.Context) error {
+		tokenId, err := parseTokenQueryParam(c)
+		if err != nil {
+			return err
+		}
+		chainId, err := parseChainIdQueryParam(c)
+		if err != nil {
+			return err
+		}
+		// if chainId is zero
+		if chainId == 0 {
+			tokenIdFixed := [im.Sha256HashLen]byte{}
+			copy(tokenIdFixed[:], im.Sha256HashBytes(tokenId))
+			balace := GetTokenTotal(tokenIdFixed)
+			return httpserver.JSONResponse(c, http.StatusOK, balace.totalAmount.Text(10))
+		}
+		// if chainId is 148
+		if chainId == 148 {
+			return httpserver.JSONResponse(c, http.StatusOK, "0")
+		}
+		// return not found
+		return httpserver.JSONResponse(c, http.StatusNotFound, "not found")
+	})
+
 	// get address balance
 	e.GET(RouteAddressBalance, func(c echo.Context) error {
 		address, err := parseAddressQueryParam(c)

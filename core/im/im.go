@@ -22,6 +22,19 @@ func parseTokenQueryParam(c echo.Context) ([]byte, error) {
 	return token, nil
 }
 
+// parse chainId
+func parseChainIdQueryParam(c echo.Context) (uint32, error) {
+	chainIdParams := c.QueryParams()["chainId"]
+	if len(chainIdParams) == 0 {
+		return 0, nil
+	}
+	chainId, err := strconv.Atoi(chainIdParams[0])
+	if err != nil {
+		return 0, err
+	}
+	return uint32(chainId), nil
+}
+
 // parse address from query param
 func parseAddressQueryParam(c echo.Context) (string, error) {
 	addressParams := c.QueryParams()["address"]
