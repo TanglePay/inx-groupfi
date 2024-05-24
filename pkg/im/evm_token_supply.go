@@ -83,8 +83,8 @@ func GetTotalSupply(client *ethclient.Client, contractAddress string) (*big.Int,
 	}
 
 	// Unpack the result
-	totalSupply := new(big.Int)
-	err = parsedABI.UnpackIntoInterface(totalSupply, "totalSupply", result)
+	var totalSupply *big.Int
+	err = parsedABI.UnpackIntoInterface(&totalSupply, "totalSupply", result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to unpack result: %w", err)
 	}
