@@ -94,7 +94,9 @@ func (im *Manager) ParseDidValue(key kvstore.Key, value kvstore.Value) (*Did, er
 func (im *Manager) StoreDid(did *Did) error {
 	key := im.DidKey(did)
 	value := im.DidValue(did)
-	return im.imStore.Set(key, value)
+	err := im.imStore.Set(key, value)
+	GenAndPushDidChangedEvent(did, im, Logger)
+	return err
 }
 
 // delete one did
@@ -240,4 +242,127 @@ func (im *Manager) HandleDidConsumedAndCreated(consumedDids []*Did, createdDids 
 		}
 	}
 
+}
+
+// struct for did changed event
+type DidChangedEvent struct {
+	EventCommonFields
+	AddressSha256Hash [Sha256HashLen]byte
+	Timestamp         uint32
+}
+
+// implements InboxItem
+func (d *DidChangedEvent) GetToken() []byte {
+	return d.Token
+}
+
+func (d *DidChangedEvent) GetEventType() byte {
+	return d.EventType
+}
+
+func (d *DidChangedEvent) SetToken(token []byte) {
+
+	d.Token = token
+}
+
+func (d *DidChangedEvent) SetEventType(eventType byte) {
+	d.EventType = eventType
+}
+
+func (d *DidChangedEvent) Jsonable() InboxItemJson {
+	json := &DidChangedEventJson{
+		Address:   iotago.EncodeHex(d.AddressSha256Hash[:]),
+		Timestamp: d.Timestamp,
+	}
+	json.SetEventType(d.EventType)
+	return json
+}
+
+type DidChangedEventJson struct {
+	EventJsonCommonFields
+	Address   string `json:"address"`
+	Timestamp uint32 `json:"timestamp"`
+}
+
+// implements InboxItemJson
+func (d *DidChangedEventJson) SetEventType(eventType byte) {
+	d.EventType = eventType
+}
+
+// new did changed event
+func NewDidChangedEvent(addressSha256Hash []byte) *DidChangedEvent {
+	timestamp := CurrentMilestoneTimestamp
+	addressSha256HashFixed := [Sha256HashLen]byte{}
+	copy(addressSha256HashFixed[:], addressSha256Hash)
+	return &DidChangedEvent{
+		AddressSha256Hash: addressSha256HashFixed,
+		Timestamp:         timestamp,
+	}
+}
+
+// serialize did changed event
+func SerializeDidChangedEvent(didChangedEvent *DidChangedEvent, logger *logger.Logger) []byte {
+	var bytes []byte
+	idx := 0
+	// prefix
+	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImInboxKeyPrefixDidChangedEvent}, false)
+	// addressSha256Hash
+	AppendBytesWithUint16Len(&bytes, &idx, didChangedEvent.AddressSha256Hash[:], false)
+	// timestamp
+	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(didChangedEvent.Timestamp), false)
+	return bytes
+}
+
+// unserialize did changed event
+func UnserializeDidChangedEvent(bytes []byte, logger *logger.Logger) (*DidChangedEvent, error) {
+	idx := 0
+	// prefix
+	_, err := ReadBytesWithUint16Len(bytes, &idx, 1)
+	if err != nil {
+		return nil, err
+	}
+	// addressSha256Hash
+	addressSha256Hash, err := ReadBytesWithUint16Len(bytes, &idx, Sha256HashLen)
+	if err != nil {
+		return nil, err
+	}
+	var addressSha256HashFixed [Sha256HashLen]byte
+	copy(addressSha256HashFixed[:], addressSha256Hash)
+	// timestamp
+	timestampBytes, err := ReadBytesWithUint16Len(bytes, &idx, 4)
+	if err != nil {
+		return nil, err
+	}
+	timestamp := BytesToUint32(timestampBytes)
+	return &DidChangedEvent{
+		AddressSha256Hash: addressSha256HashFixed,
+		Timestamp:         timestamp,
+	}, nil
+}
+
+// get topic of did changed event
+func GetTopicOfDidChangedEvent(didChangedEvent *DidChangedEvent) string {
+	return iotago.EncodeHex(didChangedEvent.AddressSha256Hash[:])
+}
+
+// get payload of did changed event
+func GetPayloadOfDidChangedEvent(didChangedEvent *DidChangedEvent) []byte {
+	eventBytes := SerializeDidChangedEvent(didChangedEvent, nil)
+	return append([]byte{ImInboxKeyPrefixDidChangedEvent}, eventBytes...)
+}
+
+// get inbox of did changed event
+func getInboxOfDidChangedEvent(didChangedEvent *DidChangedEvent) [][]byte {
+	return [][]byte{didChangedEvent.AddressSha256Hash[:]}
+}
+
+// get event type of did changed event
+func getEventTypeOfDidChangedEvent(didChangedEvent *DidChangedEvent) byte {
+	return ImInboxKeyPrefixDidChangedEvent
+}
+
+// gen and push did changed event
+func GenAndPushDidChangedEvent(did *Did, im *Manager, logger *logger.Logger) error {
+	event := NewDidChangedEvent(did.OutputIdSha256Hash[:])
+	return PushData(event, GetTopicOfDidChangedEvent, getInboxOfDidChangedEvent, getEventTypeOfDidChangedEvent, GetPayloadOfDidChangedEvent, im, logger)
 }

@@ -1,6 +1,8 @@
 package im
 
 import (
+	"bytes"
+
 	"github.com/iotaledger/hive.go/core/logger"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
@@ -80,8 +82,28 @@ func GetPayloadOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberCha
 }
 
 // getInbox func(*T) []byte, getEventType func(*T) byte,
-func getInboxOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent) []byte {
-	return Sha256Hash(groupMemberChangedEvent.Address)
+func getInboxOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent) [][]byte {
+	// get addressSha256Hash
+	addressSha256Hash := Sha256Hash(groupMemberChangedEvent.Address)
+	// get group members
+	groupMembers, err := Im.GetGroupMembers(groupMemberChangedEvent.GroupID)
+	if err != nil {
+		// log error
+		Logger.Errorf("getInboxOfGroupMemberChangedEvent GetGroupMembers error %v", err)
+		return nil
+	}
+	var keys [][]byte
+	keys = append(keys, addressSha256Hash)
+	// loop group members
+	for _, groupMember := range groupMembers {
+		gaddress := groupMember.Address
+		gaddressSha256Hash := Sha256Hash(gaddress)
+		if !bytes.Equal(addressSha256Hash, gaddressSha256Hash) {
+			keys = append(keys, gaddressSha256Hash)
+		}
+	}
+
+	return keys
 }
 
 func getEventTypeOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent) byte {

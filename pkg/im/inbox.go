@@ -15,6 +15,9 @@ const (
 	ImInboxEventTypeNewMessage         byte   = 1
 	ImInboxEventTypeGroupMemberChanged byte   = 2
 	ImInboxEventTypeMarkChanged        byte   = 4
+	ImInboxEventTypeEvmQualifyChanged  byte   = 5
+	ImInboxEventTypePairXChanged       byte   = 6
+	ImInboxKeyPrefixDidChangedEvent    byte   = 7
 	DefaultEventTtl                    uint32 = 30 // 30 seconds
 )
 
@@ -176,6 +179,40 @@ func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte,
 			}
 			eventItem = markChangedEvent
 		}
+		if eventType == ImInboxEventTypeEvmQualifyChanged {
+			// log
+			logger.Infof("ReadInbox EvmQualifyChangedEvent key %s", iotago.EncodeHex(key))
+			evmQualifyChangedEvent, err := UnserializeEvmQualifyChangedEvent(value)
+			if err != nil {
+				// log and continue
+				logger.Errorf("UnserializeEvmQualifyChangedEvent error %v", err)
+				return true
+			}
+			eventItem = evmQualifyChangedEvent
+		}
+		if eventType == ImInboxEventTypePairXChanged {
+			// log
+			logger.Infof("ReadInbox PairXChangedEvent key %s", iotago.EncodeHex(key))
+			pairXChangedEvent, err := UnserializePairXChangedEvent(value, logger)
+			if err != nil {
+				// log and continue
+				logger.Errorf("UnserializePairXChangedEvent error %v", err)
+				return true
+			}
+			eventItem = pairXChangedEvent
+		}
+		if eventType == ImInboxKeyPrefixDidChangedEvent {
+			// log
+			logger.Infof("ReadInbox DidChangedEvent key %s", iotago.EncodeHex(key))
+			didChangedEvent, err := UnserializeDidChangedEvent(value, logger)
+			if err != nil {
+				// log and continue
+				logger.Errorf("UnserializeDidChangedEvent error %v", err)
+				return true
+			}
+			eventItem = didChangedEvent
+		}
+
 		eventItem.SetToken(token)
 		eventItem.SetEventType(eventType)
 		res = append(res, eventItem)

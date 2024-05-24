@@ -150,7 +150,7 @@ func (im *Manager) DeleteGroupMember(groupMember *GroupMember, logger *logger.Lo
 			logger.Infof("GroupMemberChangedEvent, debouncer.Debounce, key:%s", key)
 
 			// create group member changed event
-			GenAndPushGroupMemberChangedEvent(groupMember, true, im, logger)
+			GenAndPushGroupMemberChangedEvent(groupMember, false, im, logger)
 		})
 
 		im.TryCalculateIfGroupIsPublic(groupMember.GroupId, logger)

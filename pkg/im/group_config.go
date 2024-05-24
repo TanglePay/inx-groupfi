@@ -12,7 +12,7 @@ import (
 )
 
 var ConfigStoreGroupIdToGroupConfig = map[string]*MessageGroupMetaJSON{}
-var ConfigStoreChainNameAndQualifyTypeToGroupId = map[string]map[string][]string{}
+var ConfigStoreChainIdAndQualifyTypeToGroupId = map[int]map[string][]string{}
 var ConfigStorePublicGroupIds = []string{}
 
 const MessageTypePublic = 2
@@ -25,27 +25,22 @@ type GroupIdAndGroupNamePair struct {
 	GroupName string
 }
 
-func ChainNameAndCollectionIdToGroupIdAndGroupNamePairs(chainName string, collectionId string) []*GroupIdAndGroupNamePair {
-	if (ConfigStoreChainNameAndQualifyTypeToGroupId[chainName] == nil) || (ConfigStoreChainNameAndQualifyTypeToGroupId[chainName]["nft"] == nil) {
+func ChainIdAndCollectionIdToGroupIdAndGroupNamePairs(chainId int, collectionId string) []*GroupIdAndGroupNamePair {
+	if (ConfigStoreChainIdAndQualifyTypeToGroupId[chainId] == nil) || (ConfigStoreChainIdAndQualifyTypeToGroupId[chainId]["nft"] == nil) {
 		return nil
 	}
 	var res []*GroupIdAndGroupNamePair
-	for _, groupIdHex := range ConfigStoreChainNameAndQualifyTypeToGroupId[chainName]["nft"] {
-		if ConfigStoreGroupIdToGroupConfig[groupIdHex].CollectionIds == nil {
-			continue
-		}
-		for _, collectionIdInGroupConfig := range ConfigStoreGroupIdToGroupConfig[groupIdHex].CollectionIds {
-			if collectionIdInGroupConfig == collectionId {
-				groupId, err := iotago.DecodeHex(groupIdHex)
-				if err != nil {
-					return nil
-				}
-				res = append(res, &GroupIdAndGroupNamePair{
-					GroupId:   groupId,
-					GroupName: ConfigStoreGroupIdToGroupConfig[groupIdHex].GroupName,
-				})
-				break
+	for _, groupIdHex := range ConfigStoreChainIdAndQualifyTypeToGroupId[chainId]["nft"] {
+		collectionIdInGroupConfig := ConfigStoreGroupIdToGroupConfig[groupIdHex].CollectionId
+		if collectionIdInGroupConfig == collectionId {
+			groupId, err := iotago.DecodeHex(groupIdHex)
+			if err != nil {
+				return nil
 			}
+			res = append(res, &GroupIdAndGroupNamePair{
+				GroupId:   groupId,
+				GroupName: ConfigStoreGroupIdToGroupConfig[groupIdHex].GroupName,
+			})
 		}
 	}
 	return res
@@ -114,15 +109,21 @@ func (im *Manager) ParseGroupConfigNFT(nftOutput *iotago.NFTOutput) (string, err
 }
 
 type MessageGroupMetaJSON struct {
-	GroupName     string   `json:"groupName"`
-	ChainName     string   `json:"chainName"`
-	SchemaVersion int      `json:"schemaVersion"`
-	MessageType   int      `json:"messageType"`
-	AuthScheme    int      `json:"authScheme"`
-	QualifyType   string   `json:"qualifyType"`
-	CollectionIds []string `json:"collectionIds"`
-	TokenId       string   `json:"tokenId"`
-	TokenThres    string   `json:"tokenThres"`
+	GroupName     string `json:"groupName"`
+	ChainId       int    `json:"chainId"`
+	SchemaVersion int    `json:"schemaVersion"`
+	MessageType   int    `json:"messageType"`
+	AuthScheme    int    `json:"authScheme"`
+	QualifyType   string `json:"qualifyType"`
+	CollectionId  string `json:"collectionId"`
+	TokenId       string `json:"tokenId"`
+	TokenThres    string `json:"tokenThres"`
+}
+
+// struct for MessageGroupMetaJSON plus isPublic
+type MessageGroupMetaJSONPlus struct {
+	MessageGroupMetaJSON
+	IsPublic bool `json:"isPublic"`
 }
 
 // handle group config nft created
@@ -182,7 +183,7 @@ func (im *Manager) GetAllGroupIds() []string {
 func (im *Manager) GetAllNonSmrGroupIds() []string {
 	var res []string
 	for groupIdHex := range ConfigStoreGroupIdToGroupConfig {
-		if ConfigStoreGroupIdToGroupConfig[groupIdHex].ChainName != "smr" {
+		if ConfigStoreGroupIdToGroupConfig[groupIdHex].ChainId != 0 {
 			res = append(res, groupIdHex)
 		}
 	}
@@ -231,40 +232,34 @@ func GroupConfigKeyFromRenterNameAndGroupName(renterName string, groupName strin
 
 // store one group config (group name, MessageGroupMetaJSON)
 func (im *Manager) StoreOneGroupConfig(messageGroupMeta *MessageGroupMetaJSON) error {
-	chainName := messageGroupMeta.ChainName
+	chainId := messageGroupMeta.ChainId
 	qualifyType := messageGroupMeta.QualifyType
 	isPublic := messageGroupMeta.MessageType == MessageTypePublic
-	// sort then concat collectionIds
-	collectionIds := messageGroupMeta.CollectionIds
-	sort.Strings(collectionIds)
-	collectionIdsStr := ""
-	for _, collectionId := range collectionIds {
-		collectionIdsStr += collectionId
-	}
+	collectionId := messageGroupMeta.CollectionId
 	configFieldsMap := map[string]string{
 		"groupName":     messageGroupMeta.GroupName,
-		"chainName":     chainName,
+		"chainId":       fmt.Sprintf("%d", chainId),
 		"schemaVersion": fmt.Sprintf("%d", messageGroupMeta.SchemaVersion),
 		"messageType":   fmt.Sprintf("%d", messageGroupMeta.MessageType),
 		"authScheme":    fmt.Sprintf("%d", messageGroupMeta.AuthScheme),
 		"qualifyType":   qualifyType,
 		"tokenId":       messageGroupMeta.TokenId,
 		"tokenThres":    messageGroupMeta.TokenThres,
-		"collectionIds": collectionIdsStr,
+		"collectionId":  collectionId,
 	}
 	groupId := sortAndSha256Map(configFieldsMap)
 	groupIdHex := iotago.EncodeHex(groupId)
 	// store groupId -> group config store
-	// ensure ConfigStoreChainNameAndQualifyTypeToGroupId[chainName] exists
-	if ConfigStoreChainNameAndQualifyTypeToGroupId[chainName] == nil {
-		ConfigStoreChainNameAndQualifyTypeToGroupId[chainName] = map[string][]string{}
+	// ensure ConfigStoreChainIdAndQualifyTypeToGroupId[chainId] exists
+	if ConfigStoreChainIdAndQualifyTypeToGroupId[chainId] == nil {
+		ConfigStoreChainIdAndQualifyTypeToGroupId[chainId] = map[string][]string{}
 	}
 
-	if ConfigStoreChainNameAndQualifyTypeToGroupId[chainName][qualifyType] == nil {
-		ConfigStoreChainNameAndQualifyTypeToGroupId[chainName][qualifyType] = []string{}
+	if ConfigStoreChainIdAndQualifyTypeToGroupId[chainId][qualifyType] == nil {
+		ConfigStoreChainIdAndQualifyTypeToGroupId[chainId][qualifyType] = []string{}
 	}
-	// append groupId to ConfigStoreChainNameAndQualifyTypeToGroupId[chainName][qualifyType]
-	ConfigStoreChainNameAndQualifyTypeToGroupId[chainName][qualifyType] = append(ConfigStoreChainNameAndQualifyTypeToGroupId[chainName][qualifyType], groupIdHex)
+	// append groupId to ConfigStoreChainIdAndQualifyTypeToGroupId[chainId][qualifyType]
+	ConfigStoreChainIdAndQualifyTypeToGroupId[chainId][qualifyType] = append(ConfigStoreChainIdAndQualifyTypeToGroupId[chainId][qualifyType], groupIdHex)
 	// set ConfigStoreGroupIdToGroupConfig[groupId] = messageGroupMeta
 	ConfigStoreGroupIdToGroupConfig[groupIdHex] = messageGroupMeta
 	// if public, append to ConfigStorePublicGroupIds
@@ -392,6 +387,11 @@ func (im *Manager) CalculateIfGroupIsPublicForAllGroups(logger *logger.Logger) e
 // get is group public
 func (im *Manager) GetIsGroupPublic(groupId [GroupIdLen]byte) bool {
 	groupIdHex := iotago.EncodeHex(groupId[:])
+	return im.GetIsGroupPublicWithGroupId(groupIdHex)
+}
+
+// get is group public with groupId string
+func (im *Manager) GetIsGroupPublicWithGroupId(groupIdHex string) bool {
 	for _, groupIdInPublicGroupIds := range ConfigStorePublicGroupIds {
 		if groupIdInPublicGroupIds == groupIdHex {
 			return true

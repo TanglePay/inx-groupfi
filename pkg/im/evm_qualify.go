@@ -167,6 +167,7 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 			}
 		}
 	}
+	GenAndPushEvmQualifyChangedEvent(evmQualify, im, logger)
 	return nil
 }
 
@@ -229,4 +230,133 @@ func (im *Manager) HandleEvmQualifyCreated(evmQualify *EvmQualify, logger *logge
 		return err
 	}
 	return nil
+}
+
+// struct for evm qualify changed event, including groupId, timestamp
+type EvmQualifyChangedEvent struct {
+	EventCommonFields
+	GroupId   [GroupIdLen]byte
+	Timestamp uint32
+}
+
+// implements InboxItem
+func (e *EvmQualifyChangedEvent) GetToken() []byte {
+	return e.Token
+}
+
+func (e *EvmQualifyChangedEvent) GetEventType() byte {
+	return e.EventType
+}
+
+func (e *EvmQualifyChangedEvent) SetToken(token []byte) {
+	e.Token = token
+}
+
+func (e *EvmQualifyChangedEvent) SetEventType(eventType byte) {
+	e.EventType = eventType
+}
+
+func (e *EvmQualifyChangedEvent) Jsonable() InboxItemJson {
+	json := &EvmQualifyChangedEventJson{
+		GroupId:   iotago.EncodeHex(e.GroupId[:]),
+		Timestamp: e.Timestamp,
+	}
+	json.SetEventType(e.EventType)
+	return json
+}
+
+type EvmQualifyChangedEventJson struct {
+	EventJsonCommonFields
+	GroupId   string `json:"groupId"`
+	Timestamp uint32 `json:"timestamp"`
+}
+
+// implements InboxItemJson
+func (e *EvmQualifyChangedEventJson) SetEventType(eventType byte) {
+	e.EventType = eventType
+}
+
+// new evm qualify changed event
+func NewEvmQualifyChangedEvent(groupId [GroupIdLen]byte, timestamp uint32) *EvmQualifyChangedEvent {
+	return &EvmQualifyChangedEvent{
+		GroupId:   groupId,
+		Timestamp: timestamp,
+	}
+}
+
+// serialize evm qualify changed event
+func Serialize(e *EvmQualifyChangedEvent) []byte {
+	// prefix(ImInboxEventTypeEvmQualifyChanged) + group id + timestamp
+	var data []byte
+	idx := 0
+	AppendBytesWithUint16Len(&data, &idx, []byte{ImInboxEventTypeEvmQualifyChanged}, false)
+	AppendBytesWithUint16Len(&data, &idx, e.GroupId[:], false)
+	AppendBytesWithUint16Len(&data, &idx, Uint32ToBytes(e.Timestamp), false)
+	return data
+}
+
+// deserialize evm qualify changed event
+func UnserializeEvmQualifyChangedEvent(data []byte) (*EvmQualifyChangedEvent, error) {
+	idx := 0
+	// prefix
+	_, err := ReadBytesWithUint16Len(data, &idx, 1)
+	if err != nil {
+		return nil, err
+	}
+	groupIdBytes, err := ReadBytesWithUint16Len(data, &idx, GroupIdLen)
+	if err != nil {
+		return nil, err
+	}
+	groupId := [GroupIdLen]byte{}
+	copy(groupId[:], groupIdBytes)
+	timestampBytes, err := ReadBytesWithUint16Len(data, &idx, 4)
+	if err != nil {
+		return nil, err
+	}
+	timestamp := BytesToUint32(timestampBytes)
+	return &EvmQualifyChangedEvent{
+		GroupId:   groupId,
+		Timestamp: timestamp,
+	}, nil
+}
+
+// GetTopicOfEvmQualifyChangedEvent
+func GetTopicOfEvmQualifyChangedEvent(e *EvmQualifyChangedEvent) string {
+	return iotago.EncodeHex(e.GroupId[:])
+}
+
+// GetPayloadOfEvmQualifyChangedEvent
+func GetPayloadOfEvmQualifyChangedEvent(e *EvmQualifyChangedEvent) []byte {
+	eventBytes := Serialize(e)
+	return eventBytes
+}
+
+// get inbox of evm qualify changed event
+func getInboxOfEvmQualifyChangedEvent(e *EvmQualifyChangedEvent) [][]byte {
+	groupQualifications, err := Im.GetAllGroupQualificationsFromGroupId(e.GroupId, Logger)
+	if err != nil {
+		// log
+		Logger.Errorf("getInboxOfEvmQualifyChangedEvent GetAllGroupQualificationsFromGroupId error:%s", err.Error())
+		return nil
+	}
+	var inboxs [][]byte
+	for _, groupQualification := range groupQualifications {
+		gaddress := groupQualification.Address
+		gaddressSha256Hash := Sha256Hash(gaddress)
+
+		inboxs = append(inboxs, gaddressSha256Hash)
+
+	}
+	return inboxs
+}
+
+// get event type of evm qualify changed event
+func getEventTypeOfEvmQualifyChangedEvent(e *EvmQualifyChangedEvent) byte {
+	return ImInboxEventTypeEvmQualifyChanged
+}
+
+// gen and push evm qualify changed event
+func GenAndPushEvmQualifyChangedEvent(e *EvmQualify, im *Manager, logger *logger.Logger) error {
+	event := NewEvmQualifyChangedEvent(e.GroupId, CurrentMilestoneTimestamp)
+	return PushData(event, GetTopicOfEvmQualifyChangedEvent, getInboxOfEvmQualifyChangedEvent, getEventTypeOfEvmQualifyChangedEvent, GetPayloadOfEvmQualifyChangedEvent, im, logger)
 }
