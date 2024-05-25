@@ -13,11 +13,14 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-const erc20ABI = `[{"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"}]`
+const erc20ABI = `[
+    {"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},
+    {"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"}
+]`
 
 var (
 	clientCacheInstance *ClientCache
-	once2               sync.Once
+	onceEvmTokenMeta    sync.Once
 )
 
 // ClientCache stores Ethereum clients mapped by their endpoint URL
@@ -35,7 +38,7 @@ func NewClientCache() *ClientCache {
 
 // GetClientCache initializes and returns the singleton instance of ClientCache
 func GetClientCache() *ClientCache {
-	once2.Do(func() {
+	onceEvmTokenMeta.Do(func() {
 		clientCacheInstance = NewClientCache()
 	})
 	return clientCacheInstance
@@ -61,28 +64,23 @@ func (c *ClientCache) GetClient(endpoint string) (*ethclient.Client, error) {
 
 // GetTotalSupply retrieves the total supply of an ERC-20 token
 func GetTotalSupply(client *ethclient.Client, contractAddress string) (*big.Int, error) {
-	// The address of the ERC-20 token contract
 	address := common.HexToAddress(contractAddress)
 
-	// Parse the contract ABI
 	parsedABI, err := abi.JSON(strings.NewReader(erc20ABI))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse contract ABI: %w", err)
 	}
 
-	// Create a call message to invoke the totalSupply function
 	callMsg := ethereum.CallMsg{
 		To:   &address,
 		Data: parsedABI.Methods["totalSupply"].ID,
 	}
 
-	// Call the contract function
 	result, err := client.CallContract(context.Background(), callMsg, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call contract: %w", err)
 	}
 
-	// Unpack the result
 	var totalSupply *big.Int
 	err = parsedABI.UnpackIntoInterface(&totalSupply, "totalSupply", result)
 	if err != nil {
@@ -92,12 +90,60 @@ func GetTotalSupply(client *ethclient.Client, contractAddress string) (*big.Int,
 	return totalSupply, nil
 }
 
-// GetSupply retrieves the total supply of an ERC-20 token given the client URL and contract address
-func GetSupply(clientURL string, contractAddress string) (*big.Int, error) {
+// GetDecimals retrieves the decimals of an ERC-20 token
+func GetDecimals(client *ethclient.Client, contractAddress string) (uint8, error) {
+	address := common.HexToAddress(contractAddress)
+
+	parsedABI, err := abi.JSON(strings.NewReader(erc20ABI))
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse contract ABI: %w", err)
+	}
+
+	callMsg := ethereum.CallMsg{
+		To:   &address,
+		Data: parsedABI.Methods["decimals"].ID,
+	}
+
+	result, err := client.CallContract(context.Background(), callMsg, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to call contract: %w", err)
+	}
+
+	var decimals uint8
+	err = parsedABI.UnpackIntoInterface(&decimals, "decimals", result)
+	if err != nil {
+		return 0, fmt.Errorf("failed to unpack result: %w", err)
+	}
+
+	return decimals, nil
+}
+
+// TokenInfo holds the total supply and decimals of an ERC-20 token
+type TokenInfo struct {
+	TotalSupply *big.Int
+	Decimals    uint8
+}
+
+// GetTokenInfo retrieves the total supply and decimals of an ERC-20 token given the client URL and contract address
+func GetTokenInfo(clientURL string, contractAddress string) (*TokenInfo, error) {
 	clientCache := GetClientCache()
 	client, err := clientCache.GetClient(clientURL)
 	if err != nil {
 		return nil, err
 	}
-	return GetTotalSupply(client, contractAddress)
+
+	totalSupply, err := GetTotalSupply(client, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	decimals, err := GetDecimals(client, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	return &TokenInfo{
+		TotalSupply: totalSupply,
+		Decimals:    decimals,
+	}, nil
 }
