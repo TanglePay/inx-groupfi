@@ -263,17 +263,21 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			tokenIdFixed := [im.Sha256HashLen]byte{}
 			copy(tokenIdFixed[:], im.Sha256HashBytes(tokenId))
 			balace := GetTokenTotal(tokenIdFixed)
-			return httpserver.JSONResponse(c, http.StatusOK, balace.totalAmount.Text(10))
+			tokenInfo := &im.TokenInfo{
+				TotalSupply: balace.totalAmount,
+				Decimals:    6,
+			}
+			return httpserver.JSONResponse(c, http.StatusOK, tokenInfo)
 		}
 		// if chainId is 148
 		if chainId == 148 {
 			tokenIdHex := iotago.EncodeHex(tokenId)
 			url := "https://json-rpc.evm.shimmer.network"
-			balance, err := im.GetSupply(url, tokenIdHex)
+			info, err := im.GetSupplyAndDecimals(url, tokenIdHex)
 			if err != nil {
 				return err
 			}
-			return httpserver.JSONResponse(c, http.StatusOK, balance.Text(10))
+			return httpserver.JSONResponse(c, http.StatusOK, info)
 		}
 		// return not found
 		return httpserver.JSONResponse(c, http.StatusNotFound, "not found")
