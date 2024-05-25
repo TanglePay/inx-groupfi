@@ -20,7 +20,7 @@ const erc20ABI = `[
 
 var (
 	clientCacheInstance *ClientCache
-	once                sync.Once
+	onceEvmTokenMeta    sync.Once
 )
 
 // ClientCache stores Ethereum clients mapped by their endpoint URL
@@ -38,7 +38,7 @@ func NewClientCache() *ClientCache {
 
 // GetClientCache initializes and returns the singleton instance of ClientCache
 func GetClientCache() *ClientCache {
-	once.Do(func() {
+	onceEvmTokenMeta.Do(func() {
 		clientCacheInstance = NewClientCache()
 	})
 	return clientCacheInstance
