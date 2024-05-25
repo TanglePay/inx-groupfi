@@ -17,7 +17,7 @@ var (
 		    {"groupName":"staff-marketing","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainId":0,"collectionId":"0x3070481ff0e0d96b1b7f6cbf8c2a484c9e7304295b44cd6ff9afe1ecbc4efca9"},
 		    {"groupName":"staff-developer","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainId":0,"collectionId":"0xdc6c3b0167af767652567523b9240c86095241c622c37cb726efeeb5e102a93c"},
 		    {"groupName":"dapper-groupfi","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainId":0,"collectionId":"0x1fd2407145ef147e0b06f835fef0e2059e56899aa8ce80147506893f837ea606"},
-			{"groupName":"GroupFi Announcement","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainId":148,"collectionId":"0x544F353C02363D848dBAC8Dc3a818B36B7f9355e"},
+			{"groupName":"Announcement","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainId":148,"collectionId":"0x544F353C02363D848dBAC8Dc3a818B36B7f9355e"},
 			{"groupName":"EtherVisions","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainId":148,"collectionId":"0xB85bdaf5eFf3f4c84d565923Eb1D62717dE17297"},
 			{"groupName":"TOKEN","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"token", "chainId":148,"collectionId":"","tokenThres":"1","tokenId":"0xfDbc4c5b14A538Aa2F6cD736b525C8e9532C5FA6"},
 			{"groupName":"GroupFi Announcement","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainId":0,"collectionId":"0x115a9fdca6a2110cc3e4cc7f92555101c3d80addf56984003e51e004ac4f9148"},
