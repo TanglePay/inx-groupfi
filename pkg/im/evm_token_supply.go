@@ -95,14 +95,23 @@ func GetTotalSupplyAndDecimals(client *ethclient.Client, contractAddress string)
 }
 
 func callBigIntFunction(client *ethclient.Client, parsedABI abi.ABI, address common.Address, methodName string) (*big.Int, error) {
+	// Prepare the call data
+	data, err := parsedABI.Pack(methodName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to pack method %s: %w", methodName, err)
+	}
+
+	// Call the contract
 	callMsg := ethereum.CallMsg{
 		To:   &address,
-		Data: parsedABI.Methods[methodName].ID,
+		Data: data,
 	}
 	result, err := client.CallContract(context.Background(), callMsg, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to call %s: %w", methodName, err)
 	}
+
+	// Unpack the result
 	var output = new(big.Int)
 	err = parsedABI.UnpackIntoInterface(output, methodName, result)
 	if err != nil {
@@ -112,14 +121,23 @@ func callBigIntFunction(client *ethclient.Client, parsedABI abi.ABI, address com
 }
 
 func callUint8Function(client *ethclient.Client, parsedABI abi.ABI, address common.Address, methodName string) (uint8, error) {
+	// Prepare the call data
+	data, err := parsedABI.Pack(methodName)
+	if err != nil {
+		return 0, fmt.Errorf("failed to pack method %s: %w", methodName, err)
+	}
+
+	// Call the contract
 	callMsg := ethereum.CallMsg{
 		To:   &address,
-		Data: parsedABI.Methods[methodName].ID,
+		Data: data,
 	}
 	result, err := client.CallContract(context.Background(), callMsg, nil)
 	if err != nil {
 		return 0, fmt.Errorf("failed to call %s: %w", methodName, err)
 	}
+
+	// Unpack the result
 	var output uint8
 	err = parsedABI.UnpackIntoInterface(&output, methodName, result)
 	if err != nil {
