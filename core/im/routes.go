@@ -273,7 +273,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		if chainId == 148 {
 			tokenIdHex := iotago.EncodeHex(tokenId)
 			url := "https://json-rpc.evm.shimmer.network"
-			info, err := im.GetSupplyAndDecimals(url, tokenIdHex)
+			info, err := im.GetTokenInfo(url, tokenIdHex)
 			if err != nil {
 				return err
 			}

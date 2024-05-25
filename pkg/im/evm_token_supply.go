@@ -62,96 +62,88 @@ func (c *ClientCache) GetClient(endpoint string) (*ethclient.Client, error) {
 	return client, nil
 }
 
-// TokenInfo holds the total supply and decimals of an ERC-20 token
-type TokenInfo struct {
-	TotalSupply *big.Int `json:"totalSupply"`
-	Decimals    uint8    `json:"decimals"`
-}
-
-// GetTotalSupplyAndDecimals retrieves the total supply and decimals of an ERC-20 token
-func GetTotalSupplyAndDecimals(client *ethclient.Client, contractAddress string) (*TokenInfo, error) {
+// GetTotalSupply retrieves the total supply of an ERC-20 token
+func GetTotalSupply(client *ethclient.Client, contractAddress string) (*big.Int, error) {
 	address := common.HexToAddress(contractAddress)
+
 	parsedABI, err := abi.JSON(strings.NewReader(erc20ABI))
 	if err != nil {
 		return nil, fmt.Errorf("failed to parse contract ABI: %w", err)
 	}
 
-	// Call the totalSupply function
-	totalSupply, err := callBigIntFunction(client, parsedABI, address, "totalSupply")
-	if err != nil {
-		return nil, fmt.Errorf("failed to get totalSupply: %w", err)
+	callMsg := ethereum.CallMsg{
+		To:   &address,
+		Data: parsedABI.Methods["totalSupply"].ID,
 	}
 
-	// Call the decimals function
-	decimals, err := callUint8Function(client, parsedABI, address, "decimals")
+	result, err := client.CallContract(context.Background(), callMsg, nil)
 	if err != nil {
-		return nil, fmt.Errorf("failed to get decimals: %w", err)
+		return nil, fmt.Errorf("failed to call contract: %w", err)
+	}
+
+	var totalSupply *big.Int
+	err = parsedABI.UnpackIntoInterface(&totalSupply, "totalSupply", result)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unpack result: %w", err)
+	}
+
+	return totalSupply, nil
+}
+
+// GetDecimals retrieves the decimals of an ERC-20 token
+func GetDecimals(client *ethclient.Client, contractAddress string) (uint8, error) {
+	address := common.HexToAddress(contractAddress)
+
+	parsedABI, err := abi.JSON(strings.NewReader(erc20ABI))
+	if err != nil {
+		return 0, fmt.Errorf("failed to parse contract ABI: %w", err)
+	}
+
+	callMsg := ethereum.CallMsg{
+		To:   &address,
+		Data: parsedABI.Methods["decimals"].ID,
+	}
+
+	result, err := client.CallContract(context.Background(), callMsg, nil)
+	if err != nil {
+		return 0, fmt.Errorf("failed to call contract: %w", err)
+	}
+
+	var decimals uint8
+	err = parsedABI.UnpackIntoInterface(&decimals, "decimals", result)
+	if err != nil {
+		return 0, fmt.Errorf("failed to unpack result: %w", err)
+	}
+
+	return decimals, nil
+}
+
+// TokenInfo holds the total supply and decimals of an ERC-20 token
+type TokenInfo struct {
+	TotalSupply *big.Int
+	Decimals    uint8
+}
+
+// GetTokenInfo retrieves the total supply and decimals of an ERC-20 token given the client URL and contract address
+func GetTokenInfo(clientURL string, contractAddress string) (*TokenInfo, error) {
+	clientCache := GetClientCache()
+	client, err := clientCache.GetClient(clientURL)
+	if err != nil {
+		return nil, err
+	}
+
+	totalSupply, err := GetTotalSupply(client, contractAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	decimals, err := GetDecimals(client, contractAddress)
+	if err != nil {
+		return nil, err
 	}
 
 	return &TokenInfo{
 		TotalSupply: totalSupply,
 		Decimals:    decimals,
 	}, nil
-}
-
-func callBigIntFunction(client *ethclient.Client, parsedABI abi.ABI, address common.Address, methodName string) (*big.Int, error) {
-	// Prepare the call data
-	data, err := parsedABI.Pack(methodName)
-	if err != nil {
-		return nil, fmt.Errorf("failed to pack method %s: %w", methodName, err)
-	}
-
-	// Call the contract
-	callMsg := ethereum.CallMsg{
-		To:   &address,
-		Data: data,
-	}
-	result, err := client.CallContract(context.Background(), callMsg, nil)
-	if err != nil {
-		return nil, fmt.Errorf("failed to call %s: %w", methodName, err)
-	}
-
-	// Unpack the result
-	var output = new(big.Int)
-	err = parsedABI.UnpackIntoInterface(output, methodName, result)
-	if err != nil {
-		return nil, fmt.Errorf("failed to unpack %s result: %w", methodName, err)
-	}
-	return output, nil
-}
-
-func callUint8Function(client *ethclient.Client, parsedABI abi.ABI, address common.Address, methodName string) (uint8, error) {
-	// Prepare the call data
-	data, err := parsedABI.Pack(methodName)
-	if err != nil {
-		return 0, fmt.Errorf("failed to pack method %s: %w", methodName, err)
-	}
-
-	// Call the contract
-	callMsg := ethereum.CallMsg{
-		To:   &address,
-		Data: data,
-	}
-	result, err := client.CallContract(context.Background(), callMsg, nil)
-	if err != nil {
-		return 0, fmt.Errorf("failed to call %s: %w", methodName, err)
-	}
-
-	// Unpack the result
-	var output uint8
-	err = parsedABI.UnpackIntoInterface(&output, methodName, result)
-	if err != nil {
-		return 0, fmt.Errorf("failed to unpack %s result: %w", methodName, err)
-	}
-	return output, nil
-}
-
-// GetSupplyAndDecimals retrieves the total supply and decimals of an ERC-20 token given the client URL and contract address
-func GetSupplyAndDecimals(clientURL string, contractAddress string) (*TokenInfo, error) {
-	clientCache := GetClientCache()
-	client, err := clientCache.GetClient(clientURL)
-	if err != nil {
-		return nil, err
-	}
-	return GetTotalSupplyAndDecimals(client, contractAddress)
 }
