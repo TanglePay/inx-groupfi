@@ -792,6 +792,28 @@ func getAddressMutes(c echo.Context) ([]*MuteResponse, error) {
 	return muteResponseArr, nil
 }
 
+// getAddressLikes
+func getAddressLikes(c echo.Context) ([]*LikeResponse, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address likes from address:%s", address)
+	addressSha256 := im.Sha256HashFixed(address)
+	likes, err := deps.IMManager.GetAllLikeGroupMembersFromAddress(addressSha256, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address likes from address:%s,found likes:%d", address, len(likes))
+	likeResponseArr := make([]*LikeResponse, len(likes))
+	for i, like := range likes {
+		likeResponseArr[i] = &LikeResponse{
+			GroupId: iotago.EncodeHex(like.GroupId[:]),
+		}
+	}
+	return likeResponseArr, nil
+}
+
 // getGroupVotesCount
 func getGroupVotesCount(c echo.Context) (*VoteCountResponse, error) {
 	groupId, err := parseGroupIdQueryParam(c)

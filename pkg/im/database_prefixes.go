@@ -74,4 +74,8 @@ const (
 	ImStoreKeyPrefixAddressMute byte = 37
 
 	ImStoreKeyPrefixTtl byte = 38
+
+	ImStoreKeyPrefixUserLikeGroupMember byte = 39
+
+	ImStoreKeyPrefixAddressLike byte = 40
 )

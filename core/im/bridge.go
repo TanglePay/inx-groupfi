@@ -203,6 +203,12 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 				if is {
 					deps.IMManager.HandleUserMuteGroupMemberBasicOutputCreated(mute, CoreComponent.Logger())
 				}
+
+				like, is := deps.IMManager.FilterLikeOutput(output, CoreComponent.Logger())
+				if is {
+					deps.IMManager.HandleUserLikeGroupMemberBasicOutputCreated(like, CoreComponent.Logger())
+				}
+
 				vote, is := deps.IMManager.FilterVoteOutput(output, CoreComponent.Logger())
 				if is {
 					deps.IMManager.HandleUserVoteGroupBasicOutputCreated(vote, CoreComponent.Logger())

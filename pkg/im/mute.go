@@ -217,8 +217,12 @@ func (im *Manager) CountMutedTimes(groupId [GroupIdLen]byte, mutedAddrSha256Hash
 }
 
 // calculate reputation score
-func (im *Manager) CalculateReputationScore(groupId [GroupIdLen]byte, mutedAddrSha256Hash [Sha256HashLen]byte) (float32, error) {
-	mutedTimes, err := im.CountMutedTimes(groupId, mutedAddrSha256Hash)
+func (im *Manager) CalculateReputationScore(groupId [GroupIdLen]byte, likedOrMutedAddrSha256Hash [Sha256HashLen]byte) (float32, error) {
+	likedTimes, err := im.CountLikedTimes(groupId, likedOrMutedAddrSha256Hash)
+	if err != nil {
+		return 0, err
+	}
+	mutedTimes, err := im.CountMutedTimes(groupId, likedOrMutedAddrSha256Hash)
 	if err != nil {
 		return 0, err
 	}
@@ -226,9 +230,10 @@ func (im *Manager) CalculateReputationScore(groupId [GroupIdLen]byte, mutedAddrS
 	if err != nil {
 		return 0, err
 	}
+	count := mutedTimes - likedTimes + 1
 	groupMemberCount := len(addresses)
 	// reputation score = 100 - 150/sqrt(groupMemberCount) * mutedTimes
-	reputationScore := float32(100) - float32(150)/float32(math.Sqrt(float64(groupMemberCount)))*float32(mutedTimes)
+	reputationScore := float32(100) - float32(150)/float32(math.Sqrt(float64(groupMemberCount)))*float32(count)
 
 	return reputationScore, nil
 }
