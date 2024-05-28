@@ -33,6 +33,16 @@ func ProcessAllBasicOutputFirstPass(initCtx *InitContext) {
 			deps.IMManager.HandleUserMuteGroupMemberBasicOutputCreated(basicOutput, initCtx.Logger)
 			return nil
 		},
+		// handle like
+		func(outputId []byte, output iotago.Output, milestoneIndex uint32, milestoneTimestamp uint32, initCtx *InitContext) error {
+			// filter vote output
+			basicOutput, is := deps.IMManager.FilterLikeOutput(output, initCtx.Logger)
+			if !is {
+				return nil
+			}
+			deps.IMManager.HandleUserLikeGroupMemberBasicOutputCreated(basicOutput, initCtx.Logger)
+			return nil
+		},
 		// handle group shared
 		func(outputId []byte, output iotago.Output, milestoneIndex uint32, milestoneTimestamp uint32, initCtx *InitContext) error {
 			// filter group shared output
