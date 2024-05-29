@@ -230,10 +230,10 @@ func (im *Manager) CalculateReputationScore(groupId [GroupIdLen]byte, likedOrMut
 	if err != nil {
 		return 0, err
 	}
-	count := mutedTimes - likedTimes + 1
+	count := likedTimes - mutedTimes
 	groupMemberCount := len(addresses)
 	// reputation score = 100 - 150/sqrt(groupMemberCount) * mutedTimes
-	reputationScore := float32(100) - float32(150)/float32(math.Sqrt(float64(groupMemberCount)))*float32(count)
+	reputationScore := float32(100) + float32(150)/float32(math.Sqrt(float64(groupMemberCount+42)))*float32(count)
 
 	return reputationScore, nil
 }
