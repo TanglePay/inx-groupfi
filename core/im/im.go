@@ -808,7 +808,8 @@ func getAddressLikes(c echo.Context) ([]*LikeResponse, error) {
 	likeResponseArr := make([]*LikeResponse, len(likes))
 	for i, like := range likes {
 		likeResponseArr[i] = &LikeResponse{
-			GroupId: iotago.EncodeHex(like.GroupId[:]),
+			GroupId:                iotago.EncodeHex(like.GroupId[:]),
+			LikedAddressSha256Hash: iotago.EncodeHex(like.LikedAddrSha256Hash[:]),
 		}
 	}
 	return likeResponseArr, nil

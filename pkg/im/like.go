@@ -186,6 +186,8 @@ func (im *Manager) GetUserLikeGroupMemberFromAddressKeyAndValue(key kvstore.Key,
 		return nil
 	}
 	likedAddrSha256HashFixed := BytesToFixedSha256HashLenBytes(likedAddrSha256Hash)
+	// log likedAddrSha256HashFixed
+	Logger.Infof("GetUserLikeGroupMemberFromAddressKeyAndValue ... likedAddrSha256Hash=%s", iotago.EncodeHex(likedAddrSha256HashFixed[:]))
 	return NewUserLikeGroupMember(groupIdFixed, likerAddrSha256HashFixed, likedAddrSha256HashFixed)
 }
 
@@ -272,21 +274,6 @@ func (im *Manager) HandleUserLikeGroupMemberBasicOutputCreated(output *iotago.Ba
 		return
 	}
 	toCreate, toDelete := CalculateDiff(createdUserLikeGroupMembers, existingUserLikeGroupMembers, getKey)
-	// log toCreate and toDelete
-	for _, userLikeGroupMember := range toCreate {
-		logger.Infof("HandleUserLikeGroupMemberBasicOutputCreated ... toCreate: groupId=%s, likedAddrSha256Hash=%s, likerAddrSha256Hash=%s",
-			iotago.EncodeHex(userLikeGroupMember.GroupId[:]),
-			iotago.EncodeHex(userLikeGroupMember.LikedAddrSha256Hash[:]),
-			iotago.EncodeHex(userLikeGroupMember.LikerAddrSha256Hash[:]),
-		)
-	}
-	for _, userLikeGroupMember := range toDelete {
-		logger.Infof("HandleUserLikeGroupMemberBasicOutputCreated ... toDelete: groupId=%s, likedAddrSha256Hash=%s, likerAddrSha256Hash=%s",
-			iotago.EncodeHex(userLikeGroupMember.GroupId[:]),
-			iotago.EncodeHex(userLikeGroupMember.LikedAddrSha256Hash[:]),
-			iotago.EncodeHex(userLikeGroupMember.LikerAddrSha256Hash[:]),
-		)
-	}
 
 	// create
 	for _, userLikeGroupMember := range toCreate {
