@@ -234,7 +234,9 @@ func (im *Manager) CalculateReputationScore(groupId [GroupIdLen]byte, likedOrMut
 	groupMemberCount := len(addresses)
 	// reputation score = 100 - 150/sqrt(groupMemberCount) * mutedTimes
 	reputationScore := float32(100) + float32(150)/float32(math.Sqrt(float64(groupMemberCount+42)))*float32(count)
-
+	// log reputation score, likedTimes, mutedTimes, groupMemberCount, adderss
+	Logger.Infof("CalculateReputationScore: reputationScore=%f, likedTimes=%d, mutedTimes=%d, groupMemberCount=%d, adderss=%s",
+		reputationScore, likedTimes, mutedTimes, groupMemberCount, iotago.EncodeHex(likedOrMutedAddrSha256Hash[:]))
 	return reputationScore, nil
 }
 
