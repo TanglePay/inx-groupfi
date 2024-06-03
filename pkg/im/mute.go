@@ -230,7 +230,9 @@ func (im *Manager) CalculateReputationScore(groupId [GroupIdLen]byte, likedOrMut
 	if err != nil {
 		return 0, err
 	}
-	count := likedTimes - mutedTimes
+	var likedTimesInt int = int(likedTimes)
+	var mutedTimesInt int = int(mutedTimes)
+	count := likedTimesInt - mutedTimesInt
 	groupMemberCount := len(addresses)
 	// reputation score = 100 + 150/sqrt(groupMemberCount+42) * (likedTimes - mutedTimes)
 	// Calculate the denominator separately
