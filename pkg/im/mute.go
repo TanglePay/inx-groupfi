@@ -237,7 +237,7 @@ func (im *Manager) CalculateReputationScore(groupId [GroupIdLen]byte, likedOrMut
 	denominator := math.Sqrt(float64(groupMemberCount + 42))
 
 	tmp1 := 150.0 / denominator
-	tmp11 := float64(count)
+	tmp11 := float64(count * 1.0)
 	tmp2 := tmp1 * tmp11
 	// Perform the division and the rest of the calculation
 	reputationScore := 100.0 + float32(tmp2)
