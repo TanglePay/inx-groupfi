@@ -217,8 +217,12 @@ func (im *Manager) CountMutedTimes(groupId [GroupIdLen]byte, mutedAddrSha256Hash
 }
 
 // calculate reputation score
-func (im *Manager) CalculateReputationScore(groupId [GroupIdLen]byte, mutedAddrSha256Hash [Sha256HashLen]byte) (float32, error) {
-	mutedTimes, err := im.CountMutedTimes(groupId, mutedAddrSha256Hash)
+func (im *Manager) CalculateReputationScore(groupId [GroupIdLen]byte, likedOrMutedAddrSha256Hash [Sha256HashLen]byte) (float32, error) {
+	likedTimes, err := im.CountLikedTimes(groupId, likedOrMutedAddrSha256Hash)
+	if err != nil {
+		return 0, err
+	}
+	mutedTimes, err := im.CountMutedTimes(groupId, likedOrMutedAddrSha256Hash)
 	if err != nil {
 		return 0, err
 	}
@@ -226,11 +230,25 @@ func (im *Manager) CalculateReputationScore(groupId [GroupIdLen]byte, mutedAddrS
 	if err != nil {
 		return 0, err
 	}
+	var likedTimesInt int = int(likedTimes)
+	var mutedTimesInt int = int(mutedTimes)
+	count := likedTimesInt - mutedTimesInt
 	groupMemberCount := len(addresses)
-	// reputation score = 100 - 150/sqrt(groupMemberCount) * mutedTimes
-	reputationScore := float32(100) - float32(150)/float32(math.Sqrt(float64(groupMemberCount)))*float32(mutedTimes)
+	// reputation score = 100 + 150/sqrt(groupMemberCount+42) * (likedTimes - mutedTimes)
+	// Calculate the denominator separately
+	denominator := math.Sqrt(float64(groupMemberCount + 42))
 
-	return reputationScore, nil
+	tmp1 := 150.0 / denominator
+	tmp11 := float64(count * 1.0)
+	tmp2 := tmp1 * tmp11
+	// Perform the division and the rest of the calculation
+	reputationScore := 100.0 + tmp2
+	reputationScore = math.Round(reputationScore*10) / 10
+
+	// log reputation score, likedTimes, mutedTimes, groupMemberCount, adderss，denominator,tmp1,tmp11,tmp2
+	Logger.Infof("CalculateReputationScore: reputationScore=%f, likedTimes=%d, mutedTimes=%d, groupMemberCount=%d, adderss=%s, denominator=%f, tmp1=%f, tmp11=%f, tmp2=%f",
+		reputationScore, likedTimes, mutedTimes, groupMemberCount, iotago.EncodeHex(likedOrMutedAddrSha256Hash[:]), denominator, tmp1, tmp11, tmp2)
+	return float32(reputationScore), nil
 }
 
 /*
@@ -313,6 +331,8 @@ func (im *Manager) HandleUserMuteGroupMemberBasicOutputCreated(output *iotago.Ba
 			logger.Infof("HandleUserMuteGroupMemberBasicOutputCreated ... err:%s", err.Error())
 			continue
 		}
+		// GenAndPushMuteChangedEvent, just for address
+		GenAndPushMuteChangedEvent(addressSha256Hash, userMuteGroupMember.GroupId, true, im, logger)
 	}
 
 	// delete
@@ -323,7 +343,9 @@ func (im *Manager) HandleUserMuteGroupMemberBasicOutputCreated(output *iotago.Ba
 			logger.Infof("HandleUserMuteGroupMemberBasicOutputCreated ... err:%s", err.Error())
 			continue
 		}
+		GenAndPushMuteChangedEvent(addressSha256Hash, userMuteGroupMember.GroupId, false, im, logger)
 	}
+
 }
 
 // handle user mute group member basic output consumed

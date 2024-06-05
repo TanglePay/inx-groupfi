@@ -15,7 +15,8 @@ import (
 
 const erc20ABI = `[
     {"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},
-    {"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"}
+    {"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},
+    {"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"}
 ]`
 
 var (
@@ -118,13 +119,44 @@ func GetDecimals(client *ethclient.Client, contractAddress string) (uint8, error
 	return decimals, nil
 }
 
-// TokenInfo holds the total supply and decimals of an ERC-20 token
+
+// GetName retrieves the name of an ERC-20 token
+func GetName(client *ethclient.Client, contractAddress string) (string, error) {
+	address := common.HexToAddress(contractAddress)
+
+	parsedABI, err := abi.JSON(strings.NewReader(erc20ABI))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse contract ABI: %w", err)
+	}
+
+	callMsg := ethereum.CallMsg{
+		To:   &address,
+		Data: parsedABI.Methods["name"].ID,
+	}
+
+	result, err := client.CallContract(context.Background(), callMsg, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to call contract: %w", err)
+	}
+
+	var name string
+	err = parsedABI.UnpackIntoInterface(&name, "name", result)
+	if err != nil {
+		return "", fmt.Errorf("failed to unpack result: %w", err)
+	}
+
+	return name, nil
+}
+
+// TokenInfo holds the total supply, decimals, and name of an ERC-20 token
 type TokenInfo struct {
 	TotalSupply *big.Int
 	Decimals    uint8
+	Name        string
 }
 
-// GetTokenInfo retrieves the total supply and decimals of an ERC-20 token given the client URL and contract address
+// GetTokenInfo retrieves the total supply, decimals, and name of an ERC-20 token given the client URL and contract address
+
 func GetTokenInfo(clientURL string, contractAddress string) (*TokenInfo, error) {
 	clientCache := GetClientCache()
 	client, err := clientCache.GetClient(clientURL)
@@ -132,18 +164,55 @@ func GetTokenInfo(clientURL string, contractAddress string) (*TokenInfo, error) 
 		return nil, err
 	}
 
-	totalSupply, err := GetTotalSupply(client, contractAddress)
-	if err != nil {
-		return nil, err
-	}
+	var wg sync.WaitGroup
+	var totalSupply *big.Int
+	var decimals uint8
+	var name string
 
-	decimals, err := GetDecimals(client, contractAddress)
-	if err != nil {
-		return nil, err
+	errs := make(chan error, 3)
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		var err error
+		totalSupply, err = GetTotalSupply(client, contractAddress)
+		if err != nil {
+			errs <- err
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		var err error
+		decimals, err = GetDecimals(client, contractAddress)
+		if err != nil {
+			errs <- err
+		}
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		var err error
+		name, err = GetName(client, contractAddress)
+		if err != nil {
+			errs <- err
+		}
+	}()
+
+	wg.Wait()
+	close(errs)
+
+	for err := range errs {
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &TokenInfo{
 		TotalSupply: totalSupply,
 		Decimals:    decimals,
+		Name:        name,
 	}, nil
 }

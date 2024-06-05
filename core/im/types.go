@@ -45,6 +45,12 @@ type MuteResponse struct {
 	MutedAddressSha256Hash string `json:"mutedAddressSha256Hash"`
 }
 
+// LikeResponse
+type LikeResponse struct {
+	GroupId                string `json:"groupId"`
+	LikedAddressSha256Hash string `json:"likedAddressSha256Hash"`
+}
+
 // VoteCountResponse
 type VoteCountResponse struct {
 	GroupId      string `json:"groupId"`

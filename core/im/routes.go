@@ -75,6 +75,9 @@ const (
 	// get address mutes
 	RouteAddressMutes = "/addressmutes"
 
+	// get address likes
+	RouteAddressLikes = "/addresslikes"
+
 	// get token total balance
 	RouteTokenTotalBalance = "/tokentotalbalance"
 	// get group votes count
@@ -529,6 +532,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// RouteAddressMutes
 	e.GET(RouteAddressMutes, func(c echo.Context) error {
 		resp, err := getAddressMutes(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// RouteAddressLikes
+	e.GET(RouteAddressLikes, func(c echo.Context) error {
+		resp, err := getAddressLikes(c)
 		if err != nil {
 			return err
 		}

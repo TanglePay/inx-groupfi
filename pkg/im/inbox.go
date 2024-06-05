@@ -18,6 +18,8 @@ const (
 	ImInboxEventTypeEvmQualifyChanged  byte   = 5
 	ImInboxEventTypePairXChanged       byte   = 6
 	ImInboxKeyPrefixDidChangedEvent    byte   = 7
+	ImInboxEventTypeMuteChanged        byte   = 8
+	ImInboxEventTypeLikeChanged        byte   = 9
 	DefaultEventTtl                    uint32 = 30 // 30 seconds
 )
 
@@ -213,6 +215,31 @@ func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte,
 			eventItem = didChangedEvent
 		}
 
+		// MuteChangedEvent
+		if eventType == ImInboxEventTypeMuteChanged {
+			// log
+			logger.Infof("ReadInbox MuteChangedEvent key %s", iotago.EncodeHex(key))
+			muteChangedEvent, err := UnserializeMuteChangedEvent(value)
+			if err != nil {
+				// log and continue
+				logger.Errorf("UnserializeMuteChangedEvent error %v", err)
+				return true
+			}
+			eventItem = muteChangedEvent
+		}
+
+		// LikeChangedEvent
+		if eventType == ImInboxEventTypeLikeChanged {
+			// log
+			logger.Infof("ReadInbox LikeChangedEvent key %s", iotago.EncodeHex(key))
+			likeChangedEvent, err := UnserializeLikeChangedEvent(value)
+			if err != nil {
+				// log and continue
+				logger.Errorf("UnserializeLikeChangedEvent error %v", err)
+				return true
+			}
+			eventItem = likeChangedEvent
+		}
 		eventItem.SetToken(token)
 		eventItem.SetEventType(eventType)
 		res = append(res, eventItem)
