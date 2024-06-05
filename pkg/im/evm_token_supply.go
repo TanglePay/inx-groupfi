@@ -119,6 +119,7 @@ func GetDecimals(client *ethclient.Client, contractAddress string) (uint8, error
 	return decimals, nil
 }
 
+
 // GetName retrieves the name of an ERC-20 token
 func GetName(client *ethclient.Client, contractAddress string) (string, error) {
 	address := common.HexToAddress(contractAddress)
@@ -155,6 +156,7 @@ type TokenInfo struct {
 }
 
 // GetTokenInfo retrieves the total supply, decimals, and name of an ERC-20 token given the client URL and contract address
+
 func GetTokenInfo(clientURL string, contractAddress string) (*TokenInfo, error) {
 	clientCache := GetClientCache()
 	client, err := clientCache.GetClient(clientURL)
