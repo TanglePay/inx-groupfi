@@ -131,6 +131,7 @@ type MessageGroupMetaJSON struct {
 	ContractAddress string `json:"contractAddress"`
 	GroupName       string `json:"groupName"`
 	TokenThres      string `json:"tokenThres"`
+	TokenDecimals   string `json:"tokenDecimals"`
 	TokenThresValue string `json:"tokenThresValue"`
 }
 
@@ -260,6 +261,7 @@ func (im *Manager) StoreOneGroupConfig(messageGroupMeta *MessageGroupMetaJSON) e
 		"contractAddress": contractAddress,
 		"tokenThres":      messageGroupMeta.TokenThres,
 		"tokenThresValue": messageGroupMeta.TokenThresValue,
+		"tokenDecimals":   messageGroupMeta.TokenDecimals,
 	}
 	groupId := sortAndSha256Map(configFieldsMap)
 	groupIdHex := iotago.EncodeHex(groupId)
