@@ -1,6 +1,7 @@
 package im
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -362,7 +363,6 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 
 type GroupData struct {
 	GroupId string `json:"groupId"`
-	ChainId int    `json:"chainId"`
 }
 
 type GroupParam struct {
@@ -383,33 +383,46 @@ func filterGroupIdsFromGroupParam(groupIds []string, groupParam GroupParam) []st
 	includeGroupNameMap := map[string]bool{}
 	if len(groupParam.Includes) > 0 {
 		for _, include := range groupParam.Includes {
-			key := include.GroupId + "-" + strconv.Itoa(include.ChainId)
+			key := include.GroupId
 			includeGroupNameMap[key] = true
 		}
 	}
 	excludeGroupNameMap := map[string]bool{}
 	if len(groupParam.Excludes) > 0 {
 		for _, exclude := range groupParam.Excludes {
-			key := exclude.GroupId + "-" + strconv.Itoa(exclude.ChainId)
+			key := exclude.GroupId
 			excludeGroupNameMap[key] = true
 		}
 	}
-	var filteredGroupIds []string
-	for _, groupId := range groupIds {
+	// map int -> string
+	filteredGroupIds := make(map[int]string)
+	for idx, groupId := range groupIds {
 		config := im.ConfigStoreGroupIdToGroupConfig[groupId]
 		if config == nil {
 			continue
 		}
 		dappGroupId := im.GetDappGroupId(groupId, config)
-		if (len(includeGroupNameMap) > 0) && (!includeGroupNameMap[dappGroupId+"-"+strconv.Itoa(config.ChainId)]) {
+		if (len(includeGroupNameMap) > 0) && (!includeGroupNameMap[dappGroupId]) {
 			continue
 		}
-		if (len(excludeGroupNameMap) > 0) && (excludeGroupNameMap[dappGroupId+"-"+strconv.Itoa(config.ChainId)]) {
+		if (len(excludeGroupNameMap) > 0) && (excludeGroupNameMap[dappGroupId]) {
 			continue
 		}
-		filteredGroupIds = append(filteredGroupIds, groupId)
+		filteredGroupIds[idx] = groupId
 	}
-	return filteredGroupIds
+	// sort filteredGroupIds by key, return values
+	var keys []int
+	for k := range filteredGroupIds {
+		keys = append(keys, k)
+	}
+	// sort keys
+	sort.Ints(keys)
+
+	var sortedGroupIds []string
+	for _, k := range keys {
+		sortedGroupIds = append(sortedGroupIds, filteredGroupIds[k])
+	}
+	return sortedGroupIds
 }
 
 // getQualifiedGroupConfigsFromAddress
