@@ -361,13 +361,21 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 }
 
 type GroupData struct {
-	GroupName string `json:"groupName"`
-	ChainId   int    `json:"chainId"`
+	GroupId string `json:"groupId"`
+	ChainId int    `json:"chainId"`
 }
 
 type GroupParam struct {
 	Includes []GroupData `json:"includes"`
 	Excludes []GroupData `json:"excludes"`
+}
+type DappGroupQuery struct {
+	ChainId         int    `json:"chainId"`
+	ContractAddress string `json:"contractAddress"`
+}
+type DappGroupConfig struct {
+	GroupName string `json:"groupName"`
+	GroupId   string `json:"groupId"`
 }
 
 // filter groupIds from group param
@@ -375,14 +383,14 @@ func filterGroupIdsFromGroupParam(groupIds []string, groupParam GroupParam) []st
 	includeGroupNameMap := map[string]bool{}
 	if len(groupParam.Includes) > 0 {
 		for _, include := range groupParam.Includes {
-			key := include.GroupName + "-" + strconv.Itoa(include.ChainId)
+			key := include.GroupId + "-" + strconv.Itoa(include.ChainId)
 			includeGroupNameMap[key] = true
 		}
 	}
 	excludeGroupNameMap := map[string]bool{}
 	if len(groupParam.Excludes) > 0 {
 		for _, exclude := range groupParam.Excludes {
-			key := exclude.GroupName + "-" + strconv.Itoa(exclude.ChainId)
+			key := exclude.GroupId + "-" + strconv.Itoa(exclude.ChainId)
 			excludeGroupNameMap[key] = true
 		}
 	}
@@ -392,10 +400,11 @@ func filterGroupIdsFromGroupParam(groupIds []string, groupParam GroupParam) []st
 		if config == nil {
 			continue
 		}
-		if (len(includeGroupNameMap) > 0) && (!includeGroupNameMap[config.GroupName+"-"+strconv.Itoa(config.ChainId)]) {
+		dappGroupId := im.GetDappGroupId(groupId, config)
+		if (len(includeGroupNameMap) > 0) && (!includeGroupNameMap[dappGroupId+"-"+strconv.Itoa(config.ChainId)]) {
 			continue
 		}
-		if (len(excludeGroupNameMap) > 0) && (excludeGroupNameMap[config.GroupName+"-"+strconv.Itoa(config.ChainId)]) {
+		if (len(excludeGroupNameMap) > 0) && (excludeGroupNameMap[dappGroupId+"-"+strconv.Itoa(config.ChainId)]) {
 			continue
 		}
 		filteredGroupIds = append(filteredGroupIds, groupId)
@@ -533,6 +542,36 @@ func getForMeGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSONPlus, error
 			IsPublic:             isPublic,
 		}
 		groupConfigs = append(groupConfigs, plusConfig)
+	}
+	return groupConfigs, nil
+}
+
+// getDappQueryGroupConfigs
+func getDappQueryGroupConfigs(c echo.Context) ([]*DappGroupConfig, error) {
+	var dappGroupQuery DappGroupQuery
+	err := c.Bind(&dappGroupQuery)
+	if err != nil {
+		// log error
+		CoreComponent.LogWarnf("getDappQueryGroupConfigs ... Bind failed:%s", err)
+		return nil, err
+	}
+	CoreComponent.LogInfof("get dapp query group configs from chainId:%d,contractAddress:%s", dappGroupQuery.ChainId, dappGroupQuery.ContractAddress)
+	// get all groupIds
+	groupIds := deps.IMManager.GetAllGroupIds()
+	// loop groupIds, get groupConfigs
+	var groupConfigs []*DappGroupConfig
+	for _, groupId := range groupIds {
+		config := deps.IMManager.GroupIdToGroupConfig(groupId)
+		// if config is nil, continue
+		if config == nil {
+			continue
+		}
+		if config.ChainId == dappGroupQuery.ChainId && config.ContractAddress == dappGroupQuery.ContractAddress {
+			groupConfigs = append(groupConfigs, &DappGroupConfig{
+				GroupName: config.GroupName,
+				GroupId:   im.GetDappGroupId(groupId, config),
+			})
+		}
 	}
 	return groupConfigs, nil
 }

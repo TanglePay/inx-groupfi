@@ -15,6 +15,59 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+type ChainConfig struct {
+	RPC            string
+	WSS            string
+	ListenType     int
+	MaxFilterBlock int
+	Contract       string
+}
+
+var evmNode = map[int]ChainConfig{
+	148: {
+		RPC:            "https://json-rpc.evm.shimmer.network",
+		WSS:            "wss://ws.json-rpc.evm.shimmer.network",
+		ListenType:     0,
+		MaxFilterBlock: 999,
+		Contract:       "0xc2F820BA3DBe0755deE2cD0ddc8Bf2fEc1e57255",
+	},
+	128123: {
+		RPC:            "https://node.ghostnet.etherlink.com/",
+		WSS:            "wss://node.ghostnet.etherlink.com/",
+		ListenType:     1,
+		MaxFilterBlock: 999,
+		Contract:       "0xD9B13709Ce4Ef82402c091f3fc8A93a9360A5c1e",
+	},
+	56: {
+		RPC:            "https://bsc-dataseed.binance.org/",
+		WSS:            "wss://bsc-dataseed.binance.org/",
+		ListenType:     1,
+		MaxFilterBlock: 999,
+		Contract:       "0xf6BEA7EA5bA937da0D73dA21139821Aa7ee85E0e",
+	},
+	137: {
+		RPC:            "https://polygon-mainnet.infura.io",
+		WSS:            "wss://polygon-mainnet.infura.io",
+		ListenType:     1,
+		MaxFilterBlock: 999,
+		Contract:       "0xD9B13709Ce4Ef82402c091f3fc8A93a9360A5c1e",
+	},
+	43114: {
+		RPC:            "https://avalanche-mainnet.infura.io",
+		WSS:            "wss://avalanche-mainnet.infura.io",
+		ListenType:     1,
+		MaxFilterBlock: 999,
+		Contract:       "0xD9B13709Ce4Ef82402c091f3fc8A93a9360A5c1e",
+	},
+	1: {
+		RPC:            "https://mainnet.infura.io/v3/",
+		WSS:            "wss://mainnet.infura.io/v3/",
+		ListenType:     0,
+		MaxFilterBlock: 999,
+		Contract:       "0xD9B13709Ce4Ef82402c091f3fc8A93a9360A5c1e",
+	},
+}
+
 const (
 	APIRoute           = "groupfi/v1"
 	MQTTAPIRoute       = "groupfi/mqtt/v1"
@@ -39,6 +92,9 @@ const (
 
 	// for me group configs
 	RouteIMForMeGroupConfigs = "/formegroupconfigs"
+
+	// dapp query group configs
+	RouteIMDappQueryGroupConfigs = "/dappquerygroupconfigs"
 
 	// marked group configs
 	RouteIMMarkedGroupConfigs = "/markedgroupconfigs"
@@ -272,18 +328,18 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			}
 			return httpserver.JSONResponse(c, http.StatusOK, tokenInfo)
 		}
-		// if chainId is 148
-		if chainId == 148 {
-			tokenIdHex := iotago.EncodeHex(tokenId)
-			url := "https://json-rpc.evm.shimmer.network"
-			info, err := im.GetTokenInfo(url, tokenIdHex)
-			if err != nil {
-				return err
-			}
-			return httpserver.JSONResponse(c, http.StatusOK, info)
+
+		config, exists := evmNode[int(chainId)]
+		if !exists {
+			return c.JSON(http.StatusBadRequest, "Chain ID not supported")
 		}
-		// return not found
-		return httpserver.JSONResponse(c, http.StatusNotFound, "not found")
+
+		tokenIdHex := iotago.EncodeHex(tokenId)
+		info, err := im.GetTokenInfo(config.RPC, tokenIdHex)
+		if err != nil {
+			return c.JSON(http.StatusInternalServerError, err.Error())
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, info)
 	})
 
 	// get address balance
@@ -427,6 +483,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// RouteIMForMeGroupConfigs
 	e.POST(RouteIMForMeGroupConfigs, func(c echo.Context) error {
 		groupConfigs, err := getForMeGroupConfigs(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, groupConfigs)
+	})
+
+	// RouteIMDappQueryGroupConfigs
+	e.POST(RouteIMDappQueryGroupConfigs, func(c echo.Context) error {
+		groupConfigs, err := getDappQueryGroupConfigs(c)
 		if err != nil {
 			return err
 		}

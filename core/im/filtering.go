@@ -325,7 +325,7 @@ func handleTokenWhaleEligibilityFromAddressGivenTotalAmount(tokenId []byte, toke
 			if groupConfig == nil {
 				continue
 			}
-			groupTokenIdStr := groupConfig.TokenId
+			groupTokenIdStr := groupConfig.ContractAddress
 			groupTokenIdBytes, _ := iotago.DecodeHex(groupTokenIdStr)
 			if !bytes.Equal(tokenId, groupTokenIdBytes) {
 				continue
@@ -378,8 +378,8 @@ func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.Nati
 			tokenIdStr := iotago.EncodeHex(im.SmrTokenId)
 			tokenIdBytes := im.SmrTokenId
 			amount := new(big.Int).SetUint64(basicTokenAmount)
-			if groupConfig.TokenId != tokenIdStr {
-				tokenIdStr = groupConfig.TokenId
+			if groupConfig.ContractAddress != tokenIdStr {
+				tokenIdStr = groupConfig.ContractAddress
 				// case no native token, continue
 				if nativeTokens == nil {
 					continue
