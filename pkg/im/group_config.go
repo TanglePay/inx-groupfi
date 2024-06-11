@@ -133,6 +133,7 @@ type MessageGroupMetaJSON struct {
 	TokenThres      string `json:"tokenThres"`
 	TokenDecimals   string `json:"tokenDecimals"`
 	TokenThresValue string `json:"tokenThresValue"`
+	DappGroupId     string `json:"dappGroupId"`
 }
 
 // struct for MessageGroupMetaJSON plus isPublic
@@ -265,6 +266,8 @@ func (im *Manager) StoreOneGroupConfig(messageGroupMeta *MessageGroupMetaJSON) e
 	}
 	groupId := sortAndSha256Map(configFieldsMap)
 	groupIdHex := iotago.EncodeHex(groupId)
+	dappGroupId := GetDappGroupId(groupIdHex, messageGroupMeta)
+	messageGroupMeta.DappGroupId = dappGroupId
 	// store groupId -> group config store
 	// ensure ConfigStoreChainIdAndQualifyTypeToGroupId[chainId] exists
 	if ConfigStoreChainIdAndQualifyTypeToGroupId[chainId] == nil {
