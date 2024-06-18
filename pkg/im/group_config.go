@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
@@ -25,13 +26,26 @@ type GroupIdAndGroupNamePair struct {
 	GroupName string
 }
 
+// get dapp groupId from groupId and group meta
+// dappGroupId = 'groupfi'+ groupNamespacestriped + keccak256(groupId)
+func GetDappGroupId(groupIdHex string, groupMeta *MessageGroupMetaJSON) string {
+	groupNamespaceStriped := groupMeta.GroupName
+	// strip white space and tab
+	groupNamespaceStriped = strings.ReplaceAll(groupNamespaceStriped, " ", "")
+	groupId, err := iotago.DecodeHex(groupIdHex)
+	if err != nil {
+		return ""
+	}
+	groupIdShortHash := SHA256HashBytesReturnString(groupId)
+	return "groupfi" + groupNamespaceStriped + groupIdShortHash
+}
 func ChainIdAndCollectionIdToGroupIdAndGroupNamePairs(chainId int, collectionId string) []*GroupIdAndGroupNamePair {
 	if (ConfigStoreChainIdAndQualifyTypeToGroupId[chainId] == nil) || (ConfigStoreChainIdAndQualifyTypeToGroupId[chainId]["nft"] == nil) {
 		return nil
 	}
 	var res []*GroupIdAndGroupNamePair
 	for _, groupIdHex := range ConfigStoreChainIdAndQualifyTypeToGroupId[chainId]["nft"] {
-		collectionIdInGroupConfig := ConfigStoreGroupIdToGroupConfig[groupIdHex].CollectionId
+		collectionIdInGroupConfig := ConfigStoreGroupIdToGroupConfig[groupIdHex].ContractAddress
 		if collectionIdInGroupConfig == collectionId {
 			groupId, err := iotago.DecodeHex(groupIdHex)
 			if err != nil {
@@ -109,15 +123,17 @@ func (im *Manager) ParseGroupConfigNFT(nftOutput *iotago.NFTOutput) (string, err
 }
 
 type MessageGroupMetaJSON struct {
-	GroupName     string `json:"groupName"`
-	ChainId       int    `json:"chainId"`
-	SchemaVersion int    `json:"schemaVersion"`
-	MessageType   int    `json:"messageType"`
-	AuthScheme    int    `json:"authScheme"`
-	QualifyType   string `json:"qualifyType"`
-	CollectionId  string `json:"collectionId"`
-	TokenId       string `json:"tokenId"`
-	TokenThres    string `json:"tokenThres"`
+	ChainId         int    `json:"chainId"`
+	SchemaVersion   int    `json:"schemaVersion"`
+	MessageType     int    `json:"messageType"`
+	AuthScheme      int    `json:"authScheme"`
+	QualifyType     string `json:"qualifyType"`
+	ContractAddress string `json:"contractAddress"`
+	GroupName       string `json:"groupName"`
+	TokenThres      string `json:"tokenThres"`
+	TokenDecimals   string `json:"tokenDecimals"`
+	TokenThresValue string `json:"tokenThresValue"`
+	DappGroupId     string `json:"dappGroupId"`
 }
 
 // struct for MessageGroupMetaJSON plus isPublic
@@ -235,20 +251,23 @@ func (im *Manager) StoreOneGroupConfig(messageGroupMeta *MessageGroupMetaJSON) e
 	chainId := messageGroupMeta.ChainId
 	qualifyType := messageGroupMeta.QualifyType
 	isPublic := messageGroupMeta.MessageType == MessageTypePublic
-	collectionId := messageGroupMeta.CollectionId
+	contractAddress := messageGroupMeta.ContractAddress
 	configFieldsMap := map[string]string{
-		"groupName":     messageGroupMeta.GroupName,
-		"chainId":       fmt.Sprintf("%d", chainId),
-		"schemaVersion": fmt.Sprintf("%d", messageGroupMeta.SchemaVersion),
-		"messageType":   fmt.Sprintf("%d", messageGroupMeta.MessageType),
-		"authScheme":    fmt.Sprintf("%d", messageGroupMeta.AuthScheme),
-		"qualifyType":   qualifyType,
-		"tokenId":       messageGroupMeta.TokenId,
-		"tokenThres":    messageGroupMeta.TokenThres,
-		"collectionId":  collectionId,
+		"groupName":       messageGroupMeta.GroupName,
+		"chainId":         fmt.Sprintf("%d", chainId),
+		"schemaVersion":   fmt.Sprintf("%d", messageGroupMeta.SchemaVersion),
+		"messageType":     fmt.Sprintf("%d", messageGroupMeta.MessageType),
+		"authScheme":      fmt.Sprintf("%d", messageGroupMeta.AuthScheme),
+		"qualifyType":     qualifyType,
+		"contractAddress": contractAddress,
+		"tokenThres":      messageGroupMeta.TokenThres,
+		"tokenThresValue": messageGroupMeta.TokenThresValue,
+		"tokenDecimals":   messageGroupMeta.TokenDecimals,
 	}
 	groupId := sortAndSha256Map(configFieldsMap)
 	groupIdHex := iotago.EncodeHex(groupId)
+	dappGroupId := GetDappGroupId(groupIdHex, messageGroupMeta)
+	messageGroupMeta.DappGroupId = dappGroupId
 	// store groupId -> group config store
 	// ensure ConfigStoreChainIdAndQualifyTypeToGroupId[chainId] exists
 	if ConfigStoreChainIdAndQualifyTypeToGroupId[chainId] == nil {

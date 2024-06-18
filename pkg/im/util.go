@@ -2,8 +2,10 @@ package im
 
 import (
 	"context"
+	"crypto/sha1"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -260,7 +262,21 @@ func BytesToFixedSha256HashLenBytes(bytes []byte) [Sha256HashLen]byte {
 	copy(fixed[:], bytes)
 	return fixed
 }
-
+func SHA1Hash(input string) string {
+	// use SHA1HashBytes
+	hashBytes := SHA1HashBytes([]byte(input))
+	return hex.EncodeToString(hashBytes)
+}
+func SHA1HashBytes(input []byte) []byte {
+	hash := sha1.New()
+	hash.Write(input)
+	hashBytes := hash.Sum(nil)
+	return hashBytes
+}
+func SHA256HashBytesReturnString(input []byte) string {
+	hashBytes := Sha256HashBytes(input)
+	return hex.EncodeToString(hashBytes)
+}
 func CalculateDiff[T any](created, existing []*T, getKey func(*T) string) (toCreate, toDelete []*T) {
 	existingMap := make(map[string]*T)
 	for _, e := range existing {
