@@ -78,4 +78,14 @@ const (
 	ImStoreKeyPrefixUserLikeGroupMember byte = 39
 
 	ImStoreKeyPrefixAddressLike byte = 40
+
+	ImStoreKeyPrefixChainIdAndContractAddressHashToGroupId byte = 41
+
+	ImStoreKeyPrefixChainIdAndQualifyTypeToGroupId byte = 42
+
+	ImStoreKeyPrefixDappGroupIdToGroupId byte = 43
+
+	ImStoreKeyPrefixChainIdAndContractAddressHashToOutputId byte = 44
+
+	ImStoreKeyPrefixPublicGroupId byte = 45
 )

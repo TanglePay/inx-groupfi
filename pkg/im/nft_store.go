@@ -178,7 +178,7 @@ func (im *Manager) FilterNftOutput(outputId []byte, output iotago.Output, mileSt
 	nftAddress := issuer.Address.(*iotago.NFTAddress)
 	collectionId := nftAddress.NFTID().ToHex()
 
-	pairs := ChainIdAndCollectionIdToGroupIdAndGroupNamePairs(HornetChainId, collectionId)
+	pairs := ChainIdAndCollectionIdToGroupIdAndGroupNamePairs(uint32(HornetChainId), collectionId, im)
 	if len(pairs) == 0 {
 		return nil, false, nil
 	}

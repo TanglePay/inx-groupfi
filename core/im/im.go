@@ -1,6 +1,7 @@
 package im
 
 import (
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -326,7 +327,83 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 	isEvmAddress := im.IsEvmAddress(address)
 	// if isEvmAddress, return all groupIds
 	if isEvmAddress {
-		groupIds := deps.IMManager.GetAllNonSmrGroupIds()
+		addressSha256 := im.Sha256Hash(address)
+		var addressSha256Fixed [im.Sha256HashLen]byte
+		copy(addressSha256Fixed[:], addressSha256)
+		groupIds, err := deps.IMManager.GetGroupIdsFromAddress(addressSha256)
+		if err != nil {
+			return nil, err
+		}
+		// filter groupIds, either joined or public
+		var groupIdsToSubsribe []string
+		for _, groupId := range groupIds {
+			var groupIdFixed [im.GroupIdLen]byte
+			copy(groupIdFixed[:], groupId)
+			groupIdHex := iotago.EncodeHex(groupIdFixed[:])
+			isMember, err := deps.IMManager.GroupMemberExistsFromGroupIdAndAddressSha256Hash(groupIdFixed, addressSha256Fixed)
+			if err != nil {
+				// log error then continue
+				CoreComponent.LogWarnf("getGroupIdsFromAddress ... GroupMemberExistsFromGroupIdAndAddressSha256Hash failed:%s", err)
+				continue
+			}
+			if isMember || im.CheckIfGroupIdIsPublic(groupIdFixed, deps.IMManager) {
+				groupIdsToSubsribe = append(groupIdsToSubsribe, groupIdHex)
+			}
+		}
+		if hasGroupParam {
+			publicGroupIdsFromInlcudes := groupParamToGroupIds(groupParam, true)
+			// MergeAndRemoveDupsStringArray
+			groupIdsToSubsribe = im.MergeAndRemoveDupsStringArray(groupIdsToSubsribe, publicGroupIdsFromInlcudes)
+		}
+		return groupIdsToSubsribe, nil
+	}
+	addressSha256 := im.Sha256Hash(address)
+	groupIds, err := deps.IMManager.GetGroupIdsFromAddress(addressSha256)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get groupIds from address:%s,found groupIds:%d", address, len(groupIds))
+	publicGroupIds := []string{}
+	groupIdStrArr := []string{}
+	seen := map[string]bool{}
+	for _, groupId := range groupIds {
+		groupIdHex := iotago.EncodeHex(groupId)
+		if _, ok := seen[groupIdHex]; !ok {
+			groupIdStrArr = append(groupIdStrArr, groupIdHex)
+			seen[groupIdHex] = true
+		}
+	}
+	for _, groupId := range publicGroupIds {
+		if _, ok := seen[groupId]; !ok {
+			groupIdStrArr = append(groupIdStrArr, groupId)
+			seen[groupId] = true
+		}
+	}
+	if hasGroupParam {
+		groupIdStrArr = filterGroupIdsFromGroupParam(groupIdStrArr, groupParam)
+	}
+
+	return groupIdStrArr, nil
+}
+
+// getGroupIdsFromAddressV2
+func getGroupIdsFromAddressV2(c echo.Context) ([]string, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	var groupParam GroupParam
+	hasGroupParam := true
+	err = c.Bind(&groupParam)
+	if err != nil {
+		hasGroupParam = false
+		CoreComponent.LogWarnf("getGroupIdsFromAddress ... Bind failed:%s", err)
+	}
+	CoreComponent.LogInfof("get groupIds from address:%s", address)
+	isEvmAddress := im.IsEvmAddress(address)
+	// if isEvmAddress, return all groupIds
+	if isEvmAddress {
+		groupIds := []string{}
 		if hasGroupParam {
 			groupIds = filterGroupIdsFromGroupParam(groupIds, groupParam)
 		}
@@ -338,7 +415,7 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 		return nil, err
 	}
 	CoreComponent.LogInfof("get groupIds from address:%s,found groupIds:%d", address, len(groupIds))
-	publicGroupIds := deps.IMManager.GetAllPublicGroupIds()
+	publicGroupIds := []string{}
 	groupIdStrArr := []string{}
 	seen := map[string]bool{}
 	for _, groupId := range groupIds {
@@ -378,6 +455,29 @@ type DappGroupConfig struct {
 	GroupId   string `json:"groupId"`
 }
 
+// group param to groupId map
+func groupParamToGroupIds(groupParam GroupParam, isPublicOnly bool) []string {
+	var groupIds []string
+	for _, include := range groupParam.Includes {
+		dappGroupId := include.GroupId
+		groupId, err := im.ReadGroupIdFromDappGroupId(dappGroupId, deps.IMManager)
+		if err != nil {
+			continue
+		}
+		shouldAppend := true
+		if isPublicOnly {
+			isGroupPublic := im.CheckIfGroupIdIsPublic(groupId, deps.IMManager)
+			if !isGroupPublic {
+				shouldAppend = false
+			}
+		}
+		if shouldAppend {
+			groupIds = append(groupIds, iotago.EncodeHex(groupId[:]))
+		}
+	}
+	return groupIds
+}
+
 // filter groupIds from group param
 func filterGroupIdsFromGroupParam(groupIds []string, groupParam GroupParam) []string {
 	includeGroupNameMap := map[string]bool{}
@@ -397,7 +497,16 @@ func filterGroupIdsFromGroupParam(groupIds []string, groupParam GroupParam) []st
 	// map int -> string
 	filteredGroupIds := make(map[int]string)
 	for idx, groupId := range groupIds {
-		config := im.ConfigStoreGroupIdToGroupConfig[groupId]
+		groupIdBytes, err := iotago.DecodeHex(groupId)
+		if err != nil {
+			continue
+		}
+		var groupIdFixed [im.GroupIdLen]byte
+		copy(groupIdFixed[:], groupIdBytes)
+		config, err := im.ReadGroupConfigMetaFromGroupId(groupIdFixed, deps.IMManager)
+		if err != nil {
+			continue
+		}
 		if config == nil {
 			continue
 		}
@@ -434,28 +543,21 @@ func getQualifiedGroupConfigsFromAddress(c echo.Context) ([]*im.MessageGroupMeta
 		CoreComponent.LogWarnf("getQualifiedGroupConfigsFromAddress ... Bind failed:%s", err)
 	}
 	CoreComponent.LogInfof("get qualified group configs from address:%s", groupParam)
-	groupIdHexList, err := getGroupIdsFromAddress(c)
-	if err != nil {
-		return nil, err
-	}
-	publicGroupIds := deps.IMManager.GetAllPublicGroupIds()
-	hash := map[string]bool{}
-	for _, groupIdHex := range groupIdHexList {
-		hash[groupIdHex] = true
-	}
-	// append public groupIds to groupIdHexList
-	for _, groupIdHex := range publicGroupIds {
-		if _, ok := hash[groupIdHex]; !ok {
-			groupIdHexList = append(groupIdHexList, groupIdHex)
-		}
-	}
-	groupIdHexList = filterGroupIdsFromGroupParam(groupIdHexList, groupParam)
-	// loop groupIdHexList
 	var groupConfigs []*im.MessageGroupMetaJSON
-	for _, groupIdHex := range groupIdHexList {
-		config := deps.IMManager.GroupIdToGroupConfig(groupIdHex)
-		// if config is not nil, append to groupConfigs
-		groupConfigs = append(groupConfigs, config)
+	for _, groupData := range groupParam.Includes {
+		dappGroupId := groupData.GroupId
+		groupId, err := im.ReadGroupIdFromDappGroupId(dappGroupId, deps.IMManager)
+		if err != nil {
+			continue
+		}
+		groupConfig, err := im.ReadGroupConfigMetaFromGroupId(groupId, deps.IMManager)
+		if err != nil {
+			continue
+		}
+		if groupConfig == nil {
+			continue
+		}
+		groupConfigs = append(groupConfigs, groupConfig)
 	}
 	return groupConfigs, nil
 }
@@ -473,13 +575,11 @@ func getPublicGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 	if len(groupParam.Includes) == 0 && len(groupParam.Excludes) == 0 {
 		return nil, nil
 	}
-	// all public groupIds
-	publicGroupIds := deps.IMManager.GetAllPublicGroupIds()
-	// filter groupIds from groupParam
-	groupIdHexList := filterGroupIdsFromGroupParam(publicGroupIds, groupParam)
+
+	publicGroupIds := groupParamToGroupIds(groupParam, true)
 	// loop groupIdHexList
 	var groupConfigs []*im.MessageGroupMetaJSON
-	for _, groupIdHex := range groupIdHexList {
+	for _, groupIdHex := range publicGroupIds {
 		config := deps.IMManager.GroupIdToGroupConfig(groupIdHex)
 		// if config is not nil, append to groupConfigs
 		groupConfigs = append(groupConfigs, config)
@@ -529,27 +629,26 @@ func getForMeGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSONPlus, error
 		return nil, nil
 	}
 	// all groupIds
-	groupIds := deps.IMManager.GetAllGroupIds()
-	// filter groupIds from groupParam
-	groupIdHexList := filterGroupIdsFromGroupParam(groupIds, groupParam)
+	groupIdHexList := groupParamToGroupIds(groupParam, false)
 	// loop groupIdHexList
 	var groupConfigs []*im.MessageGroupMetaJSONPlus
 	for _, groupIdHex := range groupIdHexList {
-		config := im.ConfigStoreGroupIdToGroupConfig[groupIdHex]
+		groupIdBytes, err := iotago.DecodeHex(groupIdHex)
+		if err != nil {
+			continue
+		}
+		var groupIdFixed [im.GroupIdLen]byte
+		copy(groupIdFixed[:], groupIdBytes)
+		config, err := im.ReadGroupConfigMetaFromGroupId(groupIdFixed, deps.IMManager)
+		if err != nil {
+			continue
+		}
 		// if config is nil continue
 		if config == nil {
 			continue
 		}
 		isPublic := deps.IMManager.GetIsGroupPublicWithGroupId(groupIdHex)
-		// copy config to plusConfig, field by field
-		/*
-				MessageType   int    `json:"messageType"`
-			AuthScheme    int    `json:"authScheme"`
-			QualifyType   string `json:"qualifyType"`
-			CollectionId  string `json:"collectionId"`
-			TokenId       string `json:"tokenId"`
-			TokenThres    string `json:"tokenThres"`
-		*/
+
 		plusConfig := &im.MessageGroupMetaJSONPlus{
 			MessageGroupMetaJSON: *config,
 			IsPublic:             isPublic,
@@ -570,21 +669,26 @@ func getDappQueryGroupConfigs(c echo.Context) ([]*DappGroupConfig, error) {
 	}
 	CoreComponent.LogInfof("get dapp query group configs from chainId:%d,contractAddress:%s", dappGroupQuery.ChainId, dappGroupQuery.ContractAddress)
 	// get all groupIds
-	groupIds := deps.IMManager.GetAllGroupIds()
+	groupIds, err := im.ReadAllGroupIdFromChainIdAndContractAddressHash(uint32(dappGroupQuery.ChainId), dappGroupQuery.ContractAddress, deps.IMManager)
+	if err != nil {
+		return nil, err
+	}
 	// loop groupIds, get groupConfigs
 	var groupConfigs []*DappGroupConfig
 	for _, groupId := range groupIds {
-		config := deps.IMManager.GroupIdToGroupConfig(groupId)
+		config, err := im.ReadGroupConfigMetaFromGroupId(groupId, deps.IMManager)
+		if err != nil {
+			continue
+		}
 		// if config is nil, continue
 		if config == nil {
 			continue
 		}
-		if config.ChainId == dappGroupQuery.ChainId && config.ContractAddress == dappGroupQuery.ContractAddress {
-			groupConfigs = append(groupConfigs, &DappGroupConfig{
-				GroupName: config.GroupName,
-				GroupId:   im.GetDappGroupId(groupId, config),
-			})
-		}
+		groupIdHex := iotago.EncodeHex(groupId[:])
+		groupConfigs = append(groupConfigs, &DappGroupConfig{
+			GroupName: config.GroupName,
+			GroupId:   im.GetDappGroupId(groupIdHex, config),
+		})
 	}
 	return groupConfigs, nil
 }
@@ -971,10 +1075,10 @@ func getAddressMarkGroupMarks(address string) ([]*im.Mark, error) {
 	var filteredMarks []*im.Mark
 	for _, mark := range marks {
 		canAppend := true
-		groupIdStr := iotago.EncodeHex(mark.GroupId[:])
 		if isEvmAddress {
-			groupConfig := im.ConfigStoreGroupIdToGroupConfig[groupIdStr]
-			if groupConfig == nil || groupConfig.ChainId == im.HornetChainId {
+			groupConfig, err := im.ReadGroupConfigMetaFromGroupId(mark.GroupId, deps.IMManager)
+
+			if err != nil || groupConfig == nil || groupConfig.ChainId == im.HornetChainId {
 				canAppend = false
 			}
 		}
@@ -1042,21 +1146,6 @@ func getUserGroupReputation(c echo.Context) (*GroupUserReputationResponse, error
 		Reputation:        score,
 	}
 	return resp, nil
-}
-
-// get all groups under renter
-func getGroupConfigsForRenter(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
-	renderName, err := parseAttrNameQueryParam(c, "renderName")
-	if err != nil {
-		return nil, err
-	}
-	CoreComponent.LogInfof("get groups under renter:%s", renderName)
-	groupConfigs, err := deps.IMManager.ReadAllGroupConfigForRenter(renderName)
-	if err != nil {
-		return nil, err
-	}
-	CoreComponent.LogInfof("get groups under renter:%s,found groupConfigs:%d", renderName, len(groupConfigs))
-	return groupConfigs, nil
 }
 
 // get inbox message
@@ -1209,4 +1298,86 @@ func batchSmrAddressToEvmAddress(c echo.Context) ([]string, error) {
 		evmAddresses[i] = evmAddress
 	}
 	return evmAddresses, nil
+}
+
+// listGroupConfigs
+func listGroupConfigsLite(c echo.Context) ([]*im.GroupConfigNftListResponse, error) {
+	// get param include chainId uint32, contractAddress string, page int, pageSize int
+	// chainId and contract address are optional
+	// page and pageSize are optional and default to 1 and 10
+	chainIdStr, err := parseAttrNameQueryParamWithNil(c, "chainId")
+	if err != nil {
+		return nil, err
+	}
+	var chainId uint32
+	chainId = math.MaxUint32
+	if chainIdStr != "" {
+		chainId64, err := strconv.ParseUint(chainIdStr, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		chainId = uint32(chainId64)
+	}
+	contractAddress, err := parseAttrNameQueryParamWithNil(c, "contractAddress")
+	if err != nil {
+		return nil, err
+	}
+	pageStr, err := parseAttrNameQueryParamWithDefault(c, "page", "1")
+	if err != nil {
+		return nil, err
+	}
+	page, err := strconv.ParseUint(pageStr, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	pageSizeStr, err := parseAttrNameQueryParamWithDefault(c, "pageSize", "10")
+	if err != nil {
+		return nil, err
+	}
+	pageSize, err := strconv.ParseUint(pageSizeStr, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("list group configs from chainId:%d,contractAddress:%s,page:%d,pageSize:%d", chainId, contractAddress, page, pageSize)
+	resp, err := im.ListOutputIdAndGroupIdFromChainIdAndContractAddress(chainId, contractAddress, int(page), int(pageSize), deps.IMManager)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("list group configs from chainId:%d,contractAddress:%s,page:%d,pageSize:%d,found groupConfigs:%d", chainId, contractAddress, page, pageSize, len(resp))
+	return resp, nil
+}
+
+// getGroupConfigUnderNft
+func getGroupConfigUnderNft(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
+	// get params including chainId uint32, contractAddress string, all required
+	chainIdStr, err := parseAttrNameQueryParam(c, "chainId")
+	if err != nil {
+		return nil, err
+	}
+	chainId64, err := strconv.ParseUint(chainIdStr, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	chainId := uint32(chainId64)
+	contractAddress, err := parseAttrNameQueryParam(c, "contractAddress")
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get group config under nft from chainId:%d,contractAddress:%s", chainId, contractAddress)
+	groupIds, err := im.ReadAllGroupIdFromChainIdAndContractAddressHash(chainId, contractAddress, deps.IMManager)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get group config under nft from chainId:%d,contractAddress:%s,found groupIds:%d", chainId, contractAddress, len(groupIds))
+	var groupConfigs []*im.MessageGroupMetaJSON
+	for _, groupId := range groupIds {
+		config, err := im.ReadGroupConfigMetaFromGroupId(groupId, deps.IMManager)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("get group config under nft from chainId:%d,contractAddress:%s,groupId:%s failed:%s", chainId, contractAddress, iotago.EncodeHex(groupId[:]), err)
+			continue
+		}
+		groupConfigs = append(groupConfigs, config)
+	}
+	return groupConfigs, nil
 }
