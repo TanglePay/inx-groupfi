@@ -65,7 +65,8 @@ func ProcessAllNftFirstPass(initCtx *InitContext) {
 			}
 			if groupConfig != nil {
 				// handle group config
-				deps.IMManager.HandleGroupConfigNFTOutputConsumedOrCreated(nil, groupConfig, initCtx.Logger)
+				groupConfigArr := []*im.ConfigNftOutputWrapper{groupConfig}
+				deps.IMManager.HandleGroupConfigNFTOutputConsumedOrCreated(nil, groupConfigArr, initCtx.Logger)
 			}
 			return nil
 		},
