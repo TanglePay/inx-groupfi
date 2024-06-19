@@ -1,6 +1,7 @@
 package im
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
@@ -1128,6 +1129,10 @@ func ExtractConfigNftOutputWrapperFromNFTOutput(outputId [OutputIdLen]byte, nftO
 	}, nil
 }
 
+var groupconfigTagRawStr = "GROUPFIGROUPCONFIGV1"
+var groupconfigTag = []byte(groupconfigTagRawStr)
+var GroupconfigTagStr = iotago.EncodeHex(groupconfigTag)
+
 // filter output for config nft output wrapper
 // output iotago.Output, outputId iotago.OutputID
 func FilterOutputForConfigNftOutputWrapper(output iotago.Output, outputId iotago.OutputID, im *Manager) (*ConfigNftOutputWrapper, error) {
@@ -1139,6 +1144,16 @@ func FilterOutputForConfigNftOutputWrapper(output iotago.Output, outputId iotago
 	if !ok {
 		return nil, nil
 	}
+	featureSet := nftOutput.FeatureSet()
+	tag := featureSet.TagFeature()
+	if tag == nil {
+		return nil, nil
+	}
+	// check tag
+	if !bytes.Equal(tag.Tag[:], groupconfigTag) {
+		return nil, nil
+	}
+
 	// ExtractConfigNftOutputWrapperFromNFTOutput
 	configNftOutputWrapper, err := ExtractConfigNftOutputWrapperFromNFTOutput(outputId, nftOutput, im)
 	if err != nil {

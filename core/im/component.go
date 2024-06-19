@@ -290,7 +290,6 @@ func run() error {
 	// log api url
 	CoreComponent.LogInfof("apiUrl:%s", apiUrl)
 
-	im.InitIpfsShell()
 	nodeHTTPAPIClient := nodeclient.New(apiUrl)
 	im.NodeHTTPAPIClient = nodeHTTPAPIClient
 
@@ -308,8 +307,6 @@ func run() error {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
 		im.NodeIndexerAPIClient = indexerClient
-		// handle group config init
-		handleGroupConfigInit(ctx, nodeHTTPAPIClient, indexerClient)
 
 		initCtx := &InitContext{
 			Ctx:           ctx,
@@ -317,6 +314,8 @@ func run() error {
 			IndexerClient: indexerClient,
 			Logger:        CoreComponent.Logger(),
 		}
+		// handle group config first
+		ProcessGroupConfig(initCtx)
 		// handle all nft first pass
 		ProcessAllNftFirstPass(initCtx)
 
