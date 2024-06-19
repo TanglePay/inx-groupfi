@@ -8,8 +8,8 @@ import (
 )
 
 func DownloadIpfsContent(ipfsUri string) (string, error) {
-	// Convert IPFS URI to ipfs.io gateway URL
-	gatewayUrl := strings.Replace(ipfsUri, "ipfs://", "https://ipfs.io/ipfs/", 1)
+	// Convert IPFS URI to amaranth-payable-cow-395.mypinata.cloud gateway URL
+	gatewayUrl := strings.Replace(ipfsUri, "ipfs://", "https://amaranth-payable-cow-395.mypinata.cloud/ipfs/", 1)
 
 	// Make the HTTP GET request
 	resp, err := http.Get(gatewayUrl)
