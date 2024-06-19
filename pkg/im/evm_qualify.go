@@ -86,9 +86,12 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 	}
 
 	// get group config by group id
-	groupIdHex := iotago.EncodeHex(evmQualify.GroupId[:])
-	groupConfig := ConfigStoreGroupIdToGroupConfig[groupIdHex]
+	groupConfig, err := ReadGroupConfigMetaFromGroupId(evmQualify.GroupId, im)
+	if err != nil {
+		return err
+	}
 	if groupConfig == nil {
+		groupIdHex := iotago.EncodeHex(evmQualify.GroupId[:])
 		return fmt.Errorf("group config not found for group id %s", groupIdHex)
 	}
 	// get group qualify type

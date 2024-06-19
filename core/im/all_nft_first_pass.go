@@ -1,6 +1,7 @@
 package im
 
 import (
+	"github.com/TanglePay/inx-groupfi/pkg/im"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -51,6 +52,20 @@ func ProcessAllNftFirstPass(initCtx *InitContext) {
 			if pairX != nil {
 				// handle pairx
 				deps.IMManager.HandlePairXCreated(pairX, initCtx.Logger)
+			}
+			return nil
+		},
+		// handle group config
+		func(outputId []byte, output iotago.Output, milestoneIndex uint32, milestoneTimestamp uint32, initCtx *InitContext) error {
+			var outputIDIota iotago.OutputID
+			copy(outputIDIota[:], outputId)
+			groupConfig, err := im.FilterOutputForConfigNftOutputWrapper(output, outputIDIota, deps.IMManager)
+			if err != nil {
+				return err
+			}
+			if groupConfig != nil {
+				// handle group config
+				deps.IMManager.HandleGroupConfigNFTOutputConsumedOrCreated(nil, groupConfig, initCtx.Logger)
 			}
 			return nil
 		},
