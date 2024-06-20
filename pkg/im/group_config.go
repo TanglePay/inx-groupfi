@@ -1083,6 +1083,8 @@ func (im *Manager) HandleGroupConfigNFTOutputConsumedOrCreated(consumed []*Confi
 	for _, config := range consumed {
 		err := HandleGroupNFTOutputConsumed(config, logger, im)
 		if err != nil {
+			// log error
+			logger.Infof("HandleGroupConfigNFTOutputConsumedOrCreated ... HandleGroupNFTOutputConsumed failed:%s", err)
 			return err
 		}
 	}
@@ -1090,6 +1092,8 @@ func (im *Manager) HandleGroupConfigNFTOutputConsumedOrCreated(consumed []*Confi
 	for _, config := range created {
 		err := HandleGroupNFTOutputCreated(config, logger, im)
 		if err != nil {
+			// log error
+			logger.Infof("HandleGroupConfigNFTOutputConsumedOrCreated ... HandleGroupNFTOutputCreated failed:%s", err)
 			return err
 		}
 	}
@@ -1246,6 +1250,8 @@ func HandleGroupNFTOutputCreated(configWrapper *ConfigNftOutputWrapper, logger *
 	for _, config := range configWrapper.Configs {
 		groupId := GetGroupIdFromGroupConfig(config)
 		groupIdHex := iotago.EncodeHex(groupId[:])
+		// log groupIdHex, chainId, contractAddress, config.QualifyType
+		logger.Infof("groupIdHex: %s, chainId: %d, contractAddress: %s, qualifyType: %s", groupIdHex, chainId, contractAddress, config.QualifyType)
 		err = StoreChainIdAndQualifyTypeToGroupId(chainId, config.QualifyType, groupId, im)
 		if err != nil {
 			return err
