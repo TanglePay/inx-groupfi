@@ -1120,6 +1120,8 @@ func ExtractConfigNftOutputWrapperFromNFTOutput(outputId [OutputIdLen]byte, nftO
 	if err != nil {
 		return nil, err
 	}
+	// log uri and configStr
+	Logger.Infof("uri: %s, configStr: %s", configNftOutputMetaJson.Uri, configStr)
 	// unmarshal configStr as MessageGroupMetaJSON slice
 	var groupConfigMeta []*MessageGroupMetaJSON
 	err = json.Unmarshal([]byte(configStr), &groupConfigMeta)
