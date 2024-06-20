@@ -1254,6 +1254,11 @@ func HandleGroupNFTOutputCreated(configWrapper *ConfigNftOutputWrapper, logger *
 			return err
 		}
 
+		// store chainId + contract address hash + -> groupId
+		err = StoreChainIdAndContractAddressHashToGroupId(config, im)
+		if err != nil {
+			return err
+		}
 		// store groupId from dappGroupId
 		dappGroupId := GetDappGroupId(groupIdHex, config)
 		err = StoreDappGroupIdToGroupId(dappGroupId, groupId, im)
