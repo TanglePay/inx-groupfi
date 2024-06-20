@@ -1231,6 +1231,7 @@ func HandleGroupNFTOutputConsumed(configWrapper *ConfigNftOutputWrapper, logger 
 			return err
 		}
 		dappGroupId := GetDappGroupId(iotago.EncodeHex(groupId[:]), config)
+		config.DappGroupId = dappGroupId
 		// delete groupId from dappGroupId
 		err = DeleteGroupIdFromDappGroupId(dappGroupId, im)
 		if err != nil {
