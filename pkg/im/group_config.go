@@ -596,6 +596,11 @@ func KeyForChainIdAndContractAddressHashToGroupId(chainId uint32, contractAddres
 // unmarshal chainId + contract address hash + groupId
 func UnmarshalChainIdAndContractAddressHashToGroupId(value []byte) ([GroupIdLen]byte, uint32, []byte, error) {
 	idx := 0
+	// prefix
+	_, err := ReadBytesWithUint16Len(value, &idx, 1)
+	if err != nil {
+		return [GroupIdLen]byte{}, 0, []byte{}, err
+	}
 	// chainId
 	chainIdBytes, err := ReadBytesWithUint16Len(value, &idx, 4)
 	if err != nil {
