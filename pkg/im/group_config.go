@@ -895,7 +895,12 @@ func ValueForChainIdAndContractAddressHashToOutputId(outputId [OutputIdLen]byte,
 
 // parse key to chainId
 func ParseKeyForChainIdToOutputId(key []byte) (uint32, error) {
+	// key = prefix + chainId + contractAddressHash
 	idx := 0
+	_, err := ReadBytesWithUint16Len(key, &idx, 1)
+	if err != nil {
+		return 0, err
+	}
 	// chainId
 	chainIdBytes, err := ReadBytesWithUint16Len(key, &idx, 4)
 	if err != nil {
