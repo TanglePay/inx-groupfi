@@ -345,8 +345,8 @@ func run() error {
 
 		CoreComponent.LogInfo("Finishing LedgerInit ... done")
 		im.IsIniting = false
-		//startListeningToLedgerUpdate()
-		//startTTLCleaningWorker()
+		startListeningToLedgerUpdate()
+		startTTLCleaningWorker()
 	}, daemon.PriorityStopIMInit); err != nil {
 		CoreComponent.LogPanicf("failed to start worker: %s", err)
 	}
