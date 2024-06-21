@@ -21,7 +21,7 @@ var (
 			{"groupName":"TOKEN","schemaVersion":1,"messageType":1,"authScheme":2,"qualifyType":"token","chainId":148,"contractAddress":"0xA62e723Db40Db2695F2a4BBD9FbB6A858C8E8B23","tokenThres":"1","tokenThresValue":"10000000000", "tokenDecimals":"8"},
 			{"groupName":"admin","schemaVersion":1,"messageType":1,"authScheme":2,"qualifyType":"nft","chainId":148,"contractAddress":"0x1976ec083c74aB55FccFCE298717B39C3Cf8Da5C"},
 			{"groupName":"Grouped Ape","schemaVersion":1,"messageType":1,"authScheme":2,"qualifyType":"nft","chainId":148,"contractAddress":"0x4fB33DC8495B27c126C09b7Bf419DD85b5B91AdB"},
-			{"groupName":"GTEST crab","schemaVersion":1,"messageType":1,"authScheme":2,"qualifyType":"token","chainId":148,"contractAddress":"0x30d2422A2cD8471e19867Bc41E76AeF6e0044A30","tokenThres":"0.0000001","tokenThresValue":"1300", "tokenDecimals":"6"},			
+			{"groupName":"GTEST crab","schemaVersion":1,"messageType":1,"authScheme":2,"qualifyType":"token","chainId":148,"contractAddress":"0x30d2422A2cD8471e19867Bc41E76AeF6e0044A30","tokenThres":"0.0000001","tokenThresValue":"11", "tokenDecimals":"6"},			
 			{"groupName":"GroupFi Announcement","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainId":0,"contractAddress":"0x115a9fdca6a2110cc3e4cc7f92555101c3d80addf56984003e51e004ac4f9148"},
 			{"groupName":"alpha-test","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainId":0,"contractAddress":"0x23e5f8500132f9dfa8698e3d352f0d57bd79cf57533f273e87e31b6cd0e0a5ef"},
 		   	{"groupName":"iceberg-1","schemaVersion":1,"messageType":1,"authScheme":2, "qualifyType":"nft", "chainId":0,"contractAddress":"0x064d0eaefb86a94eb326ff633c22cdf744decca954bb93b1572b449d324ae717"},
