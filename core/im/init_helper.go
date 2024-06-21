@@ -83,7 +83,7 @@ Loop:
 			outputIds, nextOffset, err := outputIdsFetcher(initCtx, offset)
 			if err != nil {
 				log.Errorf("failed to fetch output ids for %s: %s", topic, err)
-				return
+				continue
 			}
 			// convert []string to []interface{}
 			outputIdsInterface := make([]interface{}, len(outputIds))
@@ -97,7 +97,7 @@ Loop:
 				err = deps.IMManager.StoreInitCurrentOffset(nextOffset, topic, "")
 				if err != nil {
 					log.Errorf("failed to StoreInitCurrentOffset for %s: %s", topic, err)
-					return
+					continue
 				}
 			}
 			// check if there is more
