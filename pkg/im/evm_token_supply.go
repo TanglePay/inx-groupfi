@@ -16,7 +16,8 @@ import (
 const erc20ABI = `[
     {"constant":true,"inputs":[],"name":"totalSupply","outputs":[{"name":"","type":"uint256"}],"payable":false,"stateMutability":"view","type":"function"},
     {"constant":true,"inputs":[],"name":"decimals","outputs":[{"name":"","type":"uint8"}],"payable":false,"stateMutability":"view","type":"function"},
-    {"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"}
+    {"constant":true,"inputs":[],"name":"name","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"},
+    {"constant":true,"inputs":[],"name":"symbol","outputs":[{"name":"","type":"string"}],"payable":false,"stateMutability":"view","type":"function"}
 ]`
 
 var (
@@ -119,7 +120,6 @@ func GetDecimals(client *ethclient.Client, contractAddress string) (uint8, error
 	return decimals, nil
 }
 
-
 // GetName retrieves the name of an ERC-20 token
 func GetName(client *ethclient.Client, contractAddress string) (string, error) {
 	address := common.HexToAddress(contractAddress)
@@ -148,15 +148,43 @@ func GetName(client *ethclient.Client, contractAddress string) (string, error) {
 	return name, nil
 }
 
-// TokenInfo holds the total supply, decimals, and name of an ERC-20 token
+// GetSymbol retrieves the symbol of an ERC-20 token
+func GetSymbol(client *ethclient.Client, contractAddress string) (string, error) {
+	address := common.HexToAddress(contractAddress)
+
+	parsedABI, err := abi.JSON(strings.NewReader(erc20ABI))
+	if err != nil {
+		return "", fmt.Errorf("failed to parse contract ABI: %w", err)
+	}
+
+	callMsg := ethereum.CallMsg{
+		To:   &address,
+		Data: parsedABI.Methods["symbol"].ID,
+	}
+
+	result, err := client.CallContract(context.Background(), callMsg, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed to call contract: %w", err)
+	}
+
+	var symbol string
+	err = parsedABI.UnpackIntoInterface(&symbol, "symbol", result)
+	if err != nil {
+		return "", fmt.Errorf("failed to unpack result: %w", err)
+	}
+
+	return symbol, nil
+}
+
+// TokenInfo holds the total supply, decimals, name, and symbol of an ERC-20 token
 type TokenInfo struct {
 	TotalSupply *big.Int
 	Decimals    uint8
 	Name        string
+	Symbol      string
 }
 
-// GetTokenInfo retrieves the total supply, decimals, and name of an ERC-20 token given the client URL and contract address
-
+// GetTokenInfo retrieves the total supply, decimals, name, and symbol of an ERC-20 token given the client URL and contract address
 func GetTokenInfo(clientURL string, contractAddress string) (*TokenInfo, error) {
 	clientCache := GetClientCache()
 	client, err := clientCache.GetClient(clientURL)
@@ -168,8 +196,9 @@ func GetTokenInfo(clientURL string, contractAddress string) (*TokenInfo, error) 
 	var totalSupply *big.Int
 	var decimals uint8
 	var name string
+	var symbol string
 
-	errs := make(chan error, 3)
+	errs := make(chan error, 4)
 
 	wg.Add(1)
 	go func() {
@@ -201,6 +230,16 @@ func GetTokenInfo(clientURL string, contractAddress string) (*TokenInfo, error) 
 		}
 	}()
 
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		var err error
+		symbol, err = GetSymbol(client, contractAddress)
+		if err != nil {
+			errs <- err
+		}
+	}()
+
 	wg.Wait()
 	close(errs)
 
@@ -214,5 +253,6 @@ func GetTokenInfo(clientURL string, contractAddress string) (*TokenInfo, error) 
 		TotalSupply: totalSupply,
 		Decimals:    decimals,
 		Name:        name,
+		Symbol:      symbol,
 	}, nil
 }
