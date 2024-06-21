@@ -361,9 +361,16 @@ func handleTokenFromNFTOutput(iotaOutput *iotago.NFTOutput, outputId []byte, out
 	return handleTokenFromOutputType(amount, nativeTokens, iotaOutput, outputId, outputStatus, isUpdateGlobalAmount)
 }
 func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.NativeTokens, output iotago.Output, outputId []byte, outputStatus int, isUpdateGlobalAmount bool) error {
-
+	// handle smr at first place
+	baseTokenIdStr := iotago.EncodeHex(im.SmrTokenId)
+	baseTokenIdBytes := im.SmrTokenId
+	baseAmount := new(big.Int).SetUint64(basicTokenAmount)
+	err := handleTokenAmount(baseAmount, baseTokenIdBytes, output, outputId, outputStatus, isUpdateGlobalAmount)
+	if err != nil {
+		return err
+	}
 	// loop through all token based group
-	err := im.IterateAllGroupIdFromChainIdAndQualifyType(im.HornetChainId, "token", deps.IMManager, func(groupId [im.GroupIdLen]byte) bool {
+	err = im.IterateAllGroupIdFromChainIdAndQualifyType(im.HornetChainId, "token", deps.IMManager, func(groupId [im.GroupIdLen]byte) bool {
 		groupConfig, err := im.ReadGroupConfigMetaFromGroupId(groupId, deps.IMManager)
 		if err != nil {
 			// log error
@@ -384,12 +391,10 @@ func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.Nati
 			//CoreComponent.LogInfof("handleTokenFromOutputType, jsonStr:%s", string(jsonStr))
 		}
 		// log groupConfig json str
-
-		tokenIdStr := iotago.EncodeHex(im.SmrTokenId)
-		tokenIdBytes := im.SmrTokenId
-		amount := new(big.Int).SetUint64(basicTokenAmount)
-		if groupConfig.ContractAddress != tokenIdStr {
-			tokenIdStr = groupConfig.ContractAddress
+		var nativeTokenAmount *big.Int
+		var curTokenIdBytes []byte
+		if groupConfig.ContractAddress != baseTokenIdStr {
+			configTokenIdStr := groupConfig.ContractAddress
 			// case no native token, continue
 			if nativeTokens == nil {
 				return true
@@ -398,11 +403,11 @@ func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.Nati
 			foundToken := false
 			for _, nativeToken := range nativeTokens {
 				curTokenId := nativeToken.ID.ToHex()
-				if curTokenId == tokenIdStr {
+				if curTokenId == configTokenIdStr {
 					// log found soon
 					//CoreComponent.LogInfof("handleTokenFromOutputType,found token soon")
-					tokenIdBytes, _ = iotago.DecodeHex(curTokenId)
-					amount = nativeToken.Amount
+					curTokenIdBytes, _ = iotago.DecodeHex(curTokenId)
+					nativeTokenAmount = nativeToken.Amount
 					foundToken = true
 					break
 				}
@@ -412,12 +417,12 @@ func handleTokenFromOutputType(basicTokenAmount uint64, nativeTokens iotago.Nati
 				return true
 			}
 		} else {
-			// log handle smr
-			//CoreComponent.LogInfof("handleTokenFromOutputType,handle smr")
+			// continue since we handle smr at first place
+			return true
 		}
 		// tokenThres := groupConfig.TokenThres
 
-		err = handleTokenAmount(amount, tokenIdBytes, output, outputId, outputStatus, isUpdateGlobalAmount)
+		err = handleTokenAmount(nativeTokenAmount, curTokenIdBytes, output, outputId, outputStatus, isUpdateGlobalAmount)
 		if err != nil {
 			return true
 		}
