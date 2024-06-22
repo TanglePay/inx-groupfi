@@ -148,6 +148,8 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 
 	stream, err := deps.NodeBridge.Client().ListenToBlocks(ctx, &inx.NoParams{})
 	if err != nil {
+		// log error
+		CoreComponent.LogErrorf("LedgerUpdateBlock ListenToBlocks error:%s", err.Error())
 		return err
 	}
 	for {
@@ -191,7 +193,7 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 						pl = append(pl, meta...)
 						deps.IMManager.PushInbox(groupId, pl, CoreComponent.Logger())
 					}()
-					return nil
+					continue
 				}
 				evmQualify, err := deps.IMManager.FilterEvmQualifyFromOutput(output, CoreComponent.Logger())
 				if err != nil {
@@ -200,7 +202,7 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 				}
 				if evmQualify != nil {
 					deps.IMManager.HandleEvmQualifyCreated(evmQualify, CoreComponent.Logger())
-					return nil
+					continue
 				}
 
 				dids, err := deps.IMManager.FilterOutputForDid(output, outputId)
@@ -210,7 +212,7 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 				}
 				if dids != nil {
 					deps.IMManager.HandleDidConsumedAndCreated(nil, dids, CoreComponent.Logger())
-					return nil
+					continue
 				}
 
 				mark, is := deps.IMManager.FilterMarkOutput(output, CoreComponent.Logger())
@@ -221,25 +223,25 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 						OutputId: outputId,
 					}
 					deps.IMManager.HandleGroupMarkBasicOutputConsumedAndCreated(markAndOutputId, CoreComponent.Logger())
-					return nil
+					continue
 				}
 
 				mute, is := deps.IMManager.FilterMuteOutput(output, CoreComponent.Logger())
 				if is {
 					deps.IMManager.HandleUserMuteGroupMemberBasicOutputCreated(mute, CoreComponent.Logger())
-					return nil
+					continue
 				}
 
 				like, is := deps.IMManager.FilterLikeOutput(output, CoreComponent.Logger())
 				if is {
 					deps.IMManager.HandleUserLikeGroupMemberBasicOutputCreated(like, CoreComponent.Logger())
-					return nil
+					continue
 				}
 
 				vote, is := deps.IMManager.FilterVoteOutput(output, CoreComponent.Logger())
 				if is {
 					deps.IMManager.HandleUserVoteGroupBasicOutputCreated(vote, CoreComponent.Logger())
-					return nil
+					continue
 				}
 				pairX, err := deps.IMManager.FilterPairXFromOutput(output, outputId, CoreComponent.Logger())
 				if err != nil {
@@ -248,12 +250,11 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 				}
 				if pairX != nil {
 					deps.IMManager.HandlePairXCreated(pairX, CoreComponent.Logger())
-					return nil
+					continue
 				}
 
 			}
 		}
 	}
-	return nil
 
 }
