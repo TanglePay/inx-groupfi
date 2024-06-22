@@ -153,15 +153,14 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 	for {
 		payload, err := stream.Recv()
 		if errors.Is(err, io.EOF) || status.Code(err) == codes.Canceled {
-			break
+			// log error
+			CoreComponent.LogErrorf("LedgerUpdateBlock error:%s", err.Error())
+			continue
 		}
 		if ctx.Err() != nil {
 			// context got canceled, so stop the updates
 			//nolint:nilerr // false positive
 			return nil
-		}
-		if err != nil {
-			return err
 		}
 
 		block, err := payload.GetBlock().UnwrapBlock(serializer.DeSeriModeNoValidation, nil)
