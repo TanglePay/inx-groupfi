@@ -188,6 +188,8 @@ func (im *Manager) FilterEvmQualifyFromLedgerOutput(inxOutput *inx.LedgerOutput,
 
 // filter evm qualify from output
 func (im *Manager) FilterEvmQualifyFromOutput(output iotago.Output, logger *logger.Logger) (*EvmQualify, error) {
+	// log entering filter evm qualify, Tag in utf8
+	logger.Infof("FilterEvmQualifyFromOutput Tag %s", string(output.FeatureSet().TagFeature().Tag))
 	// check if tag is evm qualify
 	if output.FeatureSet().TagFeature() == nil ||
 		output.FeatureSet().TagFeature().Tag == nil ||
