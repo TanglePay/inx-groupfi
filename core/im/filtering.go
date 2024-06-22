@@ -41,8 +41,6 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	if !is {
 		return nil
 	}
-	// log casted to NFTOutput
-	CoreComponent.LogInfof("nftFromINXOutput, casted to NFTOutput")
 	featureSet, err := nftOutput.ImmutableFeatures.Set()
 	if err != nil {
 		// log error
@@ -71,8 +69,6 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 		return nil
 	}
 
-	// log nftIdHex
-	CoreComponent.LogInfof("nftFromINXOutput, nftIdHex:%s", nftIdHex)
 	metaMap := make(map[string]interface{})
 	err = json.Unmarshal(meta.Data, &metaMap)
 	if err != nil {
@@ -85,13 +81,6 @@ func nftFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone uint3
 	}
 	nftAddress := issuer.Address.(*iotago.NFTAddress)
 	collectionId := nftAddress.NFTID().ToHex()
-	// log
-	CoreComponent.LogInfof("Found NFT output, nftId:%s,collectionId:%s，milestoneIndex:%d,milestoneTimestamp:%d",
-		nftIdHex,
-		collectionId,
-		milestone,
-		milestoneTimestamp,
-	)
 
 	pairs := im.ChainIdAndCollectionIdToGroupIdAndGroupNamePairs(uint32(im.HornetChainId), collectionId, deps.IMManager)
 	if len(pairs) == 0 {
