@@ -86,9 +86,12 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 	}
 
 	// get group config by group id
-	groupIdHex := iotago.EncodeHex(evmQualify.GroupId[:])
-	groupConfig := ConfigStoreGroupIdToGroupConfig[groupIdHex]
+	groupConfig, err := ReadGroupConfigMetaFromGroupId(evmQualify.GroupId, im)
+	if err != nil {
+		return err
+	}
 	if groupConfig == nil {
+		groupIdHex := iotago.EncodeHex(evmQualify.GroupId[:])
 		return fmt.Errorf("group config not found for group id %s", groupIdHex)
 	}
 	// get group qualify type
@@ -185,6 +188,10 @@ func (im *Manager) FilterEvmQualifyFromLedgerOutput(inxOutput *inx.LedgerOutput,
 
 // filter evm qualify from output
 func (im *Manager) FilterEvmQualifyFromOutput(output iotago.Output, logger *logger.Logger) (*EvmQualify, error) {
+	// log entering filter evm qualify, Tag in utf8, only log when tag do exist
+	if output.FeatureSet().TagFeature() != nil && output.FeatureSet().TagFeature().Tag != nil {
+		logger.Infof("FilterEvmQualifyFromOutput Tag %s", string(output.FeatureSet().TagFeature().Tag))
+	}
 	// check if tag is evm qualify
 	if output.FeatureSet().TagFeature() == nil ||
 		output.FeatureSet().TagFeature().Tag == nil ||

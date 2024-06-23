@@ -120,6 +120,14 @@ func (im *Manager) QueryOutputIdsByTag(ctx context.Context, client nodeclient.In
 	}
 	return executeQuery(ctx, client, query, offset, logger)
 }
+
+// query nft output based on collectionId, with offset, return outputIds and new offset
+func (im *Manager) QueryNFTOutputIdsByCollectionId(ctx context.Context, client nodeclient.IndexerClient, tag string, offset *string, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
+	query := &nodeclient.NFTsQuery{
+		Tag: tag,
+	}
+	return executeQuery(ctx, client, query, offset, logger)
+}
 func executeQuery(ctx context.Context, client nodeclient.IndexerClient, query nodeclient.IndexerQuery, offset *string, logger *logger.Logger) (iotago.HexOutputIDs, *string, error) {
 	offsetStr := "nil"
 	if offset != nil {

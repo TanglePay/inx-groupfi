@@ -290,7 +290,6 @@ func run() error {
 	// log api url
 	CoreComponent.LogInfof("apiUrl:%s", apiUrl)
 
-	im.InitIpfsShell()
 	nodeHTTPAPIClient := nodeclient.New(apiUrl)
 	im.NodeHTTPAPIClient = nodeHTTPAPIClient
 
@@ -308,8 +307,6 @@ func run() error {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
 		im.NodeIndexerAPIClient = indexerClient
-		// handle group config init
-		handleGroupConfigInit(ctx, nodeHTTPAPIClient, indexerClient)
 
 		initCtx := &InitContext{
 			Ctx:           ctx,
@@ -317,19 +314,33 @@ func run() error {
 			IndexerClient: indexerClient,
 			Logger:        CoreComponent.Logger(),
 		}
+		// handle group config first
+		// log start processing group config
+		CoreComponent.LogInfo("Start processing group config ...")
+		ProcessGroupConfig(initCtx)
 		// handle all nft first pass
+		// log start processing all nft first pass
+		CoreComponent.LogInfo("Start processing all nft first pass ...")
 		ProcessAllNftFirstPass(initCtx)
 
 		// handle all basic output first pass
+		// log start processing all basic output first pass
+		CoreComponent.LogInfo("Start processing all basic output first pass ...")
 		ProcessAllBasicOutputFirstPass(initCtx)
 
 		// handle mark init
+		// log start processing mark init
+		CoreComponent.LogInfo("Start processing mark init ...")
 		handleMarkInit(initCtx)
 
 		// calculate is group public for all group config
+		// log start processing calculate is group public for all group config
+		CoreComponent.LogInfo("Start processing calculate is group public for all group config ...")
 		calculateIsGroupPublicForAllGroupConfig(initCtx)
 
 		// handle message init
+		// log start processing message init
+		CoreComponent.LogInfo("Start processing message init ...")
 		handleMessageInit(initCtx)
 
 		CoreComponent.LogInfo("Finishing LedgerInit ... done")

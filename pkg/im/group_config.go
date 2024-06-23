@@ -1,20 +1,21 @@
 package im
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/pkg/errors"
 )
-
-var ConfigStoreGroupIdToGroupConfig = map[string]*MessageGroupMetaJSON{}
-var ConfigStoreChainIdAndQualifyTypeToGroupId = map[int]map[string][]string{}
-var ConfigStorePublicGroupIds = []string{}
 
 const MessageTypePublic = 2
 
@@ -39,24 +40,24 @@ func GetDappGroupId(groupIdHex string, groupMeta *MessageGroupMetaJSON) string {
 	groupIdShortHash := SHA256HashBytesReturnString(groupId)
 	return "groupfi" + groupNamespaceStriped + groupIdShortHash
 }
-func ChainIdAndCollectionIdToGroupIdAndGroupNamePairs(chainId int, collectionId string) []*GroupIdAndGroupNamePair {
-	if (ConfigStoreChainIdAndQualifyTypeToGroupId[chainId] == nil) || (ConfigStoreChainIdAndQualifyTypeToGroupId[chainId]["nft"] == nil) {
-		return nil
-	}
+func ChainIdAndCollectionIdToGroupIdAndGroupNamePairs(chainId uint32, contractAddress string, im *Manager) []*GroupIdAndGroupNamePair {
 	var res []*GroupIdAndGroupNamePair
-	for _, groupIdHex := range ConfigStoreChainIdAndQualifyTypeToGroupId[chainId]["nft"] {
-		collectionIdInGroupConfig := ConfigStoreGroupIdToGroupConfig[groupIdHex].ContractAddress
-		if collectionIdInGroupConfig == collectionId {
-			groupId, err := iotago.DecodeHex(groupIdHex)
-			if err != nil {
-				return nil
-			}
+	IterateAllGroupIdFromChainIdAndQualifyType(chainId, contractAddress, im, func(groupId [GroupIdLen]byte) bool {
+		groupConfigMeta, err := ReadGroupConfigMetaFromGroupId(groupId, im)
+		if err != nil {
+			// log error then continue
+			Logger.Infof("ChainIdAndCollectionIdToGroupIdAndGroupNamePairs ... ReadGroupConfigMetaFromGroupId failed:%s", err)
+			return true
+		}
+		collectionIdInGroupConfig := groupConfigMeta.ContractAddress
+		if collectionIdInGroupConfig == contractAddress {
 			res = append(res, &GroupIdAndGroupNamePair{
-				GroupId:   groupId,
-				GroupName: ConfigStoreGroupIdToGroupConfig[groupIdHex].GroupName,
+				GroupId:   groupId[:],
+				GroupName: groupConfigMeta.GroupName,
 			})
 		}
-	}
+		return true
+	})
 	return res
 }
 
@@ -80,23 +81,19 @@ func sortAndSha256Map(m map[string]string) []byte {
 	return h.Sum(nil)
 }
 
-func (im *Manager) GroupNameToGroupId(group string) []byte {
-	// loop ConfigStoreGroupIdToGroupConfig
-	for groupIdHex, groupMeta := range ConfigStoreGroupIdToGroupConfig {
-		if groupMeta.GroupName == group {
-			groupId, err := iotago.DecodeHex(groupIdHex)
-			if err != nil {
-				return nil
-			}
-			return groupId
-		}
-	}
-	return nil
-}
-
 // groupId to group config
 func (im *Manager) GroupIdToGroupConfig(groupIdHex string) *MessageGroupMetaJSON {
-	return ConfigStoreGroupIdToGroupConfig[groupIdHex]
+	groupIdBytes, err := iotago.DecodeHex(groupIdHex)
+	if err != nil {
+		return nil
+	}
+	var groupIdFixed [GroupIdLen]byte
+	copy(groupIdFixed[:], groupIdBytes)
+	groupConfig, err := ReadGroupConfigMetaFromGroupId(groupIdFixed, im)
+	if err != nil {
+		return nil
+	}
+	return groupConfig
 }
 
 // parse group config nft to renterName name and ipfs link
@@ -123,10 +120,10 @@ func (im *Manager) ParseGroupConfigNFT(nftOutput *iotago.NFTOutput) (string, err
 }
 
 type MessageGroupMetaJSON struct {
-	ChainId         int    `json:"chainId"`
-	SchemaVersion   int    `json:"schemaVersion"`
-	MessageType     int    `json:"messageType"`
-	AuthScheme      int    `json:"authScheme"`
+	ChainId         uint32 `json:"chainId"`
+	SchemaVersion   uint16 `json:"schemaVersion"`
+	MessageType     uint8  `json:"messageType"`
+	AuthScheme      uint8  `json:"authScheme"`
 	QualifyType     string `json:"qualifyType"`
 	ContractAddress string `json:"contractAddress"`
 	GroupName       string `json:"groupName"`
@@ -181,76 +178,22 @@ func (im *Manager) HandleGroupConfigRawContent(contentRaw []byte, logger *logger
 	return nil
 }
 
-// getAllpublicGroupIds
-func (im *Manager) GetAllPublicGroupIds() []string {
-	return ConfigStorePublicGroupIds
-}
-
-// get all group ids
-func (im *Manager) GetAllGroupIds() []string {
-	var res []string
-	for groupIdHex := range ConfigStoreGroupIdToGroupConfig {
-		res = append(res, groupIdHex)
-	}
-	return res
-}
-
-// get all non smr group ids
-func (im *Manager) GetAllNonSmrGroupIds() []string {
-	var res []string
-	for groupIdHex := range ConfigStoreGroupIdToGroupConfig {
-		if ConfigStoreGroupIdToGroupConfig[groupIdHex].ChainId != 0 {
-			res = append(res, groupIdHex)
-		}
-	}
-	return res
-}
-
-// add groupId to public group ids
-func (im *Manager) AddGroupIdToPublicGroupIds(groupIdHex string) {
-	// check if already exists
-	for _, groupIdHexInPublicGroupIds := range ConfigStorePublicGroupIds {
-		if groupIdHexInPublicGroupIds == groupIdHex {
-			return
-		}
-	}
-	ConfigStorePublicGroupIds = append(ConfigStorePublicGroupIds, groupIdHex)
-}
-
 // checkGroupExists
 func (im *Manager) CheckGroupExists(groupIdHex string) bool {
-	return ConfigStoreGroupIdToGroupConfig[groupIdHex] != nil
+	groupIdBytes, err := iotago.DecodeHex(groupIdHex)
+	if err != nil {
+		return false
+	}
+	var groupIdFixed [GroupIdLen]byte
+	copy(groupIdFixed[:], groupIdBytes)
+	isExist := IsGroupExists(groupIdFixed, im)
+	return isExist
 }
 
-// remove groupId from public group ids
-func (im *Manager) RemoveGroupIdFromPublicGroupIds(groupIdHex string) {
-	// if group config is public, do nothing, check exist first
-	if !im.CheckGroupExists(groupIdHex) {
-		return
-	}
-	if ConfigStoreGroupIdToGroupConfig[groupIdHex].MessageType == MessageTypePublic {
-		return
-	}
-	var newPublicGroupIds []string
-	for i, groupIdHexInPublicGroupIds := range ConfigStorePublicGroupIds {
-		if groupIdHexInPublicGroupIds == groupIdHex {
-			continue
-		}
-		newPublicGroupIds = append(newPublicGroupIds, ConfigStorePublicGroupIds[i])
-	}
-	ConfigStorePublicGroupIds = newPublicGroupIds
-}
-func GroupConfigKeyFromRenterNameAndGroupName(renterName string, groupName string) []byte {
-	renterNameSha256 := Sha256Hash(renterName)
-	groupNameSha256 := Sha256Hash(groupName)
-	return ConcatByteSlices([]byte{ImStoreKeyPrefixGroupConfig}, renterNameSha256, groupNameSha256)
-}
-
-// store one group config (group name, MessageGroupMetaJSON)
-func (im *Manager) StoreOneGroupConfig(messageGroupMeta *MessageGroupMetaJSON) error {
+// get groupId from group config
+func GetGroupIdFromGroupConfig(messageGroupMeta *MessageGroupMetaJSON) [GroupIdLen]byte {
 	chainId := messageGroupMeta.ChainId
 	qualifyType := messageGroupMeta.QualifyType
-	isPublic := messageGroupMeta.MessageType == MessageTypePublic
 	contractAddress := messageGroupMeta.ContractAddress
 	configFieldsMap := map[string]string{
 		"groupName":       messageGroupMeta.GroupName,
@@ -265,100 +208,62 @@ func (im *Manager) StoreOneGroupConfig(messageGroupMeta *MessageGroupMetaJSON) e
 		"tokenDecimals":   messageGroupMeta.TokenDecimals,
 	}
 	groupId := sortAndSha256Map(configFieldsMap)
-	groupIdHex := iotago.EncodeHex(groupId)
+	var groupIdFixed [GroupIdLen]byte
+	copy(groupIdFixed[:], groupId)
+
+	return groupIdFixed
+}
+
+// store one group config (group name, MessageGroupMetaJSON)
+func (im *Manager) StoreOneGroupConfig(messageGroupMeta *MessageGroupMetaJSON) error {
+
+	groupId := GetGroupIdFromGroupConfig(messageGroupMeta)
+	groupIdHex := iotago.EncodeHex(groupId[:])
 	dappGroupId := GetDappGroupId(groupIdHex, messageGroupMeta)
 	messageGroupMeta.DappGroupId = dappGroupId
 	// store groupId -> group config store
-	// ensure ConfigStoreChainIdAndQualifyTypeToGroupId[chainId] exists
-	if ConfigStoreChainIdAndQualifyTypeToGroupId[chainId] == nil {
-		ConfigStoreChainIdAndQualifyTypeToGroupId[chainId] = map[string][]string{}
+	err := StoreGroupConfigMetaForGroupId(groupId, messageGroupMeta, im)
+	if err != nil {
+		return err
+	}
+	// store chainId + contract address hash + -> groupId
+	err = StoreChainIdAndContractAddressHashToGroupId(groupId, messageGroupMeta, im)
+	if err != nil {
+		return err
+	}
+	// store chainId + qualifyType + -> groupId
+	err = StoreChainIdAndQualifyTypeToGroupId(messageGroupMeta.ChainId, messageGroupMeta.QualifyType, groupId, im)
+	if err != nil {
+		return err
 	}
 
-	if ConfigStoreChainIdAndQualifyTypeToGroupId[chainId][qualifyType] == nil {
-		ConfigStoreChainIdAndQualifyTypeToGroupId[chainId][qualifyType] = []string{}
+	// store dappGroupId -> groupId
+	err = StoreDappGroupIdToGroupId(dappGroupId, groupId, im)
+	if err != nil {
+		return err
 	}
-	// append groupId to ConfigStoreChainIdAndQualifyTypeToGroupId[chainId][qualifyType]
-	ConfigStoreChainIdAndQualifyTypeToGroupId[chainId][qualifyType] = append(ConfigStoreChainIdAndQualifyTypeToGroupId[chainId][qualifyType], groupIdHex)
-	// set ConfigStoreGroupIdToGroupConfig[groupId] = messageGroupMeta
-	ConfigStoreGroupIdToGroupConfig[groupIdHex] = messageGroupMeta
-	// if public, append to ConfigStorePublicGroupIds
+	isPublic := messageGroupMeta.MessageType == MessageTypePublic
 	if isPublic {
-		ConfigStorePublicGroupIds = append(ConfigStorePublicGroupIds, groupIdHex)
+		StorePublicGroupId(groupId, im)
 	}
-
 	return nil
 }
 
 // log ConfigStoreGroupIdToGroupConfig
 func (im *Manager) LogConfigStoreGroupIdToGroupConfig(logger *logger.Logger) {
 	// loop ConfigStoreGroupIdToGroupConfig
-	for groupIdHex, groupMeta := range ConfigStoreGroupIdToGroupConfig {
-		jsonStr, err := json.Marshal(groupMeta)
-		if err != nil {
-			continue
-		}
-		logger.Infof("LogConfigStoreGroupIdToGroupConfig ... groupId:%s, groupMeta:%s", groupIdHex, jsonStr)
-	}
-}
-
-// read one group config (renterName, groupName)
-func (im *Manager) ReadOneGroupConfig(renterName string, groupName string) (*MessageGroupMetaJSON, error) {
-	// key = prefix + renterNameSha256 + groupNameSha256
-	key := GroupConfigKeyFromRenterNameAndGroupName(renterName, groupName)
-	// read
-	value, err := im.imStore.Get(key)
-	if err != nil {
-		return nil, err
-	}
-	// value to MessageGroupMetaJSON
-	var messageGroupMeta MessageGroupMetaJSON
-	err = json.Unmarshal(value, &messageGroupMeta)
-	if err != nil {
-		return nil, err
-	}
-	return &messageGroupMeta, nil
-}
-func GroupConfigKeyPrefixFromRenterName(renterName string) []byte {
-	renterNameSha256 := Sha256Hash(renterName)
-	return ConcatByteSlices([]byte{ImStoreKeyPrefixGroupConfig}, renterNameSha256)
-}
-
-// read all group config (renterName)
-func (im *Manager) ReadAllGroupConfigForRenter(renterName string) ([]*MessageGroupMetaJSON, error) {
-	// key = prefix + renterNameSha256
-	keyPrefix := GroupConfigKeyPrefixFromRenterName(renterName)
-	// read
-	var res []*MessageGroupMetaJSON
-	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
-		// value to MessageGroupMetaJSON
-		var messageGroupMeta MessageGroupMetaJSON
-		err := json.Unmarshal(value, &messageGroupMeta)
-		if err != nil {
-			return true
-		}
-		res = append(res, &messageGroupMeta)
-		return true
-	})
-	if err != nil {
-		return nil, err
-	}
-	return res, nil
-}
-
-// handle group config nft consumed
-func (im *Manager) HandleGroupNFTOutputConsumed(nftOutput *iotago.NFTOutput, logger *logger.Logger) error {
-
-	return nil
+	/*
+		for groupIdHex, groupMeta := range ConfigStoreGroupIdToGroupConfig {
+			jsonStr, err := json.Marshal(groupMeta)
+			if err != nil {
+				continue
+			}
+			logger.Infof("LogConfigStoreGroupIdToGroupConfig ... groupId:%s, groupMeta:%s", groupIdHex, jsonStr)
+		}*/
 }
 
 // calculate if group is public
 func (im *Manager) CalculateIfGroupIsPublic(groupId [GroupIdLen]byte, logger *logger.Logger) error {
-	groupIdHex := iotago.EncodeHex(groupId[:])
-	/*
-		if ConfigStoreGroupIdToGroupConfig[groupIdHex].MessageType == MessageTypePublic {
-			return nil
-		}
-	*/
 	// get votes
 	publicCt, privateCt, err := im.CountVotesForGroup(groupId)
 	if err != nil {
@@ -371,9 +276,31 @@ func (im *Manager) CalculateIfGroupIsPublic(groupId [GroupIdLen]byte, logger *lo
 	}
 
 	if memberCt > 100 || publicCt > privateCt {
-		im.AddGroupIdToPublicGroupIds(groupIdHex)
+		err = StorePublicGroupId(groupId, im)
+		if err != nil {
+			return err
+		}
+	} else if publicCt == privateCt {
+		config, err := ReadGroupConfigMetaFromGroupId(groupId, im)
+		if err != nil {
+			return err
+		}
+		if config.MessageType == MessageTypePublic {
+			err = StorePublicGroupId(groupId, im)
+			if err != nil {
+				return err
+			}
+		} else {
+			err = DeletePublicGroupId(groupId, im)
+			if err != nil {
+				return err
+			}
+		}
 	} else {
-		im.RemoveGroupIdFromPublicGroupIds(groupIdHex)
+		err = DeletePublicGroupId(groupId, im)
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -388,19 +315,17 @@ func (im *Manager) TryCalculateIfGroupIsPublic(groupId [GroupIdLen]byte, logger 
 
 // calculate if group is public for all groups
 func (im *Manager) CalculateIfGroupIsPublicForAllGroups(logger *logger.Logger) error {
-	for groupIdHex := range ConfigStoreGroupIdToGroupConfig {
-		groupId, err := iotago.DecodeHex(groupIdHex)
+	//IterateAllGroupIdFromGroupConfigMetaStore
+	err := IterateAllGroupIdFromGroupConfigMetaStore(im, func(groupId [GroupIdLen]byte) bool {
+
+		err := im.CalculateIfGroupIsPublic(groupId, logger)
 		if err != nil {
-			return err
+			// log error then continue
+			logger.Infof("CalculateIfGroupIsPublicForAllGroups ... CalculateIfGroupIsPublic failed:%s", err)
 		}
-		groupIdFixed := [GroupIdLen]byte{}
-		copy(groupIdFixed[:], groupId)
-		err = im.CalculateIfGroupIsPublic(groupIdFixed, logger)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
+		return true
+	})
+	return err
 }
 
 // get is group public
@@ -411,10 +336,955 @@ func (im *Manager) GetIsGroupPublic(groupId [GroupIdLen]byte) bool {
 
 // get is group public with groupId string
 func (im *Manager) GetIsGroupPublicWithGroupId(groupIdHex string) bool {
-	for _, groupIdInPublicGroupIds := range ConfigStorePublicGroupIds {
-		if groupIdInPublicGroupIds == groupIdHex {
+	groupIdBytes, err := iotago.DecodeHex(groupIdHex)
+	if err != nil {
+		// log error then return false
+		Logger.Infof("GetIsGroupPublicWithGroupId ... iotago.DecodeHex failed:%s", err)
+		return false
+	}
+	var groupIdFixed [GroupIdLen]byte
+	copy(groupIdFixed[:], groupIdBytes)
+	isGroupPublic := CheckIfGroupIdIsPublic(groupIdFixed, im)
+	return isGroupPublic
+}
+
+// store groupId -> groupConfigMeta
+// key = prefix + groupId
+func KeyForGroupConfigMeta(groupId [GroupIdLen]byte) []byte {
+	idx := 0
+	var payload []byte
+	// prefix
+	AppendBytesWithUint16Len(&payload, &idx, []byte{ImStoreKeyPrefixGroupConfig}, false)
+	// groupId
+	AppendBytesWithUint16Len(&payload, &idx, groupId[:], false)
+	return payload
+}
+
+// parse groupId from GroupConfigMeta store key
+func ParseGroupIdFromGroupConfigMetaKey(key kvstore.Key) ([GroupIdLen]byte, error) {
+	idx := 0
+	// prefix
+	_, err := ReadBytesWithUint16Len(key, &idx, 1)
+	if err != nil {
+		return [GroupIdLen]byte{}, err
+	}
+	// groupId
+	groupIdBytes, err := ReadBytesWithUint16Len(key, &idx, GroupIdLen)
+	if err != nil {
+		return [GroupIdLen]byte{}, err
+	}
+	var groupId [GroupIdLen]byte
+	copy(groupId[:], groupIdBytes)
+	return groupId, nil
+}
+
+// marshal groupConfigMeta to bytes
+func MarshalGroupConfigMeta(groupConfig *MessageGroupMetaJSON) ([]byte, error) {
+	idx := 0
+	var payload []byte
+	// chainId
+	AppendBytesWithUint16Len(&payload, &idx, Uint32ToBytes(groupConfig.ChainId), false)
+	// schemaVersion
+	AppendBytesWithUint16Len(&payload, &idx, Uint16ToBytes(groupConfig.SchemaVersion), false)
+	// messageType
+	AppendBytesWithUint16Len(&payload, &idx, Uint8ToBytes(groupConfig.MessageType), false)
+	// authScheme
+	AppendBytesWithUint16Len(&payload, &idx, Uint8ToBytes(groupConfig.AuthScheme), false)
+	// qualifyType
+	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.QualifyType), true)
+	// contractAddress
+	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.ContractAddress), true)
+	// groupName
+	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.GroupName), true)
+	// tokenThres
+	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.TokenThres), true)
+	// tokenDecimals
+	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.TokenDecimals), true)
+	// tokenThresValue
+	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.TokenThresValue), true)
+
+	// dappGroupId
+	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.DappGroupId), true)
+	return payload, nil
+}
+
+// store groupConfigMeta for groupId to groupConfig
+func StoreGroupConfigMetaForGroupId(groupId [GroupIdLen]byte, groupConfig *MessageGroupMetaJSON, im *Manager) error {
+
+	key := KeyForGroupConfigMeta(groupId)
+	// value = groupConfigMeta
+	value, err := MarshalGroupConfigMeta(groupConfig)
+	if err != nil {
+		return err
+	}
+	// store
+	err = im.imStore.Set(key, value)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// prefix for GroupConfigMeta store
+func PrefixForGroupConfigMeta() []byte {
+	idx := 0
+	var payload []byte
+	// prefix
+	AppendBytesWithUint16Len(&payload, &idx, []byte{ImStoreKeyPrefixGroupConfig}, false)
+	return payload
+}
+
+// UnmarshalGroupConfigMeta
+func UnmarshalGroupConfigMeta(value []byte) (*MessageGroupMetaJSON, error) {
+	idx := 0
+	// chainId
+	chainIdBytes, err := ReadBytesWithUint16Len(value, &idx, 4)
+	if err != nil {
+		return nil, err
+	}
+	chainId := BytesToUint32(chainIdBytes)
+	// schemaVersion
+	schemaVersionBytes, err := ReadBytesWithUint16Len(value, &idx, 2)
+	if err != nil {
+		return nil, err
+	}
+	schemaVersion := BytesToUint16(schemaVersionBytes)
+	// messageType
+	messageTypeBytes, err := ReadBytesWithUint16Len(value, &idx, 1)
+	if err != nil {
+		return nil, err
+	}
+	messageType := BytesToUint8(messageTypeBytes)
+	// authScheme
+	authSchemeBytes, err := ReadBytesWithUint16Len(value, &idx, 1)
+	if err != nil {
+		return nil, err
+	}
+	authScheme := BytesToUint8(authSchemeBytes)
+	// qualifyType
+	qualifyTypeBytes, err := ReadBytesWithUint16Len(value, &idx)
+	if err != nil {
+		return nil, err
+	}
+	qualifyType := string(qualifyTypeBytes)
+	// contractAddress
+	contractAddressBytes, err := ReadBytesWithUint16Len(value, &idx)
+	if err != nil {
+		return nil, err
+	}
+	contractAddress := string(contractAddressBytes)
+	// groupName
+	groupNameBytes, err := ReadBytesWithUint16Len(value, &idx)
+	if err != nil {
+		return nil, err
+	}
+	groupName := string(groupNameBytes)
+	// tokenThres
+	tokenThresBytes, err := ReadBytesWithUint16Len(value, &idx)
+	if err != nil {
+		return nil, err
+	}
+	tokenThres := string(tokenThresBytes)
+	// tokenDecimals
+	tokenDecimalsBytes, err := ReadBytesWithUint16Len(value, &idx)
+	if err != nil {
+		return nil, err
+	}
+	tokenDecimals := string(tokenDecimalsBytes)
+	// tokenThresValue
+	tokenThresValueBytes, err := ReadBytesWithUint16Len(value, &idx)
+	if err != nil {
+		return nil, err
+	}
+	tokenThresValue := string(tokenThresValueBytes)
+	// dappGroupId
+	dappGroupIdBytes, err := ReadBytesWithUint16Len(value, &idx)
+	if err != nil {
+		return nil, err
+	}
+	dappGroupId := string(dappGroupIdBytes)
+	return &MessageGroupMetaJSON{
+		ChainId:         chainId,
+		SchemaVersion:   schemaVersion,
+		MessageType:     messageType,
+		AuthScheme:      authScheme,
+		QualifyType:     qualifyType,
+		ContractAddress: contractAddress,
+		GroupName:       groupName,
+		TokenThres:      tokenThres,
+		TokenDecimals:   tokenDecimals,
+		TokenThresValue: tokenThresValue,
+		DappGroupId:     dappGroupId,
+	}, nil
+}
+
+// read groupConfigMeta from groupId
+func ReadGroupConfigMetaFromGroupId(groupId [GroupIdLen]byte, im *Manager) (*MessageGroupMetaJSON, error) {
+	// key = prefix + groupId
+	key := KeyForGroupConfigMeta(groupId)
+	// read
+	value, err := im.imStore.Get(key)
+	if err != nil {
+		return nil, err
+	}
+	// value to groupConfigMeta
+	groupConfig, err := UnmarshalGroupConfigMeta(value)
+	if err != nil {
+		return nil, err
+	}
+	return groupConfig, nil
+}
+
+// iterate all groupId, PrefixForGroupConfigMeta
+func IterateAllGroupIdFromGroupConfigMetaStore(im *Manager, f func(groupId [GroupIdLen]byte) bool) error {
+	prefix := PrefixForGroupConfigMeta()
+	// iterate
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		// key to groupId
+		groupId, err := ParseGroupIdFromGroupConfigMetaKey(key)
+		if err != nil {
 			return true
 		}
+		return f(groupId)
+	})
+	if err != nil {
+		return err
 	}
-	return false
+	return nil
+}
+
+// check if group exists, given groupId
+func IsGroupExists(groupId [GroupIdLen]byte, im *Manager) bool {
+	key := KeyForGroupConfigMeta(groupId)
+	isExist, err := im.imStore.Has(key)
+	if err != nil {
+		return false
+	}
+	return isExist
+}
+
+
+// delete groupConfigMeta from groupId
+func (im *Manager) DeleteGroupConfigMetaFromGroupId(groupId [GroupIdLen]byte) error {
+	// key = prefix + groupId
+	key := KeyForGroupConfigMeta(groupId)
+	// delete
+	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// store read and delete for chainId + contract address hash + -> groupId
+// key = prefix + chainId + contractAddressHash + groupId
+// value is empty
+func KeyForChainIdAndContractAddressHashToGroupId(chainId uint32, contractAddress string, groupId [GroupIdLen]byte) []byte {
+	idx := 0
+	var payload []byte
+	// prefix
+	AppendBytesWithUint16Len(&payload, &idx, []byte{ImStoreKeyPrefixChainIdAndContractAddressHashToGroupId}, false)
+	// chainId
+	AppendBytesWithUint16Len(&payload, &idx, Uint32ToBytes(chainId), false)
+	// contractAddressHash
+	contractAddressHash := Sha256Hash(contractAddress)
+	AppendBytesWithUint16Len(&payload, &idx, contractAddressHash, false)
+	// groupId
+	AppendBytesWithUint16Len(&payload, &idx, groupId[:], false)
+	return payload
+}
+
+// unmarshal chainId + contract address hash + groupId
+func UnmarshalChainIdAndContractAddressHashToGroupId(value []byte) ([GroupIdLen]byte, uint32, []byte, error) {
+	idx := 0
+	// prefix
+	_, err := ReadBytesWithUint16Len(value, &idx, 1)
+	if err != nil {
+		return [GroupIdLen]byte{}, 0, []byte{}, err
+	}
+	// chainId
+	chainIdBytes, err := ReadBytesWithUint16Len(value, &idx, 4)
+	if err != nil {
+		return [GroupIdLen]byte{}, 0, []byte{}, err
+	}
+	chainId := BytesToUint32(chainIdBytes)
+	// contractAddressHash
+	contractAddressHash, err := ReadBytesWithUint16Len(value, &idx, Sha256HashLen)
+	if err != nil {
+		return [GroupIdLen]byte{}, 0, []byte{}, err
+	}
+	// groupId
+	groupIdBytes, err := ReadBytesWithUint16Len(value, &idx, GroupIdLen)
+	if err != nil {
+		return [GroupIdLen]byte{}, 0, []byte{}, err
+	}
+	var groupId [GroupIdLen]byte
+	copy(groupId[:], groupIdBytes)
+	return groupId, chainId, contractAddressHash, nil
+}
+
+// store chainId + contract address hash + -> groupId
+func StoreChainIdAndContractAddressHashToGroupId(groupId [GroupIdLen]byte, groupConfig *MessageGroupMetaJSON, im *Manager) error {
+	// key = prefix + chainId + contractAddressHash + groupId
+	key := KeyForChainIdAndContractAddressHashToGroupId(groupConfig.ChainId, groupConfig.ContractAddress, groupId)
+	// value is empty
+	value := []byte{}
+	// store
+	err := im.imStore.Set(key, value)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// prefix for chainId + contract address hash + -> groupId
+func PrefixForChainIdAndContractAddressHashToGroupId(chainId uint32, contractAddress string) []byte {
+	idx := 0
+	var payload []byte
+	// prefix
+	AppendBytesWithUint16Len(&payload, &idx, []byte{ImStoreKeyPrefixChainIdAndContractAddressHashToGroupId}, false)
+	// chainId
+	AppendBytesWithUint16Len(&payload, &idx, Uint32ToBytes(chainId), false)
+	// contractAddressHash
+	contractAddressHash := Sha256Hash(contractAddress)
+	AppendBytesWithUint16Len(&payload, &idx, contractAddressHash, false)
+	return payload
+}
+
+// read all groupId from chainId + contract address hash
+func ReadAllGroupIdFromChainIdAndContractAddressHash(chainId uint32, contractAddress string, im *Manager) ([][GroupIdLen]byte, error) {
+	prefix := PrefixForChainIdAndContractAddressHashToGroupId(chainId, contractAddress)
+	// iterate
+	var res [][GroupIdLen]byte
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		// value to groupId
+		groupId, _, _, err := UnmarshalChainIdAndContractAddressHashToGroupId(key)
+		if err != nil {
+			return true
+		}
+		res = append(res, groupId)
+		return true
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// delete all groupId from chainId + contract address hash
+func DeleteAllGroupIdFromChainIdAndContractAddressHash(chainId uint32, contractAddress string, im *Manager) error {
+	prefix := PrefixForChainIdAndContractAddressHashToGroupId(chainId, contractAddress)
+	// iterate then delete
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		err := im.imStore.Delete(key)
+		if err != nil {
+			return true
+		}
+		return true
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// store read and delete for chainId + qualifyType + -> groupId
+// key = prefix + chainId + qualifyTypeHash + groupId
+// value is empty
+func KeyForChainIdAndQualifyTypeToGroupId(chainId uint32, qualifyType string, groupId [GroupIdLen]byte) []byte {
+	idx := 0
+	var payload []byte
+	// prefix
+	AppendBytesWithUint16Len(&payload, &idx, []byte{ImStoreKeyPrefixChainIdAndQualifyTypeToGroupId}, false)
+	// chainId
+	AppendBytesWithUint16Len(&payload, &idx, Uint32ToBytes(chainId), false)
+	// qualifyTypeHash
+	qualifyTypeHash := Sha256Hash(qualifyType)
+	AppendBytesWithUint16Len(&payload, &idx, qualifyTypeHash, false)
+	// groupId
+	AppendBytesWithUint16Len(&payload, &idx, groupId[:], false)
+	return payload
+}
+
+// PrefixForChainIdAndQualifyTypeToGroupId
+func PrefixForChainIdAndQualifyTypeToGroupId(chainId uint32, qualifyType string) []byte {
+	idx := 0
+	var payload []byte
+	// prefix
+	AppendBytesWithUint16Len(&payload, &idx, []byte{ImStoreKeyPrefixChainIdAndQualifyTypeToGroupId}, false)
+	// chainId
+	AppendBytesWithUint16Len(&payload, &idx, Uint32ToBytes(chainId), false)
+	// qualifyTypeHash
+	qualifyTypeHash := Sha256Hash(qualifyType)
+	AppendBytesWithUint16Len(&payload, &idx, qualifyTypeHash, false)
+	return payload
+}
+
+// UnmarshalChainIdAndQualifyTypeToGroupId
+func UnmarshalChainIdAndQualifyTypeToGroupId(value []byte) ([GroupIdLen]byte, uint32, string, error) {
+	idx := 0
+	// chainId
+	chainIdBytes, err := ReadBytesWithUint16Len(value, &idx, 4)
+	if err != nil {
+		return [GroupIdLen]byte{}, 0, "", err
+	}
+	chainId := BytesToUint32(chainIdBytes)
+	// qualifyTypeHash
+	qualifyTypeHash, err := ReadBytesWithUint16Len(value, &idx, Sha256HashLen)
+	if err != nil {
+		return [GroupIdLen]byte{}, 0, "", err
+	}
+	// groupId
+	groupIdBytes, err := ReadBytesWithUint16Len(value, &idx, GroupIdLen)
+	if err != nil {
+		return [GroupIdLen]byte{}, 0, "", err
+	}
+	var groupId [GroupIdLen]byte
+	copy(groupId[:], groupIdBytes)
+	// qualifyType
+	qualifyType := string(qualifyTypeHash)
+	return groupId, chainId, qualifyType, nil
+}
+
+// store chainId + qualifyType + -> groupId
+func StoreChainIdAndQualifyTypeToGroupId(chainId uint32, qualifyType string, groupId [GroupIdLen]byte, im *Manager) error {
+	// key = prefix + chainId + qualifyTypeHash + groupId
+	key := KeyForChainIdAndQualifyTypeToGroupId(chainId, qualifyType, groupId)
+	// value is empty
+	value := []byte{}
+	// store
+	err := im.imStore.Set(key, value)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// read all groupId from chainId + qualifyType
+func ReadAllGroupIdFromChainIdAndQualifyType(chainId uint32, qualifyType string, im *Manager) ([][GroupIdLen]byte, error) {
+	prefix := PrefixForChainIdAndQualifyTypeToGroupId(chainId, qualifyType)
+	// iterate
+	var res [][GroupIdLen]byte
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		// value to groupId
+		groupId, _, _, err := UnmarshalChainIdAndQualifyTypeToGroupId(key)
+		if err != nil {
+			return true
+		}
+		res = append(res, groupId)
+		return true
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+// iterate all groupId from chainId + qualifyType
+func IterateAllGroupIdFromChainIdAndQualifyType(chainId uint32, qualifyType string, im *Manager, f func(groupId [GroupIdLen]byte) bool) error {
+	prefix := PrefixForChainIdAndQualifyTypeToGroupId(chainId, qualifyType)
+	// iterate
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		// value to groupId
+		groupId, _, _, err := UnmarshalChainIdAndQualifyTypeToGroupId(key)
+		if err != nil {
+			return true
+		}
+		return f(groupId)
+	})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// delete chainId + qualifyType + -> groupId
+func DeleteGroupIdFromChainIdAndQualifyType(chainId uint32, qualifyType string, groupId [GroupIdLen]byte, im *Manager) error {
+	// key = prefix + chainId + qualifyTypeHash + groupId
+	key := KeyForChainIdAndQualifyTypeToGroupId(chainId, qualifyType, groupId)
+	// delete
+	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// store read and delete for dappGroupId + -> groupId
+// key = prefix + dappGroupIdHash, value = groupId
+func KeyForDappGroupIdToGroupId(dappGroupId string) []byte {
+	idx := 0
+	var payload []byte
+	// prefix
+	AppendBytesWithUint16Len(&payload, &idx, []byte{ImStoreKeyPrefixDappGroupIdToGroupId}, false)
+	// dappGroupIdHash
+	dappGroupIdHash := Sha256Hash(dappGroupId)
+	AppendBytesWithUint16Len(&payload, &idx, dappGroupIdHash, false)
+	return payload
+}
+
+// store dappGroupId + -> groupId
+func StoreDappGroupIdToGroupId(dappGroupId string, groupId [GroupIdLen]byte, im *Manager) error {
+	// key = prefix + dappGroupIdHash
+	key := KeyForDappGroupIdToGroupId(dappGroupId)
+	value := groupId[:]
+	// store
+	err := im.imStore.Set(key, value)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// read groupId from dappGroupId
+func ReadGroupIdFromDappGroupId(dappGroupId string, im *Manager) ([GroupIdLen]byte, error) {
+	// key = prefix + dappGroupIdHash
+	key := KeyForDappGroupIdToGroupId(dappGroupId)
+	// read
+	value, err := im.imStore.Get(key)
+	if err != nil {
+		return [GroupIdLen]byte{}, err
+	}
+	// value to groupId
+	var groupId [GroupIdLen]byte
+	copy(groupId[:], value)
+	return groupId, nil
+}
+
+// delete groupId from dappGroupId
+func DeleteGroupIdFromDappGroupId(dappGroupId string, im *Manager) error {
+	// key = prefix + dappGroupIdHash
+	key := KeyForDappGroupIdToGroupId(dappGroupId)
+	// delete
+	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// store read and delete for chainId + contract address hash + -> outputId
+// key = prefix + chainId + contractAddressHash
+// value = outputId + groupId
+func KeyForChainIdAndContractAddressHashToOutputId(chainId uint32, contractAddress string) []byte {
+	idx := 0
+	var payload []byte
+	// prefix
+	AppendBytesWithUint16Len(&payload, &idx, []byte{ImStoreKeyPrefixChainIdAndContractAddressHashToOutputId}, false)
+	// chainId
+	if chainId == math.MaxUint32 {
+		return payload
+	}
+	AppendBytesWithUint16Len(&payload, &idx, Uint32ToBytes(chainId), false)
+	// contractAddressHash
+	if contractAddress == "" {
+		return payload
+	}
+	contractAddressHash := Sha256Hash(contractAddress)
+	AppendBytesWithUint16Len(&payload, &idx, contractAddressHash, false)
+	return payload
+}
+
+// value = outputId + contractAddress
+func ValueForChainIdAndContractAddressHashToOutputId(outputId [OutputIdLen]byte, contractAddress string) []byte {
+	idx := 0
+	var payload []byte
+	// outputId
+	AppendBytesWithUint16Len(&payload, &idx, outputId[:], false)
+	// contractAddress
+	AppendBytesWithUint16Len(&payload, &idx, []byte(contractAddress), true)
+	return payload
+}
+
+// parse key to chainId
+func ParseKeyForChainIdToOutputId(key []byte) (uint32, error) {
+	// key = prefix + chainId + contractAddressHash
+	idx := 0
+	_, err := ReadBytesWithUint16Len(key, &idx, 1)
+	if err != nil {
+		return 0, err
+	}
+	// chainId
+	chainIdBytes, err := ReadBytesWithUint16Len(key, &idx, 4)
+	if err != nil {
+		return 0, err
+	}
+	chainId := BytesToUint32(chainIdBytes)
+	return chainId, nil
+}
+
+// parse value to outputId and contractAddress
+func ParseValueForChainIdAndContractAddressHashToOutputIdAndContractAddress(value []byte) ([OutputIdLen]byte, string, error) {
+	idx := 0
+	// outputId
+	outputIdBytes, err := ReadBytesWithUint16Len(value, &idx, OutputIdLen)
+	if err != nil {
+		return [OutputIdLen]byte{}, "", err
+	}
+	var outputId [OutputIdLen]byte
+	copy(outputId[:], outputIdBytes)
+	// contractAddress
+	contractAddressBytes, err := ReadBytesWithUint16Len(value, &idx)
+	if err != nil {
+		return [OutputIdLen]byte{}, "", err
+	}
+	contractAddress := string(contractAddressBytes)
+	return outputId, contractAddress, nil
+}
+
+// store chainId + contract address hash + -> outputId + groupId
+func StoreChainIdAndContractAddressHashToOutputId(chainId uint32, contractAddress string, outputId [OutputIdLen]byte, groupId [GroupIdLen]byte, im *Manager) error {
+	// key = prefix + chainId + contractAddressHash
+	key := KeyForChainIdAndContractAddressHashToOutputId(chainId, contractAddress)
+	value := ValueForChainIdAndContractAddressHashToOutputId(outputId, contractAddress)
+	// store
+	err := im.imStore.Set(key, value)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// read outputId + contractAddress from chainId + contract address
+func ReadOutputIdAndContractAddressFromChainIdAndContractAddress(chainId uint32, contractAddress string, im *Manager) ([OutputIdLen]byte, string, error) {
+	// key = prefix + chainId + contractAddressHash
+	key := KeyForChainIdAndContractAddressHashToOutputId(chainId, contractAddress)
+	// read
+	value, err := im.imStore.Get(key)
+	if err != nil {
+		return [OutputIdLen]byte{}, "", err
+	}
+	// value to outputId and contractAddress
+	outputId, contractAddressFromStore, err := ParseValueForChainIdAndContractAddressHashToOutputIdAndContractAddress(value)
+	if err != nil {
+		return [OutputIdLen]byte{}, "", err
+	}
+	return outputId, contractAddressFromStore, nil
+}
+
+// delete outputId + contractAddress from chainId + contract address
+func DeleteOutputIdAndGroupIdFromChainIdAndContractAddress(chainId uint32, contractAddress string, im *Manager) error {
+	// key = prefix + chainId + contractAddressHash
+	key := KeyForChainIdAndContractAddressHashToOutputId(chainId, contractAddress)
+	// delete
+	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// GroupConfigLiteResponse
+type GroupConfigNftListResponse struct {
+	ChainId         uint32 `json:"chainId"`
+	ContractAddress string `json:"contractAddress"`
+	OutputId        string `json:"outputId"`
+}
+
+// list all outputId + contractAddress from the store, with optional chainId and contractAddress, page and pageSize
+func ListOutputIdAndGroupIdFromChainIdAndContractAddress(chainId uint32, contractAddress string, page int, pageSize int, im *Manager) ([]*GroupConfigNftListResponse, error) {
+	if page <= 0 || pageSize <= 0 || pageSize > 100 || page >= 1000 {
+		return nil, errors.New("page and pageSize must be greater than 0")
+	}
+	var resp []*GroupConfigNftListResponse
+	prefix := KeyForChainIdAndContractAddressHashToOutputId(chainId, contractAddress)
+	ct := 0
+	skipLefted := (page - 1) * pageSize
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		if skipLefted > 0 {
+			skipLefted--
+			return true
+		}
+		chainId, err := ParseKeyForChainIdToOutputId(key)
+		if err != nil {
+			return true
+		}
+		// value to outputId and contractAddress
+		outputId, contractAddress, err := ParseValueForChainIdAndContractAddressHashToOutputIdAndContractAddress(value)
+		if err != nil {
+			return true
+		}
+		resp = append(resp, &GroupConfigNftListResponse{
+			ChainId:         chainId,
+			ContractAddress: contractAddress,
+			OutputId:        iotago.EncodeHex(outputId[:]),
+		})
+		ct++
+		if pageSize > 0 && ct >= pageSize {
+			return false
+		}
+		return true
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+// store check exist and delete for groupId which is public
+// key = prefix + groupId
+// value is empty
+func KeyForPublicGroupId(groupId [GroupIdLen]byte) []byte {
+	idx := 0
+	var payload []byte
+	// prefix
+	AppendBytesWithUint16Len(&payload, &idx, []byte{ImStoreKeyPrefixPublicGroupId}, false)
+	// groupId
+	AppendBytesWithUint16Len(&payload, &idx, groupId[:], false)
+	return payload
+}
+
+// store public groupId
+func StorePublicGroupId(groupId [GroupIdLen]byte, im *Manager) error {
+	// key = prefix + groupId
+	key := KeyForPublicGroupId(groupId)
+	// value is empty
+	value := []byte{}
+	// store
+	err := im.imStore.Set(key, value)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// check if groupId is public
+func CheckIfGroupIdIsPublic(groupId [GroupIdLen]byte, im *Manager) bool {
+	// key = prefix + groupId
+	key := KeyForPublicGroupId(groupId)
+	// check
+	isExist, err := im.imStore.Has(key)
+	if err != nil {
+		return false
+	}
+	return isExist
+}
+
+// delete public groupId
+func DeletePublicGroupId(groupId [GroupIdLen]byte, im *Manager) error {
+	// key = prefix + groupId
+	key := KeyForPublicGroupId(groupId)
+	// delete
+	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+type ConfigNftOutputWrapper struct {
+	OutputId        [OutputIdLen]byte
+	Configs         []*MessageGroupMetaJSON
+	ChainId         uint32
+	ContractAddress string
+}
+type ConfigNftOutputMetaJson struct {
+	Uri             string `json:"uri"`
+	ChainId         uint32 `json:"chainId"`
+	ContractAddress string `json:"contractAddress"`
+}
+
+// Handle group config nft output created and consumed
+func (im *Manager) HandleGroupConfigNFTOutputConsumedOrCreated(consumed []*ConfigNftOutputWrapper, created []*ConfigNftOutputWrapper, logger *logger.Logger) error {
+	for _, config := range consumed {
+		err := HandleGroupNFTOutputConsumed(config, logger, im)
+		if err != nil {
+			// log error
+			logger.Infof("HandleGroupConfigNFTOutputConsumedOrCreated ... HandleGroupNFTOutputConsumed failed:%s", err)
+			return err
+		}
+	}
+
+	for _, config := range created {
+		err := HandleGroupNFTOutputCreated(config, logger, im)
+		if err != nil {
+			// log error
+			logger.Infof("HandleGroupConfigNFTOutputConsumedOrCreated ... HandleGroupNFTOutputCreated failed:%s", err)
+			return err
+		}
+	}
+
+	return nil
+}
+
+// extract group config meta list from nft output
+func ExtractConfigNftOutputWrapperFromNFTOutput(outputId [OutputIdLen]byte, nftOutput *iotago.NFTOutput, im *Manager) (*ConfigNftOutputWrapper, error) {
+	if nftOutput.ImmutableFeatureSet() == nil || nftOutput.ImmutableFeatureSet().MetadataFeature() == nil || nftOutput.ImmutableFeatureSet().MetadataFeature().Data == nil {
+		return nil, errors.New("nftOutput.ImmutableFeatureSet().MetadataFeature().Data is nil")
+	}
+	meta := nftOutput.ImmutableFeatureSet().MetadataFeature().Data
+	// unmarshal meta as ConfigNftOutputMetaJson
+	var configNftOutputMetaJson ConfigNftOutputMetaJson
+	err := json.Unmarshal(meta, &configNftOutputMetaJson)
+	if err != nil {
+		return nil, err
+	}
+	// check nil for uri, chainId, contractAddress
+	if configNftOutputMetaJson.Uri == "" || configNftOutputMetaJson.ChainId == 0 || configNftOutputMetaJson.ContractAddress == "" {
+		return nil, errors.New("configNftOutputMetaJson.Uri, configNftOutputMetaJson.ChainId, configNftOutputMetaJson.ContractAddress is empty")
+	}
+	configStr, err := DownloadIpfsContent(configNftOutputMetaJson.Uri)
+	if err != nil {
+		return nil, err
+	}
+	// log uri and configStr
+	Logger.Infof("uri: %s, configStr: %s", configNftOutputMetaJson.Uri, configStr)
+	// unmarshal configStr as MessageGroupMetaJSON slice
+	var groupConfigMeta []*MessageGroupMetaJSON
+	err = json.Unmarshal([]byte(configStr), &groupConfigMeta)
+	if err != nil {
+		return nil, err
+	}
+	return &ConfigNftOutputWrapper{
+		OutputId:        outputId,
+		Configs:         groupConfigMeta,
+		ChainId:         configNftOutputMetaJson.ChainId,
+		ContractAddress: configNftOutputMetaJson.ContractAddress,
+	}, nil
+}
+
+var groupconfigTagRawStr = "GROUPFIGROUPCONFIGV1"
+var groupconfigTag = []byte(groupconfigTagRawStr)
+var GroupconfigTagStr = iotago.EncodeHex(groupconfigTag)
+
+// filter output for config nft output wrapper
+// output iotago.Output, outputId iotago.OutputID
+func FilterOutputForConfigNftOutputWrapper(output iotago.Output, outputId iotago.OutputID, im *Manager) (*ConfigNftOutputWrapper, error) {
+	if output == nil {
+		return nil, nil
+	}
+	// check nft output
+	nftOutput, ok := output.(*iotago.NFTOutput)
+	if !ok {
+		return nil, nil
+	}
+	featureSet := nftOutput.FeatureSet()
+	tag := featureSet.TagFeature()
+	if tag == nil {
+		return nil, nil
+	}
+	// check tag
+	if !bytes.Equal(tag.Tag[:], groupconfigTag) {
+		return nil, nil
+	}
+
+	// ExtractConfigNftOutputWrapperFromNFTOutput
+	configNftOutputWrapper, err := ExtractConfigNftOutputWrapperFromNFTOutput(outputId, nftOutput, im)
+	if err != nil {
+		return nil, err
+	}
+	return configNftOutputWrapper, nil
+}
+
+// filter ledger output for config nft output wrapper
+func FilterLedgerOutputForConfigNftOutputWrapper(inxOutput *inx.LedgerOutput, im *Manager) (*ConfigNftOutputWrapper, error) {
+	// check nil
+	if inxOutput == nil {
+		return nil, nil
+	}
+	// get output
+	output, err := inxOutput.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return nil, err
+	}
+	outputId := inxOutput.UnwrapOutputID()
+	// filter output
+	config, err := FilterOutputForConfigNftOutputWrapper(output, outputId, im)
+	if err != nil {
+		return nil, err
+	}
+	return config, nil
+}
+
+// HandleGroupNFTOutputConsumed
+func HandleGroupNFTOutputConsumed(configWrapper *ConfigNftOutputWrapper, logger *logger.Logger, im *Manager) error {
+	// get outputId and contract address
+	//outputId := configWrapper.OutputId
+	contractAddress := configWrapper.ContractAddress
+	chainId := configWrapper.ChainId
+	// delte chainId + contract address hash + -> outputId
+	err := DeleteOutputIdAndGroupIdFromChainIdAndContractAddress(chainId, contractAddress, im)
+	if err != nil {
+		return err
+	}
+	// delte all by chainId + contract address hash
+	err = DeleteAllGroupIdFromChainIdAndContractAddressHash(chainId, contractAddress, im)
+	if err != nil {
+		return err
+	}
+	configs := configWrapper.Configs
+	// get groupId from outputId and contract address
+	for _, config := range configs {
+		// delete public groupId
+		groupId := GetGroupIdFromGroupConfig(config)
+		err = DeletePublicGroupId(groupId, im)
+		if err != nil {
+			return err
+		}
+		// delete chainId + qualifyType + -> groupId
+		err = DeleteGroupIdFromChainIdAndQualifyType(chainId, config.QualifyType, groupId, im)
+		if err != nil {
+			return err
+		}
+		// delete groupId from group config meta
+		err = im.DeleteGroupConfigMetaFromGroupId(groupId)
+		if err != nil {
+			return err
+		}
+		dappGroupId := GetDappGroupId(iotago.EncodeHex(groupId[:]), config)
+		// delete groupId from dappGroupId
+		err = DeleteGroupIdFromDappGroupId(dappGroupId, im)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// HandleGroupNFTOutputCreated
+func HandleGroupNFTOutputCreated(configWrapper *ConfigNftOutputWrapper, logger *logger.Logger, im *Manager) error {
+	// get outputId and contract address
+	outputId := configWrapper.OutputId
+	contractAddress := configWrapper.ContractAddress
+	chainId := configWrapper.ChainId
+	// store chainId + contract address hash + -> outputId
+	err := StoreChainIdAndContractAddressHashToOutputId(chainId, contractAddress, outputId, GetGroupIdFromGroupConfig(configWrapper.Configs[0]), im)
+	if err != nil {
+		return err
+	}
+	// store chainId + qualifyType + -> groupId
+	for _, config := range configWrapper.Configs {
+		groupId := GetGroupIdFromGroupConfig(config)
+		groupIdHex := iotago.EncodeHex(groupId[:])
+		// log groupIdHex, chainId, contractAddress, config.QualifyType
+		logger.Infof("groupIdHex: %s, chainId: %d, contractAddress: %s, qualifyType: %s", groupIdHex, chainId, contractAddress, config.QualifyType)
+		err = StoreChainIdAndQualifyTypeToGroupId(chainId, config.QualifyType, groupId, im)
+		if err != nil {
+			return err
+		}
+
+		// store chainId + contract address hash + -> groupId
+		err = StoreChainIdAndContractAddressHashToGroupId(groupId, config, im)
+		if err != nil {
+			return err
+		}
+		// store groupId from dappGroupId
+		dappGroupId := GetDappGroupId(groupIdHex, config)
+		config.DappGroupId = dappGroupId
+		err = StoreDappGroupIdToGroupId(dappGroupId, groupId, im)
+		if err != nil {
+			return err
+		}
+		// store group config meta
+		err = StoreGroupConfigMetaForGroupId(groupId, config, im)
+		if err != nil {
+			return err
+		}
+		// CalculateIfGroupIsPublic
+		err = im.CalculateIfGroupIsPublic(groupId, logger)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }

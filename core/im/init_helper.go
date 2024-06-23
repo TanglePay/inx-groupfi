@@ -83,7 +83,7 @@ Loop:
 			outputIds, nextOffset, err := outputIdsFetcher(initCtx, offset)
 			if err != nil {
 				log.Errorf("failed to fetch output ids for %s: %s", topic, err)
-				return
+				continue
 			}
 			// convert []string to []interface{}
 			outputIdsInterface := make([]interface{}, len(outputIds))
@@ -97,7 +97,7 @@ Loop:
 				err = deps.IMManager.StoreInitCurrentOffset(nextOffset, topic, "")
 				if err != nil {
 					log.Errorf("failed to StoreInitCurrentOffset for %s: %s", topic, err)
-					return
+					continue
 				}
 			}
 			// check if there is more
@@ -141,6 +141,18 @@ var AllBasicOutputIdsFetcher = func(initCtx *InitContext, offset *string) ([]str
 var BasicOutputIdsByTagFetcher = func(tag string) OutputIdsFetcher {
 	return func(initCtx *InitContext, offset *string) ([]string, *string, error) {
 		ids, nextOffset, err := deps.IMManager.QueryOutputIdsByTag(initCtx.Ctx, initCtx.IndexerClient, tag, offset, initCtx.Logger)
+		if err != nil {
+			return nil, nil, err
+		}
+		return ids, nextOffset, nil
+	}
+}
+
+// nft output with tag fetcher
+// outputHexIds, nextOffset, err := deps.IMManager.QueryNFTOutputIdsByTag(ctx, indexerClient, tag, initOffset, CoreComponent.Logger())
+var NftOutputIdsByTagFetcher = func(tag string) OutputIdsFetcher {
+	return func(initCtx *InitContext, offset *string) ([]string, *string, error) {
+		ids, nextOffset, err := deps.IMManager.QueryNFTOutputIdsByCollectionId(initCtx.Ctx, initCtx.IndexerClient, tag, offset, initCtx.Logger)
 		if err != nil {
 			return nil, nil, err
 		}

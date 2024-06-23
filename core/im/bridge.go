@@ -44,6 +44,8 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		var createdDid []*im.Did
 		var createdPairX []*im.PairX
 		var createdEvmQualify []*im.EvmQualify
+		var createdGroupConfig []*im.ConfigNftOutputWrapper
+		var consumedGroupConfig []*im.ConfigNftOutputWrapper
 		for _, output := range update.Created {
 			// im.CurrentMilestoneTimestamp = max(im.CurrentMilestoneTimestamp, output.MilestoneTimestampBooked)
 			if output.MilestoneTimestampBooked > im.CurrentMilestoneTimestamp {
@@ -71,6 +73,14 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			}
 			handleTokenFromINXLedgerOutput(output, ImOutputTypeCreated)
 
+			groupConfig, err := im.FilterLedgerOutputForConfigNftOutputWrapper(output, deps.IMManager)
+			if err != nil {
+				// log error
+				CoreComponent.LogErrorf("LedgerUpdate FilterOutputForConfigNftOutputWrapper error:%s", err.Error())
+			}
+			if groupConfig != nil {
+				createdGroupConfig = append(createdGroupConfig, groupConfig)
+			}
 		}
 		for _, spent := range update.Consumed {
 			output := spent.GetOutput()
@@ -98,6 +108,18 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if dids != nil {
 				consumedDid = append(consumedDid, dids...)
 			}
+
+			groupConfig, err := im.FilterLedgerOutputForConfigNftOutputWrapper(output, deps.IMManager)
+			if err != nil {
+				// log error
+				CoreComponent.LogErrorf("LedgerUpdate FilterOutputForConfigNftOutputWrapper error:%s", err.Error())
+			}
+			if groupConfig != nil {
+				consumedGroupConfig = append(consumedGroupConfig, groupConfig)
+			}
+		}
+		if len(createdGroupConfig) > 0 || len(consumedGroupConfig) > 0 {
+			deps.IMManager.HandleGroupConfigNFTOutputConsumedOrCreated(consumedGroupConfig, createdGroupConfig, CoreComponent.Logger())
 		}
 		dataFromListenning := &im.DataFromListenning{
 			CreatedMessage: createdMessage,
@@ -126,20 +148,21 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 
 	stream, err := deps.NodeBridge.Client().ListenToBlocks(ctx, &inx.NoParams{})
 	if err != nil {
+		// log error
+		CoreComponent.LogErrorf("LedgerUpdateBlock ListenToBlocks error:%s", err.Error())
 		return err
 	}
 	for {
 		payload, err := stream.Recv()
 		if errors.Is(err, io.EOF) || status.Code(err) == codes.Canceled {
-			break
+			// log error
+			CoreComponent.LogErrorf("LedgerUpdateBlock error:%s", err.Error())
+			continue
 		}
 		if ctx.Err() != nil {
 			// context got canceled, so stop the updates
 			//nolint:nilerr // false positive
 			return nil
-		}
-		if err != nil {
-			return err
 		}
 
 		block, err := payload.GetBlock().UnwrapBlock(serializer.DeSeriModeNoValidation, nil)
@@ -170,6 +193,7 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 						pl = append(pl, meta...)
 						deps.IMManager.PushInbox(groupId, pl, CoreComponent.Logger())
 					}()
+					continue
 				}
 				evmQualify, err := deps.IMManager.FilterEvmQualifyFromOutput(output, CoreComponent.Logger())
 				if err != nil {
@@ -178,6 +202,7 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 				}
 				if evmQualify != nil {
 					deps.IMManager.HandleEvmQualifyCreated(evmQualify, CoreComponent.Logger())
+					continue
 				}
 
 				dids, err := deps.IMManager.FilterOutputForDid(output, outputId)
@@ -187,6 +212,7 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 				}
 				if dids != nil {
 					deps.IMManager.HandleDidConsumedAndCreated(nil, dids, CoreComponent.Logger())
+					continue
 				}
 
 				mark, is := deps.IMManager.FilterMarkOutput(output, CoreComponent.Logger())
@@ -197,11 +223,13 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 						OutputId: outputId,
 					}
 					deps.IMManager.HandleGroupMarkBasicOutputConsumedAndCreated(markAndOutputId, CoreComponent.Logger())
+					continue
 				}
 
 				mute, is := deps.IMManager.FilterMuteOutput(output, CoreComponent.Logger())
 				if is {
 					deps.IMManager.HandleUserMuteGroupMemberBasicOutputCreated(mute, CoreComponent.Logger())
+					continue
 				}
 
 				like, is := deps.IMManager.FilterLikeOutput(output, CoreComponent.Logger())
@@ -212,6 +240,7 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 				vote, is := deps.IMManager.FilterVoteOutput(output, CoreComponent.Logger())
 				if is {
 					deps.IMManager.HandleUserVoteGroupBasicOutputCreated(vote, CoreComponent.Logger())
+					continue
 				}
 				pairX, err := deps.IMManager.FilterPairXFromOutput(output, outputId, CoreComponent.Logger())
 				if err != nil {
@@ -220,11 +249,11 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 				}
 				if pairX != nil {
 					deps.IMManager.HandlePairXCreated(pairX, CoreComponent.Logger())
+					continue
 				}
 
 			}
 		}
 	}
-	return nil
 
 }

@@ -150,7 +150,29 @@ func AppendBytesWithUint16Len(bytes *[]byte, idx *int, slice []byte, appendLengt
 		*idx += length
 	}
 }
+func MergeAndRemoveDupsStringArray(slice1, slice2 []string) []string {
+	// Create a map to track unique elements
+	uniqueMap := make(map[string]bool)
+	var result []string
 
+	// Add elements from the first slice to the map and result slice
+	for _, val := range slice1 {
+		if !uniqueMap[val] {
+			uniqueMap[val] = true
+			result = append(result, val)
+		}
+	}
+
+	// Add elements from the second slice to the map and result slice
+	for _, val := range slice2 {
+		if !uniqueMap[val] {
+			uniqueMap[val] = true
+			result = append(result, val)
+		}
+	}
+
+	return result
+}
 func ReadBytesWithUint16Len(bytes []byte, idx *int, providedLength ...int) ([]byte, error) {
 	var length int
 	if len(providedLength) > 0 {
@@ -189,6 +211,11 @@ func Uint16ToBytes(num uint16) []byte {
 	return tmp
 }
 
+// uint8 to bytes
+func Uint8ToBytes(num uint8) []byte {
+	return []byte{num}
+}
+
 // BoolToByte
 func BoolToByte(b bool) byte {
 	if b {
@@ -205,6 +232,11 @@ func BytesToBool(bytes []byte) bool {
 // bytes to uint16
 func BytesToUint16(bytes []byte) uint16 {
 	return binary.BigEndian.Uint16(bytes)
+}
+
+// bytes to uint8
+func BytesToUint8(bytes []byte) uint8 {
+	return bytes[0]
 }
 
 // bytes to uint32

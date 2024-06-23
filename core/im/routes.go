@@ -81,6 +81,8 @@ const (
 	RouteIMShared = "/shared"
 	// address group ids
 	RouteIMAddressGroupIds = "/addressgroupids"
+	// address group ids v2
+	RouteIMAddressGroupIdsV2 = "/addressgroupidsv2"
 	// address group details
 	RouteIMAddressGroupDetails = "/addressgroupdetails"
 
@@ -171,6 +173,12 @@ const (
 
 	// batch smr address to evm address conversion
 	RouteBatchSmrAddressToEvmAddress = "/batchsmraddresstoevmaddress"
+
+	// list group configs Nft
+	RouteListGroupConfigsNft = "/listgroupconfigsnft"
+
+	// get group config under one nft
+	RouteGroupConfigUnderNft = "/groupconfigundernft"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -274,14 +282,6 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, iotago.EncodeHex(groupId)+iotago.EncodeHex(nftId))
 	})
 
-	e.GET("/testGroupName", func(c echo.Context) error {
-		groupName, err := parseGroupNameQueryParam(c)
-		if err != nil {
-			return err
-		}
-		groupId := deps.IMManager.GroupNameToGroupId(groupName)
-		return httpserver.JSONResponse(c, http.StatusOK, iotago.EncodeHex(groupId))
-	})
 	e.GET("/testtoken", func(c echo.Context) error {
 		address, err := parseAddressQueryParamWithNil(c)
 		if err != nil {
@@ -453,6 +453,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, groupIds)
 	})
 
+	// RouteIMAddressGroupIdsV2
+	e.POST(RouteIMAddressGroupIdsV2, func(c echo.Context) error {
+		groupIds, err := getGroupIdsFromAddressV2(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, groupIds)
+	})
+
 	//addressqualifiedgroupconfigs
 	// switch to using post
 	e.POST(RouteIMAddressQualifiedGroupConfigs, func(c echo.Context) error {
@@ -500,15 +509,6 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	//RouteIMAddressGroupDetails
 	e.GET(RouteIMAddressGroupDetails, func(c echo.Context) error {
 		resp, err := getAddressGroupDetails(c)
-		if err != nil {
-			return err
-		}
-		return httpserver.JSONResponse(c, http.StatusOK, resp)
-	})
-
-	// group configs for renter
-	e.GET(RouteGroupConfigs, func(c echo.Context) error {
-		resp, err := getGroupConfigsForRenter(c)
 		if err != nil {
 			return err
 		}
@@ -783,6 +783,23 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// RouteBatchSmrAddressToEvmAddress
 	e.POST(RouteBatchSmrAddressToEvmAddress, func(c echo.Context) error {
 		resp, err := batchSmrAddressToEvmAddress(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// RouteListGroupConfigsNft
+	e.GET(RouteListGroupConfigsNft, func(c echo.Context) error {
+		resp, err := listGroupConfigsLite(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+	// RouteGroupConfigUnderNft
+	e.GET(RouteGroupConfigUnderNft, func(c echo.Context) error {
+		resp, err := getGroupConfigUnderNft(c)
 		if err != nil {
 			return err
 		}

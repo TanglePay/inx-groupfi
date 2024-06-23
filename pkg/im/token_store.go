@@ -226,10 +226,9 @@ func (im *Manager) GetBalanceOfOneAddressSha256(tokenId []byte, addressSha256 []
 var NftIdPadding = Sha256Hash("nftIdPadding")
 
 // SetWhaleEligibility(tokenType, address, isEligible)
-func (im *Manager) SetWhaleEligibility(tokenId []byte, groupName string, tokenThreshold string, address string, isEligible bool, logger *logger.Logger) error {
-	groupId := im.GroupNameToGroupId(groupName)
+func (im *Manager) SetWhaleEligibility(tokenId []byte, groupId [GroupIdLen]byte, groupName string, tokenThreshold string, address string, isEligible bool, logger *logger.Logger) error {
 	addressSha256 := Sha256Hash(address)
-	nft := NewNFTForToken(groupId, address, addressSha256, groupName, tokenId, tokenThreshold)
+	nft := NewNFTForToken(groupId[:], address, addressSha256, groupName, tokenId, tokenThreshold)
 	if isEligible {
 		return im.storeSingleNFT(nft, logger)
 	} else {
