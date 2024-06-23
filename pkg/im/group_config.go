@@ -563,6 +563,7 @@ func IsGroupExists(groupId [GroupIdLen]byte, im *Manager) bool {
 	return isExist
 }
 
+
 // delete groupConfigMeta from groupId
 func (im *Manager) DeleteGroupConfigMetaFromGroupId(groupId [GroupIdLen]byte) error {
 	// key = prefix + groupId

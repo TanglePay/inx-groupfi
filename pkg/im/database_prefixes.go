@@ -88,4 +88,5 @@ const (
 	ImStoreKeyPrefixChainIdAndContractAddressHashToOutputId byte = 44
 
 	ImStoreKeyPrefixPublicGroupId byte = 45
+
 )

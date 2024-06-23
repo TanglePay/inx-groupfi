@@ -478,6 +478,7 @@ func groupParamToGroupIds(groupParam GroupParam, isPublicOnly bool) []string {
 	return groupIds
 }
 
+
 // filter groupIds from group param
 func filterGroupIdsFromGroupParam(groupIds []string, groupParam GroupParam) []string {
 	includeGroupNameMap := map[string]bool{}
