@@ -24,4 +24,5 @@ var (
 	CurrentNodeProtocol            *iotago.ProtocolParameters = nil
 	Logger                         *logger.Logger             = nil
 	Im                             *Manager                   = nil
+	DidCollectionId                string                     = ""
 )

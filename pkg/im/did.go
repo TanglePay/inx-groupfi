@@ -159,6 +159,14 @@ func (im *Manager) FilterNftOutputForDid(output *iotago.NFTOutput, outputId iota
 	if output == nil {
 		return nil, nil
 	}
+	// get collectionId
+	collectionId, err := GetCollectionIdFromNFTOutput(output)
+	if err != nil {
+		return nil, err
+	}
+	if collectionId == "" || collectionId != DidCollectionId {
+		return nil, nil
+	}
 	// get metadata
 	if output.ImmutableFeatureSet().MetadataFeature() == nil || output.ImmutableFeatureSet().MetadataFeature().Data == nil {
 		return nil, nil
