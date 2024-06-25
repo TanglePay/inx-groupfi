@@ -173,7 +173,7 @@ func (im *Manager) FilterNftOutputForDid(output *iotago.NFTOutput, outputId iota
 	}
 	// unmarshal metadata as json, using go library
 	metaMap := make(map[string]interface{})
-	err := json.Unmarshal(output.ImmutableFeatureSet().MetadataFeature().Data, &metaMap)
+	err = json.Unmarshal(output.ImmutableFeatureSet().MetadataFeature().Data, &metaMap)
 	if err != nil {
 		return nil, err
 	}
