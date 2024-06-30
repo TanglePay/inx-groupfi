@@ -31,6 +31,14 @@ var evmNode = map[int]ChainConfig{
 		MaxFilterBlock: 999,
 		Contract:       "0xc2F820BA3DBe0755deE2cD0ddc8Bf2fEc1e57255",
 	},
+	// 8822 https://json-rpc.evm.iotaledger.net or wss://ws.json-rpc.evm.iotaledger.net
+	8822: {
+		RPC:            "https://json-rpc.evm.iotaledger.net",
+		WSS:            "wss://ws.json-rpc.evm.iotaledger.net",
+		ListenType:     0,
+		MaxFilterBlock: 999,
+		Contract:       "0xc2F820BA3DBe0755deE2cD0ddc8Bf2fEc1e57255",
+	},
 	128123: {
 		RPC:            "https://node.ghostnet.etherlink.com/",
 		WSS:            "wss://node.ghostnet.etherlink.com/",
