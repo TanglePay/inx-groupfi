@@ -361,3 +361,22 @@ func PushData[T any](data *T, getTopic func(*T) string,
 
 	return nil
 }
+
+// get collectionId from nft output
+func GetCollectionIdFromNFTOutput(output *iotago.NFTOutput) (string, error) {
+	issuer := output.ImmutableFeatureSet().IssuerFeature()
+	if issuer == nil {
+		return "", fmt.Errorf("issuer not found")
+	}
+	issuerAddress := issuer.Address
+	if issuerAddress == nil {
+		return "", fmt.Errorf("issuer address not found")
+	}
+	if issuerAddress.Type() != iotago.AddressNFT {
+		return "", fmt.Errorf("issuer address type is not NFT")
+	}
+	nftAddress := issuerAddress.(*iotago.NFTAddress)
+	collectionId := nftAddress.NFTID().ToHex()
+
+	return collectionId, nil
+}

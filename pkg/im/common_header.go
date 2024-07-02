@@ -12,7 +12,7 @@ func DeserializeCommonHeader(data []byte, idx *int) (*CommonHeader, error) {
 	}
 	isActAsSelf := false
 	schemaVersion := schemaBytes[0]
-	if schemaVersion > 1 {
+	if schemaVersion > 3 {
 		isActAsSelfBytes, err := ReadBytesWithUint16Len(data, idx, 1)
 		if err != nil {
 			return nil, err

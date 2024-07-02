@@ -159,13 +159,21 @@ func (im *Manager) FilterNftOutputForDid(output *iotago.NFTOutput, outputId iota
 	if output == nil {
 		return nil, nil
 	}
+	// get collectionId
+	collectionId, err := GetCollectionIdFromNFTOutput(output)
+	if err != nil {
+		return nil, err
+	}
+	if collectionId == "" || collectionId != DidCollectionId {
+		return nil, nil
+	}
 	// get metadata
 	if output.ImmutableFeatureSet().MetadataFeature() == nil || output.ImmutableFeatureSet().MetadataFeature().Data == nil {
 		return nil, nil
 	}
 	// unmarshal metadata as json, using go library
 	metaMap := make(map[string]interface{})
-	err := json.Unmarshal(output.ImmutableFeatureSet().MetadataFeature().Data, &metaMap)
+	err = json.Unmarshal(output.ImmutableFeatureSet().MetadataFeature().Data, &metaMap)
 	if err != nil {
 		return nil, err
 	}

@@ -16,7 +16,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var pairXTagRawStr = "GROUPFIPAIRXV1"
+var pairXTagRawStr = "GROUPFIPAIRXV2"
 var pairXTag = []byte(pairXTagRawStr)
 var PairXTagStr = iotago.EncodeHex(pairXTag)
 

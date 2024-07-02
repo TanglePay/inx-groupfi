@@ -277,6 +277,8 @@ func run() error {
 	apiUrl := os.Getenv("SHIMMER_API_URL")
 	hornetChainName := os.Getenv("HORNET_CHAINNAME")
 	networkId := os.Getenv("NETWORK_ID")
+	didCollectionId := os.Getenv("DID_COLLECTION_ID")
+	im.DidCollectionId = didCollectionId
 	im.HornetChainName = hornetChainName
 	networkIdInt, err := strconv.Atoi(networkId)
 	if err != nil {
