@@ -17,8 +17,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const MessageTypePublic = 2
-
 const IcebergGroup = "iceberg"
 const IcebergCollectionConfigIssuerAddress = "smr1zqry6r4wlwr2jn4nymlkx0pzehm5fhkv492thya32u45f8fjftn3wkng2mp"
 
@@ -562,7 +560,6 @@ func IsGroupExists(groupId [GroupIdLen]byte, im *Manager) bool {
 	}
 	return isExist
 }
-
 
 // delete groupConfigMeta from groupId
 func (im *Manager) DeleteGroupConfigMetaFromGroupId(groupId [GroupIdLen]byte) error {
