@@ -35,7 +35,7 @@ var evmNode = map[int]ChainConfig{
 		ListenType:             0,
 		MaxFilterBlock:         999,
 		Contract:               "0xc2F820BA3DBe0755deE2cD0ddc8Bf2fEc1e57255",
-		NativeTokenDecimal:     6,
+		NativeTokenDecimal:     18,
 		NativeTokenTotalSupply: 1450896407,
 		NativeTokenSymbol:      "SMR",
 	},
@@ -46,7 +46,7 @@ var evmNode = map[int]ChainConfig{
 		ListenType:             0,
 		MaxFilterBlock:         999,
 		Contract:               "0xc2F820BA3DBe0755deE2cD0ddc8Bf2fEc1e57255",
-		NativeTokenDecimal:     6,
+		NativeTokenDecimal:     18,
 		NativeTokenTotalSupply: 4600000000,
 		NativeTokenSymbol:      "IOTA",
 	},
@@ -57,7 +57,7 @@ var evmNode = map[int]ChainConfig{
 		ListenType:             1,
 		MaxFilterBlock:         999,
 		Contract:               "0xD9B13709Ce4Ef82402c091f3fc8A93a9360A5c1e",
-		NativeTokenDecimal:     6,
+		NativeTokenDecimal:     18,
 		NativeTokenTotalSupply: 937800078,
 		NativeTokenSymbol:      "XTZ",
 	},
@@ -374,11 +374,20 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 
 		tokenIdHex := iotago.EncodeHex(tokenId)
-		info, err := im.GetTokenInfo(config.RPC, tokenIdHex)
-		if err != nil {
-			return c.JSON(http.StatusInternalServerError, err.Error())
+		if tokenIdHex == "0x0000000000000000000000000000000000000000" {
+			tokenInfo := &im.TokenInfo{
+				TotalSupply: big.NewInt(int64(config.NativeTokenTotalSupply)),
+				Decimals:    uint8(config.NativeTokenDecimal),
+				Symbol:      config.NativeTokenSymbol,
+			}
+			return httpserver.JSONResponse(c, http.StatusOK, tokenInfo)
+		} else {
+			info, err := im.GetTokenInfo(config.RPC, tokenIdHex)
+			if err != nil {
+				return c.JSON(http.StatusInternalServerError, err.Error())
+			}
+			return httpserver.JSONResponse(c, http.StatusOK, info)
 		}
-		return httpserver.JSONResponse(c, http.StatusOK, info)
 	})
 
 	// get address balance

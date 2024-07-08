@@ -463,8 +463,15 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 	if err != nil {
 		return nil
 	}
-	groupId := metaPayload[idx : im.GroupIdLen+idx]
-
+	groupId, err := im.ReadBytesWithUint16Len(metaPayload, &idx, im.GroupIdLen)
+	if err != nil {
+		return nil
+	}
+	messageTypeBytes, err := im.ReadBytesWithUint16Len(metaPayload, &idx, 1)
+	if err != nil {
+		return nil
+	}
+	messageType := messageTypeBytes[0]
 	metapayloadSha256 := im.Sha256HashBytes(metaPayload)
 	unlockConditionSet := iotaOutput.UnlockConditionSet()
 	senderAddressStr := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(im.HornetChainName))
@@ -481,7 +488,7 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 		milestoneTimestamp,
 		senderAddressStr,
 	)
-	return im.NewMessage(groupId, outputId, milestone, milestoneTimestamp, senderAddressSha256, metapayloadSha256)
+	return im.NewMessage(groupId, messageType, outputId, milestone, milestoneTimestamp, senderAddressSha256, metapayloadSha256)
 }
 
 // filter output for push
