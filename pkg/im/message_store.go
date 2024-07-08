@@ -250,7 +250,7 @@ func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) e
 		// TODO cache group member addresses
 		var addresses []string
 		var err error
-		if im.GetIsGroupPublic(groupId32) {
+		if message.MessageType == MessageTypePublic {
 			var marks []*Mark
 			marks, err = im.GetMarksFromGroupId(groupId32, logger)
 			for _, mark := range marks {
@@ -281,7 +281,7 @@ func (im *Manager) StoreMessageForPublicGroup(message *Message, logger *logger.L
 	key := im.PublicMessageKeyFromMessage(message)
 	groupIdFixed := [GroupIdLen]byte{}
 	copy(groupIdFixed[:], message.GroupId)
-	isPublic := im.GetIsGroupPublic(groupIdFixed)
+	isPublic := message.MessageType == MessageTypePublic
 	if isPublic {
 		valuePayload := make([]byte, 4+OutputIdLen)
 		binary.BigEndian.PutUint32(valuePayload, message.MileStoneTimestamp)

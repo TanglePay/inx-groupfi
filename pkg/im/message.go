@@ -6,6 +6,9 @@ type Message struct {
 	EventCommonFields
 	// group id
 	GroupId []byte
+
+	MessageType byte // public or private
+
 	// OutputId of the Output that store message body payload
 	OutputId []byte
 
@@ -54,9 +57,12 @@ func (m *Message) Jsonable() InboxItemJson {
 	return json
 }
 
-func NewMessage(groupId []byte, outputId []byte, mileStoneIndex uint32, mileStoneTimestamp uint32, senderAddressSha256 []byte, metaSha256 []byte) *Message {
+func NewMessage(groupId []byte,
+	messageType byte,
+	outputId []byte, mileStoneIndex uint32, mileStoneTimestamp uint32, senderAddressSha256 []byte, metaSha256 []byte) *Message {
 	return &Message{
 		GroupId:             groupId,
+		MessageType:         messageType,
 		OutputId:            outputId,
 		MileStoneIndex:      mileStoneIndex,
 		MileStoneTimestamp:  mileStoneTimestamp,
@@ -77,3 +83,6 @@ const Sha256HashLen = 32
 const OutputIdLen = 34
 const NFTIdLen = 32
 const TimestampLen = 4
+
+const MessageTypePrivate = byte(1)
+const MessageTypePublic = byte(2)
