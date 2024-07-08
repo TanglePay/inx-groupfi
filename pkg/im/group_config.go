@@ -308,6 +308,7 @@ func (im *Manager) TryCalculateIfGroupIsPublic(groupId [GroupIdLen]byte, logger 
 	if IsIniting {
 		return nil
 	}
+
 	return im.CalculateIfGroupIsPublic(groupId, logger)
 }
 
