@@ -218,6 +218,9 @@ const (
 
 	// get group config under one nft
 	RouteGroupConfigUnderNft = "/groupconfigundernft"
+
+	// get group state sync under one address
+	RouteGroupStateSyncUnderAddress = "/groupstatesyncunderaddress"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -848,6 +851,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// RouteGroupConfigUnderNft
 	e.GET(RouteGroupConfigUnderNft, func(c echo.Context) error {
 		resp, err := getGroupConfigUnderNft(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+	// RouteGroupStateSyncUnderAddress
+	e.GET(RouteGroupStateSyncUnderAddress, func(c echo.Context) error {
+		resp, err := getGroupStateSyncUnderAddress(c)
 		if err != nil {
 			return err
 		}

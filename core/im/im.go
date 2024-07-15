@@ -478,7 +478,6 @@ func groupParamToGroupIds(groupParam GroupParam, isPublicOnly bool) []string {
 	return groupIds
 }
 
-
 // filter groupIds from group param
 func filterGroupIdsFromGroupParam(groupIds []string, groupParam GroupParam) []string {
 	includeGroupNameMap := map[string]bool{}
@@ -1381,4 +1380,31 @@ func getGroupConfigUnderNft(c echo.Context) ([]*im.MessageGroupMetaJSON, error) 
 		groupConfigs = append(groupConfigs, config)
 	}
 	return groupConfigs, nil
+}
+
+// getGroupStateSyncUnderAddress
+func getGroupStateSyncUnderAddress(c echo.Context) (*im.GroupStateSyncResponse, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get group state sync under address:%s", address)
+	groupStateSync, err := im.GetGroupStateSyncFromAddress(address, deps.IMManager)
+	if err != nil {
+		return nil, err
+	}
+	var respItems []*im.GroupStateSyncResponseItem
+	for _, item := range groupStateSync.Items {
+		respItems = append(respItems, &im.GroupStateSyncResponseItem{
+			GroupId:                            iotago.EncodeHex(item.GroupId[:]),
+			LastTimeReadLatestMessageTimestamp: item.LastTimeReadLatestMessageTimestamp,
+		})
+	}
+
+	resp := &im.GroupStateSyncResponse{
+		OutputId: iotago.EncodeHex(groupStateSync.OutputId[:]),
+		Items:    respItems,
+	}
+	return resp, nil
+
 }

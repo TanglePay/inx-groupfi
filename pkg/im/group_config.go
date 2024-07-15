@@ -979,6 +979,18 @@ type GroupConfigNftListResponse struct {
 	OutputId        string `json:"outputId"`
 }
 
+// GroupStateSyncResponseItem
+type GroupStateSyncResponseItem struct {
+	GroupId                            string `json:"groupId"`
+	LastTimeReadLatestMessageTimestamp uint32 `json:"lastTimeReadLatestMessageTimestamp"`
+}
+
+// GroupStateSyncResponse
+type GroupStateSyncResponse struct {
+	OutputId string                        `json:"outputId"`
+	Items    []*GroupStateSyncResponseItem `json:"items"`
+}
+
 // list all outputId + contractAddress from the store, with optional chainId and contractAddress, page and pageSize
 func ListOutputIdAndGroupIdFromChainIdAndContractAddress(chainId uint32, contractAddress string, page int, pageSize int, im *Manager) ([]*GroupConfigNftListResponse, error) {
 	if page <= 0 || pageSize <= 0 || pageSize > 100 || page >= 1000 {

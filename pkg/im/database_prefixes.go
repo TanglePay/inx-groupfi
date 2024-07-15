@@ -89,4 +89,5 @@ const (
 
 	ImStoreKeyPrefixPublicGroupId byte = 45
 
+	ImStoreKeyPrefixGroupStateSync byte = 46
 )
