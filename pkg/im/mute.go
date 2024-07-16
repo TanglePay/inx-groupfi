@@ -332,7 +332,7 @@ func (im *Manager) HandleUserMuteGroupMemberBasicOutputCreated(output *iotago.Ba
 			continue
 		}
 		// GenAndPushMuteChangedEvent, just for address
-		GenAndPushMuteChangedEvent(addressSha256Hash, userMuteGroupMember.GroupId, true, im, logger)
+		GenAndPushMuteChangedEvent(addressSha256Hash, userMuteGroupMember.MutedAddrSha256Hash, userMuteGroupMember.GroupId, true, im, logger)
 	}
 
 	// delete
@@ -343,7 +343,7 @@ func (im *Manager) HandleUserMuteGroupMemberBasicOutputCreated(output *iotago.Ba
 			logger.Infof("HandleUserMuteGroupMemberBasicOutputCreated ... err:%s", err.Error())
 			continue
 		}
-		GenAndPushMuteChangedEvent(addressSha256Hash, userMuteGroupMember.GroupId, false, im, logger)
+		GenAndPushMuteChangedEvent(addressSha256Hash, userMuteGroupMember.MutedAddrSha256Hash, userMuteGroupMember.GroupId, false, im, logger)
 	}
 
 }

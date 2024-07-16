@@ -7,18 +7,22 @@ import (
 
 type LikeChangedEvent struct {
 	EventCommonFields
-	AddressSha256Hash  [Sha256HashLen]byte
-	GroupID            [GroupIdLen]byte
-	IsLiked            bool
-	MilestoneTimestamp uint32
+	AddressSha256Hash         [Sha256HashLen]byte
+	ActionedAddressSha256Hash [Sha256HashLen]byte
+	GroupID                   [GroupIdLen]byte
+	IsLiked                   bool
+	MilestoneTimestamp        uint32
 }
 
-func NewLikeChangedEvent(addressSha256Hash [Sha256HashLen]byte, groupID [GroupIdLen]byte, isLiked bool, milestoneTimestamp uint32) *LikeChangedEvent {
+func NewLikeChangedEvent(addressSha256Hash [Sha256HashLen]byte,
+	actionedAddressSha256Hash [Sha256HashLen]byte,
+	groupID [GroupIdLen]byte, isLiked bool, milestoneTimestamp uint32) *LikeChangedEvent {
 	return &LikeChangedEvent{
-		AddressSha256Hash:  addressSha256Hash,
-		GroupID:            groupID,
-		IsLiked:            isLiked,
-		MilestoneTimestamp: milestoneTimestamp,
+		AddressSha256Hash:         addressSha256Hash,
+		ActionedAddressSha256Hash: actionedAddressSha256Hash,
+		GroupID:                   groupID,
+		IsLiked:                   isLiked,
+		MilestoneTimestamp:        milestoneTimestamp,
 	}
 }
 
@@ -42,7 +46,7 @@ func (m *LikeChangedEvent) SetEventType(eventType byte) {
 func (m *LikeChangedEvent) Jsonable() InboxItemJson {
 	json := &LikeChangedEventJson{
 		GroupID:           iotago.EncodeHex(m.GroupID[:]),
-		AddressSha256Hash: iotago.EncodeHex(m.AddressSha256Hash[:]),
+		AddressSha256Hash: iotago.EncodeHex(m.ActionedAddressSha256Hash[:]),
 		Timestamp:         m.MilestoneTimestamp,
 		IsLiked:           m.IsLiked,
 	}
@@ -72,7 +76,7 @@ func SerializeLikeChangedEvent(m *LikeChangedEvent) []byte {
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImInboxEventTypeLikeChanged}, false)
 
 	AppendBytesWithUint16Len(&bytes, &idx, m.GroupID[:], false)
-	AppendBytesWithUint16Len(&bytes, &idx, m.AddressSha256Hash[:], false)
+	AppendBytesWithUint16Len(&bytes, &idx, m.ActionedAddressSha256Hash[:], false)
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(m.MilestoneTimestamp), false)
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{BoolToByte(m.IsLiked)}, false)
 	return bytes
@@ -107,7 +111,7 @@ func UnserializeLikeChangedEvent(bytes []byte) (*LikeChangedEvent, error) {
 		return nil, err
 	}
 	isLiked := BytesToBool(isLikedBytes)
-	return NewLikeChangedEvent(addressSha256HashFixed, groupIDFixed, isLiked, milestoneTimestamp), nil
+	return NewLikeChangedEvent(addressSha256HashFixed, addressSha256HashFixed, groupIDFixed, isLiked, milestoneTimestamp), nil
 }
 
 // implements InboxItem
@@ -141,7 +145,9 @@ func getEventTypeOfLikeChangedEvent(m *LikeChangedEvent) byte {
 
 // gen and push LikeChangedEvent
 func GenAndPushLikeChangedEvent(
-	receiverAddressSha256Hash [Sha256HashLen]byte, groupId [GroupIdLen]byte, isLiked bool, milestoneTimestamp uint32, im *Manager, logger *logger.Logger) error {
-	event := NewLikeChangedEvent(receiverAddressSha256Hash, groupId, isLiked, milestoneTimestamp)
+	receiverAddressSha256Hash [Sha256HashLen]byte,
+	actionedAddressSha256Hash [Sha256HashLen]byte,
+	groupId [GroupIdLen]byte, isLiked bool, milestoneTimestamp uint32, im *Manager, logger *logger.Logger) error {
+	event := NewLikeChangedEvent(receiverAddressSha256Hash, actionedAddressSha256Hash, groupId, isLiked, milestoneTimestamp)
 	return PushData(event, GetTopicOfLikeChangedEvent, getInboxOfLikeChangedEvent, getEventTypeOfLikeChangedEvent, GetPayloadOfLikeChangedEvent, im, logger)
 }

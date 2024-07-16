@@ -283,7 +283,9 @@ func (im *Manager) HandleUserLikeGroupMemberBasicOutputCreated(output *iotago.Ba
 			logger.Infof("HandleUserLikeGroupMemberBasicOutputCreated ... err:%s", err.Error())
 			continue
 		}
-		GenAndPushLikeChangedEvent(addressSha256Hash, userLikeGroupMember.GroupId, true, CurrentMilestoneTimestamp, im, logger)
+		GenAndPushLikeChangedEvent(addressSha256Hash,
+			userLikeGroupMember.LikedAddrSha256Hash,
+			userLikeGroupMember.GroupId, true, CurrentMilestoneTimestamp, im, logger)
 	}
 
 	// delete
@@ -294,7 +296,7 @@ func (im *Manager) HandleUserLikeGroupMemberBasicOutputCreated(output *iotago.Ba
 			logger.Infof("HandleUserLikeGroupMemberBasicOutputCreated ... err:%s", err.Error())
 			continue
 		}
-		GenAndPushLikeChangedEvent(addressSha256Hash, userLikeGroupMember.GroupId, false, CurrentMilestoneTimestamp, im, logger)
+		GenAndPushLikeChangedEvent(addressSha256Hash, userLikeGroupMember.LikedAddrSha256Hash, userLikeGroupMember.GroupId, false, CurrentMilestoneTimestamp, im, logger)
 	}
 }
 

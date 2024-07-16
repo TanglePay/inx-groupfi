@@ -7,18 +7,22 @@ import (
 
 type MuteChangedEvent struct {
 	EventCommonFields
-	AddressSha256Hash  [Sha256HashLen]byte
-	GroupID            [GroupIdLen]byte
-	IsMuted            bool
-	MilestoneTimestamp uint32
+	AddressSha256Hash         [Sha256HashLen]byte
+	ActionedAddressSha256Hash [Sha256HashLen]byte
+	GroupID                   [GroupIdLen]byte
+	IsMuted                   bool
+	MilestoneTimestamp        uint32
 }
 
-func NewMuteChangedEvent(addressSha256Hash [Sha256HashLen]byte, groupID [GroupIdLen]byte, isMuted bool, milestoneTimestamp uint32) *MuteChangedEvent {
+func NewMuteChangedEvent(addressSha256Hash [Sha256HashLen]byte,
+	actionedAddressSha256Hash [Sha256HashLen]byte,
+	groupID [GroupIdLen]byte, isMuted bool, milestoneTimestamp uint32) *MuteChangedEvent {
 	return &MuteChangedEvent{
-		AddressSha256Hash:  addressSha256Hash,
-		GroupID:            groupID,
-		IsMuted:            isMuted,
-		MilestoneTimestamp: milestoneTimestamp,
+		AddressSha256Hash:         addressSha256Hash,
+		ActionedAddressSha256Hash: actionedAddressSha256Hash,
+		GroupID:                   groupID,
+		IsMuted:                   isMuted,
+		MilestoneTimestamp:        milestoneTimestamp,
 	}
 }
 
@@ -42,7 +46,7 @@ func (m *MuteChangedEvent) SetEventType(eventType byte) {
 func (m *MuteChangedEvent) Jsonable() InboxItemJson {
 	json := &MuteChangedEventJson{
 		GroupID:           iotago.EncodeHex(m.GroupID[:]),
-		AddressSha256Hash: iotago.EncodeHex(m.AddressSha256Hash[:]),
+		AddressSha256Hash: iotago.EncodeHex(m.ActionedAddressSha256Hash[:]),
 		Timestamp:         m.MilestoneTimestamp,
 		IsMuted:           m.IsMuted,
 	}
@@ -72,7 +76,7 @@ func SerializeMuteChangedEvent(m *MuteChangedEvent) []byte {
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImInboxEventTypeMuteChanged}, false)
 
 	AppendBytesWithUint16Len(&bytes, &idx, m.GroupID[:], false)
-	AppendBytesWithUint16Len(&bytes, &idx, m.AddressSha256Hash[:], false)
+	AppendBytesWithUint16Len(&bytes, &idx, m.ActionedAddressSha256Hash[:], false)
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(m.MilestoneTimestamp), false)
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{BoolToByte(m.IsMuted)}, false)
 	return bytes
@@ -107,7 +111,7 @@ func UnserializeMuteChangedEvent(bytes []byte) (*MuteChangedEvent, error) {
 		return nil, err
 	}
 	isMuted := BytesToBool(isMutedBytes)
-	return NewMuteChangedEvent(addressSha256HashFixed, groupIDFixed, isMuted, milestoneTimestamp), nil
+	return NewMuteChangedEvent(addressSha256HashFixed, addressSha256HashFixed, groupIDFixed, isMuted, milestoneTimestamp), nil
 }
 
 // implements InboxItem
@@ -142,9 +146,10 @@ func getEventTypeOfMuteChangedEvent(m *MuteChangedEvent) byte {
 // gen and push MuteChangedEvent
 func GenAndPushMuteChangedEvent(
 	receiverAddressSha256Hash [Sha256HashLen]byte,
+	actionedAddressSha256Hash [Sha256HashLen]byte,
 	groupId [GroupIdLen]byte,
 	isMuted bool,
 	im *Manager, logger *logger.Logger) error {
-	event := NewMuteChangedEvent(receiverAddressSha256Hash, groupId, isMuted, CurrentMilestoneTimestamp)
+	event := NewMuteChangedEvent(receiverAddressSha256Hash, actionedAddressSha256Hash, groupId, isMuted, CurrentMilestoneTimestamp)
 	return PushData(event, GetTopicOfMuteChangedEvent, getInboxOfMuteChangedEvent, getEventTypeOfMuteChangedEvent, GetPayloadOfMuteChangedEvent, im, logger)
 }
