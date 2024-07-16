@@ -263,6 +263,7 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 						// log error
 						CoreComponent.LogErrorf("LedgerUpdate StoreGroupStateSync error:%s", err.Error())
 					}
+					continue
 				}
 			}
 		}

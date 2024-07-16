@@ -41,9 +41,10 @@ func (m *LikeChangedEvent) SetEventType(eventType byte) {
 
 func (m *LikeChangedEvent) Jsonable() InboxItemJson {
 	json := &LikeChangedEventJson{
-		GroupID:   iotago.EncodeHex(m.GroupID[:]),
-		Timestamp: m.MilestoneTimestamp,
-		IsLiked:   m.IsLiked,
+		GroupID:           iotago.EncodeHex(m.GroupID[:]),
+		AddressSha256Hash: iotago.EncodeHex(m.AddressSha256Hash[:]),
+		Timestamp:         m.MilestoneTimestamp,
+		IsLiked:           m.IsLiked,
 	}
 	json.SetEventType(m.EventType)
 	return json
@@ -51,9 +52,10 @@ func (m *LikeChangedEvent) Jsonable() InboxItemJson {
 
 type LikeChangedEventJson struct {
 	EventJsonCommonFields
-	GroupID   string `json:"groupId"`
-	Timestamp uint32 `json:"timestamp"`
-	IsLiked   bool   `json:"isLiked"`
+	GroupID           string `json:"groupId"`
+	AddressSha256Hash string `json:"addressHash"`
+	Timestamp         uint32 `json:"timestamp"`
+	IsLiked           bool   `json:"isLiked"`
 }
 
 // implements InboxItemJson
@@ -70,6 +72,7 @@ func SerializeLikeChangedEvent(m *LikeChangedEvent) []byte {
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImInboxEventTypeLikeChanged}, false)
 
 	AppendBytesWithUint16Len(&bytes, &idx, m.GroupID[:], false)
+	AppendBytesWithUint16Len(&bytes, &idx, m.AddressSha256Hash[:], false)
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(m.MilestoneTimestamp), false)
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{BoolToByte(m.IsLiked)}, false)
 	return bytes
@@ -88,6 +91,12 @@ func UnserializeLikeChangedEvent(bytes []byte) (*LikeChangedEvent, error) {
 	}
 	var groupIDFixed [GroupIdLen]byte
 	copy(groupIDFixed[:], groupID)
+	addressSha256Hash, err := ReadBytesWithUint16Len(bytes, &idx, Sha256HashLen)
+	if err != nil {
+		return nil, err
+	}
+	var addressSha256HashFixed [Sha256HashLen]byte
+	copy(addressSha256HashFixed[:], addressSha256Hash)
 	milestoneTimestampBytes, err := ReadBytesWithUint16Len(bytes, &idx, 4)
 	if err != nil {
 		return nil, err
@@ -98,7 +107,7 @@ func UnserializeLikeChangedEvent(bytes []byte) (*LikeChangedEvent, error) {
 		return nil, err
 	}
 	isLiked := BytesToBool(isLikedBytes)
-	return NewLikeChangedEvent(groupIDFixed, groupIDFixed, isLiked, milestoneTimestamp), nil
+	return NewLikeChangedEvent(addressSha256HashFixed, groupIDFixed, isLiked, milestoneTimestamp), nil
 }
 
 // implements InboxItem

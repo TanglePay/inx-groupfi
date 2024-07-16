@@ -41,9 +41,10 @@ func (m *MuteChangedEvent) SetEventType(eventType byte) {
 
 func (m *MuteChangedEvent) Jsonable() InboxItemJson {
 	json := &MuteChangedEventJson{
-		GroupID:   iotago.EncodeHex(m.GroupID[:]),
-		Timestamp: m.MilestoneTimestamp,
-		IsMuted:   m.IsMuted,
+		GroupID:           iotago.EncodeHex(m.GroupID[:]),
+		AddressSha256Hash: iotago.EncodeHex(m.AddressSha256Hash[:]),
+		Timestamp:         m.MilestoneTimestamp,
+		IsMuted:           m.IsMuted,
 	}
 	json.SetEventType(m.EventType)
 	return json
@@ -51,9 +52,10 @@ func (m *MuteChangedEvent) Jsonable() InboxItemJson {
 
 type MuteChangedEventJson struct {
 	EventJsonCommonFields
-	GroupID   string `json:"groupId"`
-	Timestamp uint32 `json:"timestamp"`
-	IsMuted   bool   `json:"isMuted"`
+	GroupID           string `json:"groupId"`
+	AddressSha256Hash string `json:"addressHash"`
+	Timestamp         uint32 `json:"timestamp"`
+	IsMuted           bool   `json:"isMuted"`
 }
 
 // implements InboxItemJson
@@ -70,6 +72,7 @@ func SerializeMuteChangedEvent(m *MuteChangedEvent) []byte {
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImInboxEventTypeMuteChanged}, false)
 
 	AppendBytesWithUint16Len(&bytes, &idx, m.GroupID[:], false)
+	AppendBytesWithUint16Len(&bytes, &idx, m.AddressSha256Hash[:], false)
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(m.MilestoneTimestamp), false)
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{BoolToByte(m.IsMuted)}, false)
 	return bytes
@@ -88,6 +91,12 @@ func UnserializeMuteChangedEvent(bytes []byte) (*MuteChangedEvent, error) {
 	}
 	var groupIDFixed [GroupIdLen]byte
 	copy(groupIDFixed[:], groupID)
+	addressSha256Hash, err := ReadBytesWithUint16Len(bytes, &idx, Sha256HashLen)
+	if err != nil {
+		return nil, err
+	}
+	var addressSha256HashFixed [Sha256HashLen]byte
+	copy(addressSha256HashFixed[:], addressSha256Hash)
 	milestoneTimestampBytes, err := ReadBytesWithUint16Len(bytes, &idx, 4)
 	if err != nil {
 		return nil, err
@@ -98,7 +107,7 @@ func UnserializeMuteChangedEvent(bytes []byte) (*MuteChangedEvent, error) {
 		return nil, err
 	}
 	isMuted := BytesToBool(isMutedBytes)
-	return NewMuteChangedEvent(groupIDFixed, groupIDFixed, isMuted, milestoneTimestamp), nil
+	return NewMuteChangedEvent(addressSha256HashFixed, groupIDFixed, isMuted, milestoneTimestamp), nil
 }
 
 // implements InboxItem
