@@ -229,6 +229,14 @@ func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
 		return next(c)
 	}
 }
+func ServiceUnavailableMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		if im.IsIniting {
+			return c.JSON(http.StatusServiceUnavailable, map[string]string{"message": "Service is initializing, please try again later."})
+		}
+		return next(c)
+	}
+}
 func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	im.PublicKeyDrainer = im.NewItemDrainer(ctx, func(item interface{}) {
 
@@ -262,7 +270,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		nftWithRespChan.RespChan <- nftResponse
 	}, 2000, 1000, 1000)
 	//e.Use(AddCORS)
-
+	e.Use(ServiceUnavailableMiddleware)
 	//nft
 	e.GET(RouteIMNFTs, func(c echo.Context) error {
 		resp, err := getNFTsFromGroupId(c)
