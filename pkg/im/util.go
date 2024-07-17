@@ -349,6 +349,8 @@ func PushData[T any](data *T, getTopic func(*T) string,
 	if err != nil {
 		return err
 	}
+	// log topic
+	logger.Infof("PushEventData to topic %s", topic)
 	eventType := getEventType(data)
 	inboxs := getInbox(data)
 	// store to ttl store

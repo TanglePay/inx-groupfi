@@ -371,9 +371,10 @@ func (im *Manager) DeleteInboxMessage(receiverAddress []byte, message *Message, 
 func (im *Manager) PushInbox(receiverAddress []byte, token []byte, logger *logger.Logger) {
 	// payload = groupId + outputId
 
-	err := im.mqttServer.Publish("inbox/"+iotago.EncodeHex(receiverAddress), token)
+	addressHex := iotago.EncodeHex(receiverAddress)
+	err := im.mqttServer.Publish("inbox/"+addressHex, token)
 	//log topic only
-	logger.Infof("push message to inbox/%s", string(receiverAddress))
+	logger.Infof("push message to inbox/%s", addressHex)
 
 	if err != nil {
 		logger.Errorf("pushMessage error %v", err)
