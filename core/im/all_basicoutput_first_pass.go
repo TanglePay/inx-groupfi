@@ -72,6 +72,21 @@ func ProcessAllBasicOutputFirstPass(initCtx *InitContext) {
 			deps.IMManager.HandleEvmQualifyCreated(evmQualify, initCtx.Logger)
 			return nil
 		},
+		// handle group state sync
+		func(outputId []byte, output iotago.Output, milestoneIndex uint32, milestoneTimestamp uint32, initCtx *InitContext) error {
+			// filter group state sync output
+			var outputIdFixed [im.OutputIdLen]byte
+			copy(outputIdFixed[:], outputId)
+			groupStateSync, address, is := im.FilterGroupStateSyncOutput(output, outputIdFixed, deps.IMManager)
+			if !is {
+				return nil
+			}
+			if groupStateSync == nil {
+				return nil
+			}
+			err := im.StoreGroupStateSync(groupStateSync, address, deps.IMManager)
+			return err
+		},
 	}
 	HandleGenericInit(initCtx, "allbasicoutputfirstpass", idsFetcher, processors)
 	// HandleTotalInit after all basic output first pass

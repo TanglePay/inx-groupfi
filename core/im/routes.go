@@ -218,11 +218,22 @@ const (
 
 	// get group config under one nft
 	RouteGroupConfigUnderNft = "/groupconfigundernft"
+
+	// get group state sync under one address
+	RouteGroupStateSyncUnderAddress = "/groupstatesyncunderaddress"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 		c.Response().Header().Set("Access-Control-Allow-Origin", "*")
+		return next(c)
+	}
+}
+func ServiceUnavailableMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		if im.IsIniting {
+			return c.JSON(http.StatusServiceUnavailable, map[string]string{"message": "Service is initializing, please try again later."})
+		}
 		return next(c)
 	}
 }
@@ -259,7 +270,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		nftWithRespChan.RespChan <- nftResponse
 	}, 2000, 1000, 1000)
 	//e.Use(AddCORS)
-
+	e.Use(ServiceUnavailableMiddleware)
 	//nft
 	e.GET(RouteIMNFTs, func(c echo.Context) error {
 		resp, err := getNFTsFromGroupId(c)
@@ -848,6 +859,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// RouteGroupConfigUnderNft
 	e.GET(RouteGroupConfigUnderNft, func(c echo.Context) error {
 		resp, err := getGroupConfigUnderNft(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+	// RouteGroupStateSyncUnderAddress
+	e.GET(RouteGroupStateSyncUnderAddress, func(c echo.Context) error {
+		resp, err := getGroupStateSyncUnderAddress(c)
 		if err != nil {
 			return err
 		}
