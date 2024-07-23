@@ -320,6 +320,9 @@ func run() error {
 		// log start processing group config
 		CoreComponent.LogInfo("Start processing group config ...")
 		ProcessGroupConfig(initCtx)
+		// process pairx
+		ProcessPairx(initCtx)
+
 		// handle all nft first pass
 		// log start processing all nft first pass
 		CoreComponent.LogInfo("Start processing all nft first pass ...")
