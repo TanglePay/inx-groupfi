@@ -45,7 +45,9 @@ func parseAddressQueryParam(c echo.Context) (string, error) {
 	}
 	address := addressParams[0]
 	// to lower case
-	address = strings.ToLower(address)
+	if im.IsEvmAddress(address) {
+		address = strings.ToLower(address)
+	}
 	return address, nil
 }
 
@@ -58,7 +60,10 @@ func parseAddressesFromBody(c echo.Context) ([]string, error) {
 	}
 	var lowerAddresses []string
 	for _, address := range addresses {
-		lowerAddresses = append(lowerAddresses, strings.ToLower(address))
+		if im.IsEvmAddress(address) {
+			address = strings.ToLower(address)
+		}
+		lowerAddresses = append(lowerAddresses, address)
 	}
 	return lowerAddresses, nil
 }
@@ -69,7 +74,9 @@ func parseAddressQueryParamWithNil(c echo.Context) (string, error) {
 	}
 	address := addressParams[0]
 	// to lower case
-	address = strings.ToLower(address)
+	if im.IsEvmAddress(address) {
+		address = strings.ToLower(address)
+	}
 	return address, nil
 }
 
