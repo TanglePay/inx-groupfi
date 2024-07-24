@@ -67,6 +67,13 @@ func UnmarshalEvmQualify(data []byte, logger *logger.Logger) (*EvmQualify, error
 			return nil, err
 		}
 		addressType = int(addressTypeBytes[0])
+		timestampBytes, err := ReadBytesWithUint16Len(data, &idx, 4)
+		if err != nil {
+			return nil, err
+		}
+		timestamp := BytesToUint32(timestampBytes)
+		// log timestamp
+		logger.Infof("UnmarshalEvmQualify timestamp %d", timestamp)
 	}
 	addressLen := EvmAddressLen
 	if addressType == AddressTypeSolana {
