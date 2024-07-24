@@ -128,6 +128,7 @@ type MessageGroupMetaJSON struct {
 	TokenThres      string `json:"tokenThres"`
 	TokenDecimals   string `json:"tokenDecimals"`
 	TokenThresValue string `json:"tokenThresValue"`
+	Symbol          string `json:"symbol"`
 	DappGroupId     string `json:"dappGroupId"`
 }
 
@@ -204,6 +205,7 @@ func GetGroupIdFromGroupConfig(messageGroupMeta *MessageGroupMetaJSON) [GroupIdL
 		"tokenThres":      messageGroupMeta.TokenThres,
 		"tokenThresValue": messageGroupMeta.TokenThresValue,
 		"tokenDecimals":   messageGroupMeta.TokenDecimals,
+		"symbol":          messageGroupMeta.Symbol,
 	}
 	groupId := sortAndSha256Map(configFieldsMap)
 	var groupIdFixed [GroupIdLen]byte
