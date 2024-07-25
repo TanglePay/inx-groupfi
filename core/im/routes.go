@@ -216,6 +216,8 @@ const (
 	// list group configs Nft
 	RouteListGroupConfigsNft = "/listgroupconfigsnft"
 
+	// list group configs Nft v2
+	RouteListGroupConfigsNftV2 = "/listgroupconfigsnftv2"
 	// get group config under one nft
 	RouteGroupConfigUnderNft = "/groupconfigundernft"
 
@@ -851,6 +853,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// RouteListGroupConfigsNft
 	e.GET(RouteListGroupConfigsNft, func(c echo.Context) error {
 		resp, err := listGroupConfigsLite(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// RouteListGroupConfigsNftV2
+	e.GET(RouteListGroupConfigsNftV2, func(c echo.Context) error {
+		resp, err := listGroupConfigsLitev2(c)
 		if err != nil {
 			return err
 		}

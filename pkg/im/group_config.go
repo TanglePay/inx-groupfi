@@ -403,9 +403,10 @@ func MarshalGroupConfigMeta(groupConfig *MessageGroupMetaJSON) ([]byte, error) {
 	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.TokenDecimals), true)
 	// tokenThresValue
 	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.TokenThresValue), true)
-
 	// dappGroupId
 	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.DappGroupId), true)
+	// symbol
+	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.Symbol), true)
 	return payload, nil
 }
 
@@ -504,6 +505,12 @@ func UnmarshalGroupConfigMeta(value []byte) (*MessageGroupMetaJSON, error) {
 		return nil, err
 	}
 	dappGroupId := string(dappGroupIdBytes)
+	// symbol
+	var symbol string
+	symbolBytes, err := ReadBytesWithUint16Len(value, &idx)
+	if err == nil {
+		symbol = string(symbolBytes)
+	}
 	return &MessageGroupMetaJSON{
 		ChainId:         chainId,
 		SchemaVersion:   schemaVersion,
@@ -516,6 +523,7 @@ func UnmarshalGroupConfigMeta(value []byte) (*MessageGroupMetaJSON, error) {
 		TokenDecimals:   tokenDecimals,
 		TokenThresValue: tokenThresValue,
 		DappGroupId:     dappGroupId,
+		Symbol:          symbol,
 	}, nil
 }
 
@@ -993,7 +1001,6 @@ type GroupStateSyncResponse struct {
 	Items    []*GroupStateSyncResponseItem `json:"items"`
 }
 
-// list all outputId + contractAddress from the store, with optional chainId and contractAddress, page and pageSize
 func ListOutputIdAndGroupIdFromChainIdAndContractAddress(chainId uint32, contractAddress string, page int, pageSize int, im *Manager) ([]*GroupConfigNftListResponse, error) {
 	if page <= 0 || pageSize <= 0 || pageSize > 100 || page >= 1000 {
 		return nil, errors.New("page and pageSize must be greater than 0")
@@ -1031,6 +1038,48 @@ func ListOutputIdAndGroupIdFromChainIdAndContractAddress(chainId uint32, contrac
 		return nil, err
 	}
 	return resp, nil
+}
+
+// list all outputId + contractAddress from the store, with optional chainId and contractAddress, page and pageSize
+func ListOutputIdAndGroupIdFromChainIdAndContractAddressv2(chainId uint32, contractAddress string, page int, pageSize int, im *Manager) (int, int, int, []*GroupConfigNftListResponse, error) {
+	if page <= 0 || pageSize <= 0 || pageSize > 100 || page >= 1000 {
+		return 0, 0, 0, nil, errors.New("page and pageSize must be greater than 0")
+	}
+
+	var resp []*GroupConfigNftListResponse
+	prefix := KeyForChainIdAndContractAddressHashToOutputId(chainId, contractAddress)
+	total := 0
+	skipLefted := (page - 1) * pageSize
+
+	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
+		total++
+
+		if total > skipLefted && len(resp) < pageSize {
+			chainId, err := ParseKeyForChainIdToOutputId(key)
+			if err != nil {
+				return true
+			}
+
+			// value to outputId and contractAddress
+			outputId, contractAddress, err := ParseValueForChainIdAndContractAddressHashToOutputIdAndContractAddress(value)
+			if err != nil {
+				return true
+			}
+
+			resp = append(resp, &GroupConfigNftListResponse{
+				ChainId:         chainId,
+				ContractAddress: contractAddress,
+				OutputId:        iotago.EncodeHex(outputId[:]),
+			})
+		}
+		return true
+	})
+
+	if err != nil {
+		return 0, 0, 0, nil, err
+	}
+
+	return page, pageSize, total, resp, nil
 }
 
 // store check exist and delete for groupId which is public
