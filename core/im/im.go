@@ -1455,6 +1455,13 @@ func getGroupStateSyncUnderAddress(c echo.Context) (*im.GroupStateSyncResponse, 
 		return nil, err
 	}
 	var respItems []*im.GroupStateSyncResponseItem
+	if groupStateSync == nil {
+		respEmpty := &im.GroupStateSyncResponse{
+			OutputId: "",
+			Items:    respItems,
+		}
+		return respEmpty, nil
+	}
 	for _, item := range groupStateSync.Items {
 		respItems = append(respItems, &im.GroupStateSyncResponseItem{
 			GroupId:                            iotago.EncodeHex(item.GroupId[:]),
