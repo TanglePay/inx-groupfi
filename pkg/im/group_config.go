@@ -1001,6 +1001,7 @@ type GroupStateSyncResponse struct {
 	Items    []*GroupStateSyncResponseItem `json:"items"`
 }
 
+// list all outputId + contractAddress from the store, with optional chainId and contractAddress, page and pageSize
 func ListOutputIdAndGroupIdFromChainIdAndContractAddress(chainId uint32, contractAddress string, page int, pageSize int, im *Manager) ([]*GroupConfigNftListResponse, error) {
 	if page <= 0 || pageSize <= 0 || pageSize > 100 || page >= 1000 {
 		return nil, errors.New("page and pageSize must be greater than 0")
