@@ -114,6 +114,8 @@ Loop:
 		log.Errorf("failed to MarkInitFinished for %s: %s", topic, err)
 		return
 	}
+	// log topic finished
+	log.Infof("LedgerInit ... %s finished", topic)
 }
 
 // All nft output fetcher

@@ -45,7 +45,9 @@ func parseAddressQueryParam(c echo.Context) (string, error) {
 	}
 	address := addressParams[0]
 	// to lower case
-	address = strings.ToLower(address)
+	if im.IsEvmAddress(address) {
+		address = strings.ToLower(address)
+	}
 	return address, nil
 }
 
@@ -58,7 +60,10 @@ func parseAddressesFromBody(c echo.Context) ([]string, error) {
 	}
 	var lowerAddresses []string
 	for _, address := range addresses {
-		lowerAddresses = append(lowerAddresses, strings.ToLower(address))
+		if im.IsEvmAddress(address) {
+			address = strings.ToLower(address)
+		}
+		lowerAddresses = append(lowerAddresses, address)
 	}
 	return lowerAddresses, nil
 }
@@ -69,7 +74,9 @@ func parseAddressQueryParamWithNil(c echo.Context) (string, error) {
 	}
 	address := addressParams[0]
 	// to lower case
-	address = strings.ToLower(address)
+	if im.IsEvmAddress(address) {
+		address = strings.ToLower(address)
+	}
 	return address, nil
 }
 
@@ -1301,6 +1308,60 @@ func batchSmrAddressToEvmAddress(c echo.Context) ([]string, error) {
 }
 
 // listGroupConfigs
+func listGroupConfigsLitev2(c echo.Context) (map[string]interface{}, error) {
+	// get param include chainId uint32, contractAddress string, page int, pageSize int
+	// chainId and contract address are optional
+	// page and pageSize are optional and default to 1 and 10
+	chainIdStr, err := parseAttrNameQueryParamWithNil(c, "chainId")
+	if err != nil {
+		return nil, err
+	}
+	var chainId uint32 = math.MaxUint32
+	if chainIdStr != "" {
+		chainId64, err := strconv.ParseUint(chainIdStr, 10, 32)
+		if err != nil {
+			return nil, err
+		}
+		chainId = uint32(chainId64)
+	}
+	contractAddress, err := parseAttrNameQueryParamWithNil(c, "contractAddress")
+	if err != nil {
+		return nil, err
+	}
+	pageStr, err := parseAttrNameQueryParamWithDefault(c, "page", "1")
+	if err != nil {
+		return nil, err
+	}
+	page, err := strconv.ParseUint(pageStr, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	pageSizeStr, err := parseAttrNameQueryParamWithDefault(c, "pageSize", "10")
+	if err != nil {
+		return nil, err
+	}
+	pageSize, err := strconv.ParseUint(pageSizeStr, 10, 32)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("list group configs from chainId:%d,contractAddress:%s,page:%d,pageSize:%d", chainId, contractAddress, page, pageSize)
+
+	currentPage, _, total, resp, err := im.ListOutputIdAndGroupIdFromChainIdAndContractAddressv2(chainId, contractAddress, int(page), int(pageSize), deps.IMManager)
+	if err != nil {
+		return nil, err
+	}
+
+	CoreComponent.LogInfof("list group configs from chainId:%d,contractAddress:%s,page:%d,pageSize:%d,found groupConfigs:%d", chainId, contractAddress, currentPage, pageSize, len(resp))
+
+	result := map[string]interface{}{
+		"currentPage":  currentPage,
+		"pageSize":     pageSize,
+		"total":        total,
+		"groupConfigs": resp,
+	}
+
+	return result, nil
+}
 func listGroupConfigsLite(c echo.Context) ([]*im.GroupConfigNftListResponse, error) {
 	// get param include chainId uint32, contractAddress string, page int, pageSize int
 	// chainId and contract address are optional
@@ -1394,6 +1455,13 @@ func getGroupStateSyncUnderAddress(c echo.Context) (*im.GroupStateSyncResponse, 
 		return nil, err
 	}
 	var respItems []*im.GroupStateSyncResponseItem
+	if groupStateSync == nil {
+		respEmpty := &im.GroupStateSyncResponse{
+			OutputId: "",
+			Items:    respItems,
+		}
+		return respEmpty, nil
+	}
 	for _, item := range groupStateSync.Items {
 		respItems = append(respItems, &im.GroupStateSyncResponseItem{
 			GroupId:                            iotago.EncodeHex(item.GroupId[:]),

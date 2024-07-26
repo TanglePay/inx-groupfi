@@ -12,7 +12,9 @@ import (
 
 // constant evm address len = 20
 const (
-	EvmAddressLen = 20
+	EvmAddressLen     = 20
+	AddressTypeEvm    = 1
+	AddressTypeSolana = 2
 )
 
 var evmQualifyTagRawStr = "GROUPFIQUALIFYV1"
@@ -21,12 +23,12 @@ var EvmQualifyTagStr = iotago.EncodeHex(evmQualifyTag)
 
 type EvmQualify struct {
 	GroupId     [GroupIdLen]byte
-	AddressList [][EvmAddressLen]byte
+	AddressList []string
 	Signature   []byte
 }
 
 // new evm qualify
-func NewEvmQualify(groupId [GroupIdLen]byte, addressList [][EvmAddressLen]byte, signature []byte) *EvmQualify {
+func NewEvmQualify(groupId [GroupIdLen]byte, addressList []string, signature []byte) *EvmQualify {
 	return &EvmQualify{
 		GroupId:     groupId,
 		AddressList: addressList,
@@ -58,20 +60,47 @@ func UnmarshalEvmQualify(data []byte, logger *logger.Logger) (*EvmQualify, error
 	logger.Infof("UnmarshalEvmQualify groupId %s", iotago.EncodeHex(groupId))
 	groupIdFixed := [GroupIdLen]byte{}
 	copy(groupIdFixed[:], groupId)
-	addressList := make([][EvmAddressLen]byte, 0)
-	for idx < len(data) {
-		if len(data)-idx < EvmAddressLen {
-			return nil, fmt.Errorf("invalid evm qualify data")
-		}
-		address, err := ReadBytesWithUint16Len(data, &idx, EvmAddressLen)
+	addressType := AddressTypeEvm
+	if commonHeader.SchemaVersion > 1 {
+		addressTypeBytes, err := ReadBytesWithUint16Len(data, &idx, 1)
 		if err != nil {
 			return nil, err
 		}
+		addressType = int(addressTypeBytes[0])
+		timestampBytes, err := ReadBytesWithUint16Len(data, &idx, 4)
+		if err != nil {
+			return nil, err
+		}
+		timestamp := BytesToUint32(timestampBytes)
+		// log timestamp
+		logger.Infof("UnmarshalEvmQualify timestamp %d", timestamp)
+	}
+	addressLen := EvmAddressLen
+	if addressType == AddressTypeSolana {
+		addressLen = SolanaAddressLength
+	}
+	addressList := make([]string, 0)
+	for idx < len(data) {
+		if len(data)-idx < addressLen {
+			return nil, fmt.Errorf("invalid evm qualify data")
+		}
+		address, err := ReadBytesWithUint16Len(data, &idx, addressLen)
+		if err != nil {
+			return nil, err
+		}
+		addressString := ""
+		if addressType == AddressTypeEvm {
+			addressString = iotago.EncodeHex(address)
+		} else if addressType == AddressTypeSolana {
+			solanaAddress, err := UnmarshalSolanaAddress(address)
+			if err != nil {
+				return nil, err
+			}
+			addressString = solanaAddress
+		}
 		// log address
-		logger.Infof("UnmarshalEvmQualify address %s", iotago.EncodeHex(address))
-		addressFixed := [EvmAddressLen]byte{}
-		copy(addressFixed[:], address)
-		addressList = append(addressList, addressFixed)
+		logger.Infof("UnmarshalEvmQualify address %s", addressString)
+		addressList = append(addressList, addressString)
 	}
 	return NewEvmQualify(groupIdFixed, addressList, signatureBytes), nil
 }
@@ -99,21 +128,20 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 	// log group qualify type
 	logger.Infof("StoreSingleEvmQualify group qualify type %s", groupQualifyType)
 	// store if not exist
-	for _, addressBytes := range evmQualify.AddressList {
-		addressHex := iotago.EncodeHex(addressBytes[:])
+	for _, addressStr := range evmQualify.AddressList {
 		// log address
-		logger.Infof("StoreSingleEvmQualify address %s", addressHex)
-		exist, err := im.GroupQualificationExists(evmQualify.GroupId, addressHex, logger)
+		logger.Infof("StoreSingleEvmQualify address %s", addressStr)
+		exist, err := im.GroupQualificationExists(evmQualify.GroupId, addressStr, logger)
 		if err != nil {
 			return err
 		}
 		if exist {
 			// log address exist
-			logger.Infof("StoreSingleEvmQualify address %s exist", addressHex)
+			logger.Infof("StoreSingleEvmQualify address %s exist", addressStr)
 		}
 
 		hash := [Sha256HashLen]byte{}
-		copy(hash[:], Sha256Hash(addressHex))
+		copy(hash[:], Sha256Hash(addressStr))
 		var qualifyType int
 		if groupQualifyType == "nft" {
 			qualifyType = GroupQualifyTypeNft
@@ -122,15 +150,15 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 		} else {
 			return fmt.Errorf("invalid group qualify type %s", groupQualifyType)
 		}
-		qualification := NewGroupQualification(evmQualify.GroupId, addressHex, hash, "", qualifyType, "")
+		qualification := NewGroupQualification(evmQualify.GroupId, addressStr, hash, "", qualifyType, "")
 		// log store group qualification
-		logger.Infof("StoreSingleEvmQualify store group qualification %s", addressHex)
+		logger.Infof("StoreSingleEvmQualify store group qualification %s", addressStr)
 		// store group qualification
 		err = im.StoreGroupQualification(qualification, logger)
 		if err != nil {
 			return err
 		}
-		addressGroup := NewAddressGroupNft([]byte(addressHex), evmQualify.GroupId[:], "", "")
+		addressGroup := NewAddressGroupNft([]byte(addressStr), evmQualify.GroupId[:], "", "")
 		err = im.StoreAddressGroup(addressGroup, logger)
 		if err != nil {
 			return err
@@ -143,16 +171,9 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 	}
 	for _, qualified := range qualifiedList {
 		addressPreviouslyQualified := qualified.Address
-		addressPreviouslyQualifiedBytes, err := iotago.DecodeHex(addressPreviouslyQualified)
-		if err != nil {
-			// log error then continue
-			logger.Warnf("failed to decode hex %s", addressPreviouslyQualified)
-			continue
-		}
-		// check if address is in evm qualify
 		found := false
-		for _, addressBytes := range evmQualify.AddressList {
-			if bytes.Equal(addressPreviouslyQualifiedBytes, addressBytes[:]) {
+		for _, addressStr := range evmQualify.AddressList {
+			if addressPreviouslyQualified == addressStr {
 				found = true
 				break
 			}

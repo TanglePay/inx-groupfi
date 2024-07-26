@@ -17,6 +17,7 @@ import (
 
 	"github.com/iotaledger/hive.go/core/logger"
 	iotago "github.com/iotaledger/iota.go/v3"
+	"github.com/mr-tron/base58"
 )
 
 var (
@@ -195,6 +196,16 @@ func ReadBytesWithUint16Len(bytes []byte, idx *int, providedLength ...int) ([]by
 	*idx += length
 
 	return data, nil
+}
+
+// const solana address length
+const SolanaAddressLength = 32
+
+func UnmarshalSolanaAddress(addressBytes []byte) (string, error) {
+	if len(addressBytes) != SolanaAddressLength {
+		return "", fmt.Errorf("invalid address length: expected 32 bytes, got %d", len(addressBytes))
+	}
+	return base58.Encode(addressBytes), nil
 }
 
 // uint32 to bytes
