@@ -50,10 +50,10 @@ var evmNode = map[int]ChainConfig{
 		NativeTokenTotalSupply: 4600000000,
 		NativeTokenSymbol:      "IOTA",
 	},
-	128123: {
-		ChainName:              "Ghostnet",
-		RPC:                    "https://node.ghostnet.etherlink.com/",
-		WSS:                    "wss://node.ghostnet.etherlink.com/",
+	42793: {
+		ChainName:              "Etherlink",
+		RPC:                    "https://node.mainnet.etherlink.com/",
+		WSS:                    "wss://node.mainnet.etherlink.com/",
 		ListenType:             1,
 		MaxFilterBlock:         999,
 		Contract:               "0xD9B13709Ce4Ef82402c091f3fc8A93a9360A5c1e",
