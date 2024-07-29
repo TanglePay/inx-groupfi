@@ -52,15 +52,16 @@ func HandleGenericInit(initCtx *InitContext,
 
 	drainer := im.NewItemDrainer(initCtx.Ctx, func(outputIdUnwrapped interface{}) {
 		defer wg.Done()
+		initCtx.Logger.Debugf("Processing outputId: %s", outputIdUnwrapped)
 		outputIdHex := outputIdUnwrapped.(string)
 		output, milestoneIndex, milestoneTimestamp, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(initCtx.Ctx, initCtx.Client, outputIdHex)
 		if err != nil {
-			initCtx.Logger.Warnf("LedgerInit ... OutputIdToOutput failed:%s", err)
+			initCtx.Logger.Warnf("LedgerInit ... OutputIdToOutput failed: %s", err)
 			return
 		}
 		outputId, err := iotago.DecodeHex(outputIdHex)
 		if err != nil {
-			initCtx.Logger.Warnf("LedgerInit ... DecodeHex failed:%s", err)
+			initCtx.Logger.Warnf("LedgerInit ... DecodeHex failed: %s", err)
 			return
 		}
 		ow := outputWithIdPool.Get().(*OutputWithId)
@@ -69,6 +70,7 @@ func HandleGenericInit(initCtx *InitContext,
 		ow.MilestoneIndex = milestoneIndex
 		ow.MilestoneTimestamp = milestoneTimestamp
 		outputChan <- ow
+		initCtx.Logger.Debugf("Finished processing outputId: %s", outputIdHex)
 	}, 200, 100, 1000)
 
 	// check if finished
@@ -106,9 +108,11 @@ Loop:
 				outputIdsInterface[i] = v
 			}
 
+			initCtx.Logger.Debugf("Draining %d outputIds", len(outputIdsInterface))
 			wg.Add(len(outputIdsInterface))
 			drainer.Drain(outputIdsInterface)
 			wg.Wait()
+			initCtx.Logger.Debug("Finished waiting for drainer")
 
 			// Collect outputs from channel
 			var outputs []*OutputWithId
@@ -122,6 +126,8 @@ Loop:
 				}
 			}
 
+			initCtx.Logger.Debugf("Collected %d outputs", len(outputs))
+
 			// Sort outputs by OutputId
 			sort.Slice(outputs, func(i, j int) bool {
 				return bytes.Compare(outputs[i].OutputId, outputs[j].OutputId) < 0
@@ -131,7 +137,7 @@ Loop:
 			for _, ow := range outputs {
 				for _, processor := range outputProcessors {
 					if err := processor(ow.OutputId, ow.Output, ow.MilestoneIndex, ow.MilestoneTimestamp, initCtx); err != nil {
-						initCtx.Logger.Warnf("LedgerInit ... OutputProcessor failed:%s", err)
+						initCtx.Logger.Warnf("LedgerInit ... OutputProcessor failed: %s", err)
 						continue
 					}
 				}
