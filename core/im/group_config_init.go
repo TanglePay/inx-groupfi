@@ -24,7 +24,7 @@ func ProcessGroupConfig(initCtx *InitContext) {
 			return nil
 		},
 	}
-	HandleGenericInit(initCtx, "groupconfig", idFetcher, processors)
+	HandleGenericInitParallel(initCtx, "groupconfig", idFetcher, processors)
 
 }
 
