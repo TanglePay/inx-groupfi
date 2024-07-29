@@ -5,6 +5,7 @@ import (
 	"context"
 	"sort"
 	"sync"
+	"time"
 
 	"github.com/TanglePay/inx-groupfi/pkg/im"
 	"github.com/iotaledger/hive.go/core/logger"
@@ -54,11 +55,13 @@ func HandleGenericInit(initCtx *InitContext,
 		output, milestoneIndex, milestoneTimestamp, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(initCtx.Ctx, initCtx.Client, outputIdHex)
 		if err != nil {
 			initCtx.Logger.Warnf("LedgerInit ... OutputIdToOutput failed: %s", err)
+			outputChan <- nil
 			return
 		}
 		outputId, err := iotago.DecodeHex(outputIdHex)
 		if err != nil {
 			initCtx.Logger.Warnf("LedgerInit ... DecodeHex failed: %s", err)
+			outputChan <- nil
 			return
 		}
 		ow := outputWithIdPool.Get().(*OutputWithId)
@@ -103,19 +106,27 @@ Loop:
 			for i, v := range outputIds {
 				outputIdsInterface[i] = v
 			}
-
-			initCtx.Logger.Infof("Draining %d outputIds", len(outputIdsInterface))
+			itemCt := len(outputIdsInterface)
+			initCtx.Logger.Infof("Draining %d outputIds", itemCt)
 			drainer.Drain(outputIdsInterface)
-			drainer.Wait()
-			initCtx.Logger.Info("Finished waiting for drainer")
 
 			// Collect outputs from channel
 			var outputs []*OutputWithId
+			itemProcessedCt := 0
 		CollectLoop:
 			for {
 				select {
 				case ow := <-outputChan:
-					outputs = append(outputs, ow)
+					itemProcessedCt++
+					if ow != nil {
+						outputs = append(outputs, ow)
+					}
+					if itemProcessedCt == itemCt {
+						break CollectLoop
+					}
+					// 10 sec timeout
+				case <-time.After(5 * time.Second):
+					break CollectLoop
 				default:
 					break CollectLoop
 				}
