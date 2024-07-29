@@ -41,7 +41,7 @@ func HandleGenericInit(initCtx *InitContext,
 	outputIdsFetcher OutputIdsFetcher,
 	outputProcessors []OutputProcessor) {
 
-	outputChan := make(chan *OutputWithId, 200)
+	outputChan := make(chan *OutputWithId, 1100)
 
 	// Object pool for OutputWithId
 	outputWithIdPool := sync.Pool{
@@ -118,6 +118,8 @@ Loop:
 				select {
 				case ow := <-outputChan:
 					itemProcessedCt++
+					// log itemCt and itemProcessedCt
+					initCtx.Logger.Infof("itemCt: %d, itemProcessedCt: %d", itemCt, itemProcessedCt)
 					if ow != nil {
 						outputs = append(outputs, ow)
 					}
