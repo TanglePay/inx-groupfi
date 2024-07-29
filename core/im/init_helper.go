@@ -5,6 +5,7 @@ import (
 	"context"
 	"sort"
 	"sync"
+	"sync/atomic"
 
 	"github.com/TanglePay/inx-groupfi/pkg/im"
 	"github.com/iotaledger/hive.go/core/logger"
@@ -41,6 +42,7 @@ func HandleGenericInit(initCtx *InitContext,
 	outputProcessors []OutputProcessor) {
 
 	var wg sync.WaitGroup
+	var wgCount int32
 	outputChan := make(chan *OutputWithId, 200)
 
 	// Object pool for OutputWithId
@@ -52,7 +54,8 @@ func HandleGenericInit(initCtx *InitContext,
 
 	drainer := im.NewItemDrainer(initCtx.Ctx, func(outputIdUnwrapped interface{}) {
 		defer wg.Done()
-		initCtx.Logger.Infof("Processing outputId: %s", outputIdUnwrapped)
+		atomic.AddInt32(&wgCount, -1)
+		initCtx.Logger.Infof("Processing outputId: %s, wgCount: %d", outputIdUnwrapped, wgCount)
 		outputIdHex := outputIdUnwrapped.(string)
 		output, milestoneIndex, milestoneTimestamp, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(initCtx.Ctx, initCtx.Client, outputIdHex)
 		if err != nil {
@@ -70,7 +73,7 @@ func HandleGenericInit(initCtx *InitContext,
 		ow.MilestoneIndex = milestoneIndex
 		ow.MilestoneTimestamp = milestoneTimestamp
 		outputChan <- ow
-		initCtx.Logger.Infof("Finished processing outputId: %s", outputIdHex)
+		initCtx.Logger.Infof("Finished processing outputId: %s, wgCount: %d", outputIdHex, wgCount)
 	}, 200, 100, 1000)
 
 	// check if finished
@@ -110,9 +113,11 @@ Loop:
 
 			initCtx.Logger.Infof("Draining %d outputIds", len(outputIdsInterface))
 			wg.Add(len(outputIdsInterface))
+			atomic.AddInt32(&wgCount, int32(len(outputIdsInterface)))
 			drainer.Drain(outputIdsInterface)
+			initCtx.Logger.Infof("Waiting for drainer to finish, wgCount: %d", wgCount)
 			wg.Wait()
-			initCtx.Logger.Infof("Finished waiting for drainer")
+			initCtx.Logger.Info("Finished waiting for drainer")
 
 			// Collect outputs from channel
 			var outputs []*OutputWithId
