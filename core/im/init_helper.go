@@ -52,7 +52,7 @@ func HandleGenericInit(initCtx *InitContext,
 
 	drainer := im.NewItemDrainer(initCtx.Ctx, func(outputIdUnwrapped interface{}) {
 		defer wg.Done()
-		initCtx.Logger.Debugf("Processing outputId: %s", outputIdUnwrapped)
+		initCtx.Logger.Infof("Processing outputId: %s", outputIdUnwrapped)
 		outputIdHex := outputIdUnwrapped.(string)
 		output, milestoneIndex, milestoneTimestamp, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(initCtx.Ctx, initCtx.Client, outputIdHex)
 		if err != nil {
@@ -70,7 +70,7 @@ func HandleGenericInit(initCtx *InitContext,
 		ow.MilestoneIndex = milestoneIndex
 		ow.MilestoneTimestamp = milestoneTimestamp
 		outputChan <- ow
-		initCtx.Logger.Debugf("Finished processing outputId: %s", outputIdHex)
+		initCtx.Logger.Infof("Finished processing outputId: %s", outputIdHex)
 	}, 200, 100, 1000)
 
 	// check if finished
@@ -108,11 +108,11 @@ Loop:
 				outputIdsInterface[i] = v
 			}
 
-			initCtx.Logger.Debugf("Draining %d outputIds", len(outputIdsInterface))
+			initCtx.Logger.Infof("Draining %d outputIds", len(outputIdsInterface))
 			wg.Add(len(outputIdsInterface))
 			drainer.Drain(outputIdsInterface)
 			wg.Wait()
-			initCtx.Logger.Debug("Finished waiting for drainer")
+			initCtx.Logger.Infof("Finished waiting for drainer")
 
 			// Collect outputs from channel
 			var outputs []*OutputWithId
@@ -126,7 +126,7 @@ Loop:
 				}
 			}
 
-			initCtx.Logger.Debugf("Collected %d outputs", len(outputs))
+			initCtx.Logger.Infof("Collected %d outputs", len(outputs))
 
 			// Sort outputs by OutputId
 			sort.Slice(outputs, func(i, j int) bool {
