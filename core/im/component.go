@@ -320,35 +320,35 @@ func run() error {
 		// log start processing group config
 		CoreComponent.LogInfo("Start processing group config ...")
 		ProcessGroupConfig(initCtx)
-		/*
-			// process pairx
-			ProcessPairx(initCtx)
 
-			// handle all nft first pass
-			// log start processing all nft first pass
-			CoreComponent.LogInfo("Start processing all nft first pass ...")
-			ProcessAllNftFirstPass(initCtx)
+		// process pairx
+		ProcessPairx(initCtx)
 
-			// handle all basic output first pass
-			// log start processing all basic output first pass
-			CoreComponent.LogInfo("Start processing all basic output first pass ...")
-			ProcessAllBasicOutputFirstPass(initCtx)
+		// handle all nft first pass
+		// log start processing all nft first pass
+		CoreComponent.LogInfo("Start processing all nft first pass ...")
+		ProcessAllNftFirstPass(initCtx)
 
-			// handle mark init
-			// log start processing mark init
-			CoreComponent.LogInfo("Start processing mark init ...")
-			handleMarkInit(initCtx)
+		// handle all basic output first pass
+		// log start processing all basic output first pass
+		CoreComponent.LogInfo("Start processing all basic output first pass ...")
+		ProcessAllBasicOutputFirstPass(initCtx)
 
-			// calculate is group public for all group config
-			// log start processing calculate is group public for all group config
-			CoreComponent.LogInfo("Start processing calculate is group public for all group config ...")
-			calculateIsGroupPublicForAllGroupConfig(initCtx)
+		// handle mark init
+		// log start processing mark init
+		CoreComponent.LogInfo("Start processing mark init ...")
+		handleMarkInit(initCtx)
 
-			// handle message init
-			// log start processing message init
-			CoreComponent.LogInfo("Start processing message init ...")
-			handleMessageInit(initCtx)
-		*/
+		// calculate is group public for all group config
+		// log start processing calculate is group public for all group config
+		CoreComponent.LogInfo("Start processing calculate is group public for all group config ...")
+		calculateIsGroupPublicForAllGroupConfig(initCtx)
+
+		// handle message init
+		// log start processing message init
+		CoreComponent.LogInfo("Start processing message init ...")
+		handleMessageInit(initCtx)
+
 		CoreComponent.LogInfo("Finishing LedgerInit ... done")
 		im.IsIniting = false
 		startListeningToLedgerUpdate()
