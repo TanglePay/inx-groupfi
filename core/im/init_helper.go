@@ -36,7 +36,7 @@ type OutputWithId struct {
 
 // handleGenericInit function will maintain a mark for is finished,
 // iterate all output under certain filter,
-func HandleGenericInit(initCtx *InitContext,
+func HandleGenericInitv2(initCtx *InitContext,
 	topic string,
 	outputIdsFetcher OutputIdsFetcher,
 	outputProcessors []OutputProcessor) {
@@ -213,7 +213,7 @@ var NftOutputIdsByTagFetcher = func(tag string) OutputIdsFetcher {
 	}
 }
 
-func HandleGenericInitParallel(initCtx *InitContext,
+func HandleGenericInit(initCtx *InitContext,
 	topic string,
 	outputIdsFetcher OutputIdsFetcher,
 	outputProcessors []OutputProcessor) {
