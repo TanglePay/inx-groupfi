@@ -354,6 +354,9 @@ func CalculateDiff[T any](created, existing []*T, getKey func(*T) string) (toCre
 func PushData[T any](data *T, getTopic func(*T) string,
 	getInbox func(*T) [][]byte, getEventType func(*T) byte,
 	getPayload func(*T) []byte, manager *Manager, logger *logger.Logger) error {
+	if IsIniting {
+		return nil
+	}
 	topic := getTopic(data)
 	payload := getPayload(data)
 	err := manager.GetMqttServer().Publish("inbox/"+topic, payload)
