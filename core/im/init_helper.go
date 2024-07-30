@@ -171,7 +171,7 @@ Loop:
 		log.Errorf("failed to MarkInitFinished for %s: %s", topic, err)
 		return
 	}
-
+	drainer.Close()
 	log.Infof("LedgerInit ... %s finished", topic)
 }
 
@@ -304,6 +304,7 @@ Loop:
 		log.Errorf("failed to MarkInitFinished for %s: %s", topic, err)
 		return
 	}
+	drainer.Close()
 	// log topic finished
 	log.Infof("LedgerInit ... %s finished", topic)
 }
