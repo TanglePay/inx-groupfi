@@ -124,10 +124,8 @@ Loop:
 					if itemProcessedCt == itemCt {
 						break CollectLoop
 					}
-					// 10 sec timeout
+					// 5 sec timeout
 				case <-time.After(5 * time.Second):
-					break CollectLoop
-				default:
 					break CollectLoop
 				}
 			}
