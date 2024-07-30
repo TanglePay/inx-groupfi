@@ -14,6 +14,8 @@ func ProcessGroupConfig(initCtx *InitContext) {
 			copy(outputIDIota[:], outputId)
 			groupConfig, err := im.FilterOutputForConfigNftOutputWrapper(output, outputIDIota, deps.IMManager)
 			if err != nil {
+				// log error
+				initCtx.Logger.Warnf("LedgerInit ... FilterOutputForConfigNftOutputWrapper failed:%s", err)
 				return err
 			}
 			if groupConfig != nil {
