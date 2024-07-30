@@ -36,7 +36,7 @@ type OutputWithId struct {
 
 // handleGenericInit function will maintain a mark for is finished,
 // iterate all output under certain filter,
-func HandleGenericInitv2(initCtx *InitContext,
+func HandleGenericInit(initCtx *InitContext,
 	topic string,
 	outputIdsFetcher OutputIdsFetcher,
 	outputProcessors []OutputProcessor) {
@@ -140,11 +140,12 @@ Loop:
 			})
 
 			// Process each output in sorted order
+			// log process nth outputs, with mth processors, task name
+			initCtx.Logger.Infof("Processing %d outputs with %d processors for %s", len(outputs), len(outputProcessors), topic)
 			for _, ow := range outputs {
 				for _, processor := range outputProcessors {
 					if err := processor(ow.OutputId, ow.Output, ow.MilestoneIndex, ow.MilestoneTimestamp, initCtx); err != nil {
 						initCtx.Logger.Warnf("LedgerInit ... OutputProcessor failed: %s", err)
-						continue
 					}
 				}
 				// Put the used OutputWithId back to the pool
@@ -213,7 +214,7 @@ var NftOutputIdsByTagFetcher = func(tag string) OutputIdsFetcher {
 	}
 }
 
-func HandleGenericInit(initCtx *InitContext,
+func HandleGenericInitv2(initCtx *InitContext,
 	topic string,
 	outputIdsFetcher OutputIdsFetcher,
 	outputProcessors []OutputProcessor) {
