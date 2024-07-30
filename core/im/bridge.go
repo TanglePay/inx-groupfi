@@ -153,120 +153,120 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 		return err
 	}
 	for {
-		payload, err := stream.Recv()
-		if errors.Is(err, io.EOF) || status.Code(err) == codes.Canceled {
-			// log error
-			CoreComponent.LogErrorf("LedgerUpdateBlock error:%s", err.Error())
-			continue
-		}
-		if ctx.Err() != nil {
+		select {
+		case <-ctx.Done():
 			// context got canceled, so stop the updates
-			//nolint:nilerr // false positive
 			return nil
-		}
+		default:
+			payload, err := stream.Recv()
+			if errors.Is(err, io.EOF) || status.Code(err) == codes.Canceled {
+				// log error
+				CoreComponent.LogErrorf("LedgerUpdateBlock error:%s", err.Error())
+				continue
+			}
 
-		block, err := payload.GetBlock().UnwrapBlock(serializer.DeSeriModeNoValidation, nil)
-		if err != nil {
-			continue
-		}
-		// check if block or payload is nil
-		if block == nil || block.Payload == nil {
-			continue
-		}
-		if block.Payload.PayloadType() != iotago.PayloadTransaction {
-			continue
-		}
-		transaction := block.Payload.(*iotago.Transaction)
-		outputSets, err := transaction.OutputsSet()
-		if err != nil {
-			// log error
-			CoreComponent.LogErrorf("LedgerUpdateBlock OutputsSet error:%s", err.Error())
-		} else {
-			for outputId, output := range outputSets {
-				isMessage, sender, groupId, meta := filterOutputForPush(output)
-				if isMessage {
-					// log sender length
-					CoreComponent.LogInfof("LedgerUpdateBlock before push sender len:%d", len(sender))
-					go func() {
-						// prefix ImInboxMessageTypeNewMessageP2PV1 + sender + meta
-						pl := append([]byte{im.ImInboxEventTypeNewMessage}, sender...)
-						pl = append(pl, meta...)
-						deps.IMManager.PushInbox(groupId, pl, CoreComponent.Logger())
-					}()
-					continue
-				}
-				evmQualify, err := deps.IMManager.FilterEvmQualifyFromOutput(output, CoreComponent.Logger())
-				if err != nil {
-					// log error
-					CoreComponent.LogErrorf("LedgerUpdate FilterEvmQualifyFromLedgerOutput error:%s", err.Error())
-				}
-				if evmQualify != nil {
-					deps.IMManager.HandleEvmQualifyCreated(evmQualify, CoreComponent.Logger())
-					continue
-				}
-
-				dids, err := deps.IMManager.FilterOutputForDid(output, outputId)
-				if err != nil {
-					// log error
-					CoreComponent.LogErrorf("LedgerUpdate FilterLedgerOutputForDid error:%s", err.Error())
-				}
-				if dids != nil {
-					deps.IMManager.HandleDidConsumedAndCreated(nil, dids, CoreComponent.Logger())
-					continue
-				}
-
-				mark, is := deps.IMManager.FilterMarkOutput(output, CoreComponent.Logger())
-
-				if is {
-					markAndOutputId := &im.OutputAndOutputId{
-						Output:   mark,
-						OutputId: outputId,
+			block, err := payload.GetBlock().UnwrapBlock(serializer.DeSeriModeNoValidation, nil)
+			if err != nil {
+				continue
+			}
+			// check if block or payload is nil
+			if block == nil || block.Payload == nil {
+				continue
+			}
+			if block.Payload.PayloadType() != iotago.PayloadTransaction {
+				continue
+			}
+			transaction := block.Payload.(*iotago.Transaction)
+			outputSets, err := transaction.OutputsSet()
+			if err != nil {
+				// log error
+				CoreComponent.LogErrorf("LedgerUpdateBlock OutputsSet error:%s", err.Error())
+			} else {
+				for outputId, output := range outputSets {
+					isMessage, sender, groupId, meta := filterOutputForPush(output)
+					if isMessage {
+						// log sender length
+						CoreComponent.LogInfof("LedgerUpdateBlock before push sender len:%d", len(sender))
+						go func() {
+							// prefix ImInboxMessageTypeNewMessageP2PV1 + sender + meta
+							pl := append([]byte{im.ImInboxEventTypeNewMessage}, sender...)
+							pl = append(pl, meta...)
+							deps.IMManager.PushInbox(groupId, pl, CoreComponent.Logger())
+						}()
+						continue
 					}
-					deps.IMManager.HandleGroupMarkBasicOutputConsumedAndCreated(markAndOutputId, CoreComponent.Logger())
-					continue
-				}
-
-				mute, is := deps.IMManager.FilterMuteOutput(output, CoreComponent.Logger())
-				if is {
-					deps.IMManager.HandleUserMuteGroupMemberBasicOutputCreated(mute, CoreComponent.Logger())
-					continue
-				}
-
-				like, is := deps.IMManager.FilterLikeOutput(output, CoreComponent.Logger())
-				if is {
-					deps.IMManager.HandleUserLikeGroupMemberBasicOutputCreated(like, CoreComponent.Logger())
-				}
-
-				vote, is := deps.IMManager.FilterVoteOutput(output, CoreComponent.Logger())
-				if is {
-					deps.IMManager.HandleUserVoteGroupBasicOutputCreated(vote, CoreComponent.Logger())
-					continue
-				}
-				pairX, err := deps.IMManager.FilterPairXFromOutput(output, outputId, CoreComponent.Logger())
-				if err != nil {
-					// log error
-					CoreComponent.LogErrorf("LedgerUpdate FilterPairXFromLedgerOutput error:%s", err.Error())
-				}
-				if pairX != nil {
-					deps.IMManager.HandlePairXCreated(pairX, CoreComponent.Logger())
-					continue
-				}
-				groupStateSync, address, is := im.FilterGroupStateSyncOutput(output, outputId, deps.IMManager)
-				if is {
-					err = im.DeleteGroupStateSync(address, deps.IMManager)
+					evmQualify, err := deps.IMManager.FilterEvmQualifyFromOutput(output, CoreComponent.Logger())
 					if err != nil {
 						// log error
-						CoreComponent.LogErrorf("LedgerUpdate DeleteGroupStateSync error:%s", err.Error())
+						CoreComponent.LogErrorf("LedgerUpdate FilterEvmQualifyFromLedgerOutput error:%s", err.Error())
 					}
-					err = im.StoreGroupStateSync(groupStateSync, address, deps.IMManager)
+					if evmQualify != nil {
+						deps.IMManager.HandleEvmQualifyCreated(evmQualify, CoreComponent.Logger())
+						continue
+					}
+
+					dids, err := deps.IMManager.FilterOutputForDid(output, outputId)
 					if err != nil {
 						// log error
-						CoreComponent.LogErrorf("LedgerUpdate StoreGroupStateSync error:%s", err.Error())
+						CoreComponent.LogErrorf("LedgerUpdate FilterLedgerOutputForDid error:%s", err.Error())
 					}
-					continue
+					if dids != nil {
+						deps.IMManager.HandleDidConsumedAndCreated(nil, dids, CoreComponent.Logger())
+						continue
+					}
+
+					mark, is := deps.IMManager.FilterMarkOutput(output, CoreComponent.Logger())
+
+					if is {
+						markAndOutputId := &im.OutputAndOutputId{
+							Output:   mark,
+							OutputId: outputId,
+						}
+						deps.IMManager.HandleGroupMarkBasicOutputConsumedAndCreated(markAndOutputId, CoreComponent.Logger())
+						continue
+					}
+
+					mute, is := deps.IMManager.FilterMuteOutput(output, CoreComponent.Logger())
+					if is {
+						deps.IMManager.HandleUserMuteGroupMemberBasicOutputCreated(mute, CoreComponent.Logger())
+						continue
+					}
+
+					like, is := deps.IMManager.FilterLikeOutput(output, CoreComponent.Logger())
+					if is {
+						deps.IMManager.HandleUserLikeGroupMemberBasicOutputCreated(like, CoreComponent.Logger())
+					}
+
+					vote, is := deps.IMManager.FilterVoteOutput(output, CoreComponent.Logger())
+					if is {
+						deps.IMManager.HandleUserVoteGroupBasicOutputCreated(vote, CoreComponent.Logger())
+						continue
+					}
+					pairX, err := deps.IMManager.FilterPairXFromOutput(output, outputId, CoreComponent.Logger())
+					if err != nil {
+						// log error
+						CoreComponent.LogErrorf("LedgerUpdate FilterPairXFromLedgerOutput error:%s", err.Error())
+					}
+					if pairX != nil {
+						deps.IMManager.HandlePairXCreated(pairX, CoreComponent.Logger())
+						continue
+					}
+					groupStateSync, address, is := im.FilterGroupStateSyncOutput(output, outputId, deps.IMManager)
+					if is {
+						err = im.DeleteGroupStateSync(address, deps.IMManager)
+						if err != nil {
+							// log error
+							CoreComponent.LogErrorf("LedgerUpdate DeleteGroupStateSync error:%s", err.Error())
+						}
+						err = im.StoreGroupStateSync(groupStateSync, address, deps.IMManager)
+						if err != nil {
+							// log error
+							CoreComponent.LogErrorf("LedgerUpdate StoreGroupStateSync error:%s", err.Error())
+						}
+						continue
+					}
 				}
 			}
 		}
 	}
-
 }
