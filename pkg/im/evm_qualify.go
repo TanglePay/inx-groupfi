@@ -186,19 +186,23 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 			// delete group qualification
 			err = im.DeleteGroupQualification(qualified, logger)
 			if err != nil {
-				return err
+
+				// log error
+				logger.Errorf("StoreSingleEvmQualify delete group qualification error:%s", err.Error())
 			}
 			addressGroup := NewAddressGroupNft([]byte(addressPreviouslyQualified), evmQualify.GroupId[:], "", "")
 			err = im.DeleteAddressGroup(addressGroup)
 			if err != nil {
-				return err
+				// log error
+				logger.Errorf("StoreSingleEvmQualify delete address group error:%s", err.Error())
 			}
 		}
 	}
 	// StoreEvmQualifyOutputId
 	err = StoreEvmQualifyOutputId(evmQualify.GroupId, evmQualify.OutputId, im, logger)
 	if err != nil {
-		return err
+		// log error
+		logger.Errorf("StoreSingleEvmQualify StoreEvmQualifyOutputId error:%s", err.Error())
 	}
 	GenAndPushEvmQualifyChangedEvent(evmQualify, im, logger)
 	return nil
