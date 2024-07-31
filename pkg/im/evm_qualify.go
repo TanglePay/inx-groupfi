@@ -222,8 +222,10 @@ func GetEvmQualifyEffectingOutputIdKey(outputId [OutputIdLen]byte) []byte {
 
 // store evm qualify effecting output id
 func StoreEvmQualifyEffectingOutputId(outputId [OutputIdLen]byte, im *Manager, logger *logger.Logger) error {
+	// log method output id
+	logger.Infof("StoreEvmQualifyEffectingOutputId outputId %s", iotago.EncodeHex(outputId[:]))
 	key := GetEvmQualifyEffectingOutputIdKey(outputId)
-	err := im.imStore.Set(key, nil)
+	err := im.imStore.Set(key, []byte{})
 	if err != nil {
 		return err
 	}
