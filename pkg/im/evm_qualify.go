@@ -266,14 +266,16 @@ func StoreEvmQualifyOutputId(groupId [GroupIdLen]byte, outputId [OutputIdLen]byt
 	if currentOutputId != [OutputIdLen]byte{} {
 		err = DeleteEvmQualifyEffectingOutputId(currentOutputId, im, logger)
 		if err != nil {
-			return err
+			// log error
+			logger.Errorf("StoreEvmQualifyOutputId DeleteEvmQualifyEffectingOutputId error:%s", err.Error())
 		}
 	}
 	key := GetEvmQualifyOutputIdKey(groupId)
 	value := outputId[:]
 	err = im.imStore.Set(key, value)
 	if err != nil {
-		return err
+		// log error
+		logger.Errorf("StoreEvmQualifyOutputId error:%s", err.Error())
 	}
 	// store effecting
 	err = StoreEvmQualifyEffectingOutputId(outputId, im, logger)
