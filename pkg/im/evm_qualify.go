@@ -22,14 +22,16 @@ var evmQualifyTag = []byte(evmQualifyTagRawStr)
 var EvmQualifyTagStr = iotago.EncodeHex(evmQualifyTag)
 
 type EvmQualify struct {
+	OutputId    [OutputIdLen]byte
 	GroupId     [GroupIdLen]byte
 	AddressList []string
 	Signature   []byte
 }
 
 // new evm qualify
-func NewEvmQualify(groupId [GroupIdLen]byte, addressList []string, signature []byte) *EvmQualify {
+func NewEvmQualify(outputId [OutputIdLen]byte, groupId [GroupIdLen]byte, addressList []string, signature []byte) *EvmQualify {
 	return &EvmQualify{
+		OutputId:    outputId,
 		GroupId:     groupId,
 		AddressList: addressList,
 		Signature:   signature,
@@ -37,7 +39,8 @@ func NewEvmQualify(groupId [GroupIdLen]byte, addressList []string, signature []b
 }
 
 // unmarsal evm qualify from bytes
-func UnmarshalEvmQualify(data []byte, logger *logger.Logger) (*EvmQualify, error) {
+func UnmarshalEvmQualify(outputId [OutputIdLen]byte,
+	data []byte, logger *logger.Logger) (*EvmQualify, error) {
 	// schema(1byte) + signature length  + signature + group id + address list
 	idx := 0
 	commonHeader, err := DeserializeCommonHeader(data, &idx)
@@ -102,7 +105,8 @@ func UnmarshalEvmQualify(data []byte, logger *logger.Logger) (*EvmQualify, error
 		logger.Infof("UnmarshalEvmQualify address %s", addressString)
 		addressList = append(addressList, addressString)
 	}
-	return NewEvmQualify(groupIdFixed, addressList, signatureBytes), nil
+	return NewEvmQualify(outputId,
+		groupIdFixed, addressList, signatureBytes), nil
 }
 
 // store one evm qualify
@@ -191,8 +195,101 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 			}
 		}
 	}
+	// StoreEvmQualifyOutputId
+	err = StoreEvmQualifyOutputId(evmQualify.GroupId, evmQualify.OutputId, im, logger)
+	if err != nil {
+		return err
+	}
 	GenAndPushEvmQualifyChangedEvent(evmQualify, im, logger)
 	return nil
+}
+
+// for effecting outputid for group key = prefix + groupid, value = outputid
+func GetEvmQualifyOutputIdKey(groupId [GroupIdLen]byte) []byte {
+	payload := make([]byte, 1+GroupIdLen)
+	payload[0] = ImEvmQualifyOutputIdPrefix
+	copy(payload[1:], groupId[:])
+	return payload
+}
+
+// effecting qualify outputid store, key = prefix + outputid, value = nil
+func GetEvmQualifyEffectingOutputIdKey(outputId [OutputIdLen]byte) []byte {
+	payload := make([]byte, 1+OutputIdLen)
+	payload[0] = ImEvmQualifyEffectingOutputIdPrefix
+	copy(payload[1:], outputId[:])
+	return payload
+}
+
+// store evm qualify effecting output id
+func StoreEvmQualifyEffectingOutputId(outputId [OutputIdLen]byte, im *Manager, logger *logger.Logger) error {
+	key := GetEvmQualifyEffectingOutputIdKey(outputId)
+	err := im.imStore.Set(key, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// delete evm qualify effecting output id
+func DeleteEvmQualifyEffectingOutputId(outputId [OutputIdLen]byte, im *Manager, logger *logger.Logger) error {
+	key := GetEvmQualifyEffectingOutputIdKey(outputId)
+	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// check exist of evm qualify effecting output id
+func EvmQualifyEffectingOutputIdExists(outputId [OutputIdLen]byte, im *Manager, logger *logger.Logger) (bool, error) {
+	key := GetEvmQualifyEffectingOutputIdKey(outputId)
+	exist, err := im.imStore.Has(key)
+	if err != nil {
+		return false, err
+	}
+	return exist, nil
+}
+
+// store evm qualify output id
+func StoreEvmQualifyOutputId(groupId [GroupIdLen]byte, outputId [OutputIdLen]byte, im *Manager, logger *logger.Logger) error {
+	// get current output id, delete effecting
+	currentOutputId, err := GetEvmQualifyOutputId(groupId, im, logger)
+	if err != nil {
+		return err
+	}
+	if currentOutputId != [OutputIdLen]byte{} {
+		err = DeleteEvmQualifyEffectingOutputId(currentOutputId, im, logger)
+		if err != nil {
+			return err
+		}
+	}
+	key := GetEvmQualifyOutputIdKey(groupId)
+	value := outputId[:]
+	err = im.imStore.Set(key, value)
+	if err != nil {
+		return err
+	}
+	// store effecting
+	err = StoreEvmQualifyEffectingOutputId(outputId, im, logger)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// get evm qualify output id
+func GetEvmQualifyOutputId(groupId [GroupIdLen]byte, im *Manager, logger *logger.Logger) ([OutputIdLen]byte, error) {
+	key := GetEvmQualifyOutputIdKey(groupId)
+	value, err := im.imStore.Get(key)
+	if err != nil {
+		return [OutputIdLen]byte{}, err
+	}
+	if value == nil {
+		return [OutputIdLen]byte{}, nil
+	}
+	outputId := [OutputIdLen]byte{}
+	copy(outputId[:], value)
+	return outputId, nil
 }
 
 // filter pairX from LedgerOutput
@@ -200,15 +297,18 @@ func (im *Manager) FilterEvmQualifyFromLedgerOutput(inxOutput *inx.LedgerOutput,
 	if inxOutput == nil {
 		return nil, nil
 	}
+	outputIdRaw := inxOutput.OutputId.Id
+	outputId := [OutputIdLen]byte{}
+	copy(outputId[:], outputIdRaw)
 	output, err := inxOutput.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
 	if err != nil {
 		return nil, err
 	}
-	return im.FilterEvmQualifyFromOutput(output, logger)
+	return im.FilterEvmQualifyFromOutput(outputId, output, logger)
 }
 
 // filter evm qualify from output
-func (im *Manager) FilterEvmQualifyFromOutput(output iotago.Output, logger *logger.Logger) (*EvmQualify, error) {
+func (im *Manager) FilterEvmQualifyFromOutput(outputId [OutputIdLen]byte, output iotago.Output, logger *logger.Logger) (*EvmQualify, error) {
 	// check if tag is evm qualify
 	if output.FeatureSet().TagFeature() == nil ||
 		output.FeatureSet().TagFeature().Tag == nil ||
@@ -222,7 +322,7 @@ func (im *Manager) FilterEvmQualifyFromOutput(output iotago.Output, logger *logg
 	if output.FeatureSet().MetadataFeature() == nil {
 		return nil, fmt.Errorf("metadata not found in evm qualify output")
 	}
-	qualify, err := UnmarshalEvmQualify(output.FeatureSet().MetadataFeature().Data, logger)
+	qualify, err := UnmarshalEvmQualify(outputId, output.FeatureSet().MetadataFeature().Data, logger)
 	if err != nil {
 		// log error
 		logger.Errorf("failed to unmarshal evm qualify output:%s", err.Error())

@@ -195,7 +195,7 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 						}()
 						continue
 					}
-					evmQualify, err := deps.IMManager.FilterEvmQualifyFromOutput(output, CoreComponent.Logger())
+					evmQualify, err := deps.IMManager.FilterEvmQualifyFromOutput(outputId, output, CoreComponent.Logger())
 					if err != nil {
 						// log error
 						CoreComponent.LogErrorf("LedgerUpdate FilterEvmQualifyFromLedgerOutput error:%s", err.Error())

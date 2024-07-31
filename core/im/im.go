@@ -107,6 +107,16 @@ func parseGroupIdQueryParam(c echo.Context) ([]byte, error) {
 	return groupId, nil
 }
 
+// parse outputIds from body
+func parseOutputIdsFromBody(c echo.Context) ([]string, error) {
+	var outputIds []string
+	err := c.Bind(&outputIds)
+	if err != nil {
+		return nil, err
+	}
+	return outputIds, nil
+}
+
 // parse given attrName from query param
 func parseAttrNameQueryParam(c echo.Context, attrName string) (string, error) {
 	// use parseAttrNameQueryParamWithNil
@@ -1475,4 +1485,37 @@ func getGroupStateSyncUnderAddress(c echo.Context) (*im.GroupStateSyncResponse, 
 	}
 	return resp, nil
 
+}
+
+// batchCheckOutputId
+func batchCheckOutputId(c echo.Context) ([]*im.OutputIdCheckResponse, error) {
+	// get outputIds from body
+	outputIds, err := parseOutputIdsFromBody(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("batch check outputId from outputIds:%d", len(outputIds))
+	resp := make([]*im.OutputIdCheckResponse, len(outputIds))
+	for i, outputId := range outputIds {
+		outputIdBytes, err := iotago.DecodeHex(outputId)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("batch check outputId from outputIds:%d failed:%s", len(outputIds), err)
+			continue
+		}
+		outputIdFixed := [im.OutputIdLen]byte{}
+		copy(outputIdFixed[:], outputIdBytes)
+
+		checked, err := im.EvmQualifyEffectingOutputIdExists(outputIdFixed, deps.IMManager, CoreComponent.Logger())
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("batch check outputId from outputIds:%d failed:%s", len(outputIds), err)
+			continue
+		}
+		resp[i] = &im.OutputIdCheckResponse{
+			OutputId:    outputId,
+			IsEffecting: checked,
+		}
+	}
+	return resp, nil
 }

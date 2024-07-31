@@ -90,4 +90,8 @@ const (
 	ImStoreKeyPrefixPublicGroupId byte = 45
 
 	ImStoreKeyPrefixGroupStateSync byte = 46
+
+	ImEvmQualifyOutputIdPrefix byte = 47
+
+	ImEvmQualifyEffectingOutputIdPrefix byte = 48
 )
