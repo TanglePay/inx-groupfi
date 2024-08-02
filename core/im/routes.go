@@ -226,6 +226,9 @@ const (
 
 	// batch check if outputid is effecting evm qualify outputid
 	RouteBatchCheckOutputId = "/batchcheckqualifyoutputid"
+
+	// batch convert outputid to output
+	RouteBatchOutputIdToOutput = "/batchoutputidtooutput"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -274,6 +277,38 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		// send to respChan
 		nftWithRespChan.RespChan <- nftResponse
 	}, 2000, 1000, 1000)
+
+	im.OutputIdDrainer = im.NewItemDrainer(ctx, func(item interface{}) {
+		// unwrap to *OutputIdWithRespChan
+		outputIdWithRespChan := item.(*im.OutputIdWithRespChan)
+		// get output id
+		outputIdHex := outputIdWithRespChan.OutputIdHex
+		outputId, err := iotago.OutputIDFromHex(outputIdHex)
+		if err != nil {
+			resp := &im.OutputIdOutputResponse{
+				OutputIdHex: outputIdHex,
+				Output:      nil,
+			}
+			outputIdWithRespChan.RespChan <- resp
+			return
+		}
+
+		// get output using node client
+		output, err := client.OutputByID(ctx, outputId)
+		if err != nil {
+			resp := &im.OutputIdOutputResponse{
+				OutputIdHex: outputIdHex,
+				Output:      nil,
+			}
+			outputIdWithRespChan.RespChan <- resp
+			return
+		}
+		resp := &im.OutputIdOutputResponse{
+			OutputIdHex: outputIdHex,
+			Output:      output,
+		}
+		outputIdWithRespChan.RespChan <- resp
+	}, 500, 1000, 1000)
 	//e.Use(AddCORS)
 	e.Use(ServiceUnavailableMiddleware)
 	//nft
@@ -890,6 +925,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// RouteBatchCheckOutputId
 	e.POST(RouteBatchCheckOutputId, func(c echo.Context) error {
 		resp, err := batchCheckOutputId(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// RouteBatchOutputIdToOutput
+	e.POST(RouteBatchOutputIdToOutput, func(c echo.Context) error {
+		resp, err := batchOutputIdToOutput(c)
 		if err != nil {
 			return err
 		}

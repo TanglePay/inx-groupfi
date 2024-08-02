@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/TanglePay/inx-groupfi/pkg/im"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -1517,5 +1518,41 @@ func batchCheckOutputId(c echo.Context) ([]*im.OutputIdCheckResponse, error) {
 			IsEffecting: checked,
 		}
 	}
+	return resp, nil
+}
+
+// batchOutputIdToOutput
+func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error) {
+	// get outputIds from body
+	outputIds, err := parseOutputIdsFromBody(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("batch outputId to output from outputIds:%d", len(outputIds))
+	chanForResp := make(chan interface{})
+	var resp []*im.OutputIdOutputResponse
+	// map outputIds to OutputIdWithRespChan[]
+	var items []interface{}
+	for _, outputId := range outputIds {
+		req := &im.OutputIdWithRespChan{
+			OutputIdHex: outputId,
+			RespChan:    chanForResp,
+		}
+		items = append(items, req)
+	}
+	im.OutputIdDrainer.Drain(items)
+	// get item from chanForResp, also with 5 sec timeout
+Loop:
+	for i := 0; i < len(outputIds); i++ {
+		select {
+		case item := <-chanForResp:
+			resp = append(resp, item.(*im.OutputIdOutputResponse))
+		case <-time.After(5 * time.Second):
+			// log error then break
+			CoreComponent.LogWarnf("batch outputId to output from outputIds:%d timeout", len(outputIds))
+			break Loop
+		}
+	}
+
 	return resp, nil
 }
