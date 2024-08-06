@@ -1,7 +1,11 @@
 package im
 
 import (
+	"bytes"
 	"context"
+	"sort"
+	"sync"
+	"time"
 
 	"github.com/TanglePay/inx-groupfi/pkg/im"
 	"github.com/iotaledger/hive.go/core/logger"
@@ -19,12 +23,194 @@ type InitContext struct {
 
 type OutputIdsFetcher func(initCtx *InitContext, offset *string) ([]string, *string, error)
 
-type OutputProcessor func(outputId []byte, output iotago.Output, mileStoneIndex uint32, mileStoneTimestamp uint32,
+type OutputProcessor func(outputId []byte, output iotago.Output, milestoneIndex uint32, milestoneTimestamp uint32,
 	initCtx *InitContext) error
 
-// handleGenericInit function will
-// maintain a mark for is finished,
-// iterate all output under certain filer,
+// OutputWithId struct to hold output and its ID
+type OutputWithId struct {
+	OutputId           []byte
+	Output             iotago.Output
+	MilestoneIndex     uint32
+	MilestoneTimestamp uint32
+}
+
+// handleGenericInit function will maintain a mark for is finished,
+// iterate all output under certain filter,
+func HandleGenericInitv2(initCtx *InitContext,
+	topic string,
+	outputIdsFetcher OutputIdsFetcher,
+	outputProcessors []OutputProcessor) {
+
+	outputChan := make(chan *OutputWithId, 1100)
+
+	// Object pool for OutputWithId
+	outputWithIdPool := sync.Pool{
+		New: func() interface{} {
+			return &OutputWithId{}
+		},
+	}
+
+	drainer := im.NewItemDrainer(initCtx.Ctx, func(outputIdUnwrapped interface{}) {
+		outputIdHex := outputIdUnwrapped.(string)
+		output, milestoneIndex, milestoneTimestamp, err := deps.IMManager.OutputIdToOutputAndMilestoneInfo(initCtx.Ctx, initCtx.Client, outputIdHex)
+		if err != nil {
+			initCtx.Logger.Warnf("LedgerInit ... OutputIdToOutput failed: %s", err)
+			outputChan <- nil
+			return
+		}
+		outputId, err := iotago.DecodeHex(outputIdHex)
+		if err != nil {
+			initCtx.Logger.Warnf("LedgerInit ... DecodeHex failed: %s", err)
+			outputChan <- nil
+			return
+		}
+		ow := outputWithIdPool.Get().(*OutputWithId)
+		ow.OutputId = outputId
+		ow.Output = output
+		ow.MilestoneIndex = milestoneIndex
+		ow.MilestoneTimestamp = milestoneTimestamp
+		outputChan <- ow
+	}, 200, 100, 1000)
+
+	// check if finished
+	isFinished, err := deps.IMManager.IsInitFinished(topic, "")
+	if err != nil {
+		log.Errorf("failed to ReadInitFinished for %s: %s", topic, err)
+		return
+	}
+	if isFinished {
+		return
+	}
+
+	// get current offset
+	offset, err := deps.IMManager.ReadInitCurrentOffset(topic, "")
+	if err != nil {
+		log.Errorf("failed to ReadInitCurrentOffset for %s: %s", topic, err)
+		return
+	}
+
+Loop:
+	for {
+		select {
+		case <-initCtx.Ctx.Done():
+			log.Infof("LedgerInit ... ctx.Done()")
+			break Loop
+		default:
+			outputIds, nextOffset, err := outputIdsFetcher(initCtx, offset)
+			if err != nil {
+				log.Errorf("failed to fetch output ids for %s: %s", topic, err)
+				continue
+			}
+
+			outputIdsInterface := make([]interface{}, len(outputIds))
+			for i, v := range outputIds {
+				outputIdsInterface[i] = v
+			}
+			itemCt := len(outputIdsInterface)
+			initCtx.Logger.Infof("Draining %d outputIds", itemCt)
+			drainer.Drain(outputIdsInterface)
+
+			// Collect outputs from channel
+			var outputs []*OutputWithId
+			itemProcessedCt := 0
+		CollectLoop:
+			for {
+				select {
+				case ow := <-outputChan:
+					itemProcessedCt++
+					if ow != nil {
+						outputs = append(outputs, ow)
+					}
+					if itemProcessedCt == itemCt {
+						break CollectLoop
+					}
+					// 5 sec timeout
+				case <-time.After(5 * time.Second):
+					break CollectLoop
+				}
+			}
+
+			initCtx.Logger.Infof("Collected %d outputs", len(outputs))
+
+			// Sort outputs by OutputId
+			sort.Slice(outputs, func(i, j int) bool {
+				return bytes.Compare(outputs[i].OutputId, outputs[j].OutputId) < 0
+			})
+
+			// Process each output in sorted order
+			// log process nth outputs, with mth processors, task name
+			initCtx.Logger.Infof("Processing %d outputs with %d processors for %s", len(outputs), len(outputProcessors), topic)
+			for _, ow := range outputs {
+				for _, processor := range outputProcessors {
+					if err := processor(ow.OutputId, ow.Output, ow.MilestoneIndex, ow.MilestoneTimestamp, initCtx); err != nil {
+						initCtx.Logger.Warnf("LedgerInit ... OutputProcessor failed: %s", err)
+					}
+				}
+				// Put the used OutputWithId back to the pool
+				outputWithIdPool.Put(ow)
+			}
+
+			if nextOffset != nil {
+				if err := deps.IMManager.StoreInitCurrentOffset(nextOffset, topic, ""); err != nil {
+					log.Errorf("failed to StoreInitCurrentOffset for %s: %s", topic, err)
+					continue
+				}
+			}
+
+			if nextOffset == nil {
+				break Loop
+			}
+			offset = nextOffset
+		}
+	}
+
+	if err := deps.IMManager.MarkInitFinished(topic, ""); err != nil {
+		log.Errorf("failed to MarkInitFinished for %s: %s", topic, err)
+		return
+	}
+	drainer.Close()
+	log.Infof("LedgerInit ... %s finished", topic)
+}
+
+// All nft output fetcher
+var AllNftOutputIdsFetcher = func(initCtx *InitContext, offset *string) ([]string, *string, error) {
+	ids, nextOffset, err := deps.IMManager.QueryNFTIds(initCtx.Ctx, initCtx.IndexerClient, offset, 1000, initCtx.Logger)
+	if err != nil {
+		return nil, nil, err
+	}
+	return ids, nextOffset, nil
+}
+
+// All basic output fetcher
+var AllBasicOutputIdsFetcher = func(initCtx *InitContext, offset *string) ([]string, *string, error) {
+	ids, nextOffset, err := deps.IMManager.QueryBasicOutputIds(initCtx.Ctx, initCtx.IndexerClient, offset, initCtx.Logger, 1000)
+	if err != nil {
+		return nil, nil, err
+	}
+	return ids, nextOffset, nil
+}
+
+// basic output with tag fetcher
+var BasicOutputIdsByTagFetcher = func(tag string) OutputIdsFetcher {
+	return func(initCtx *InitContext, offset *string) ([]string, *string, error) {
+		ids, nextOffset, err := deps.IMManager.QueryOutputIdsByTag(initCtx.Ctx, initCtx.IndexerClient, tag, offset, initCtx.Logger)
+		if err != nil {
+			return nil, nil, err
+		}
+		return ids, nextOffset, nil
+	}
+}
+
+// nft output with tag fetcher
+var NftOutputIdsByTagFetcher = func(tag string) OutputIdsFetcher {
+	return func(initCtx *InitContext, offset *string) ([]string, *string, error) {
+		ids, nextOffset, err := deps.IMManager.QueryNFTOutputIdsByCollectionId(initCtx.Ctx, initCtx.IndexerClient, tag, offset, initCtx.Logger)
+		if err != nil {
+			return nil, nil, err
+		}
+		return ids, nextOffset, nil
+	}
+}
 
 func HandleGenericInit(initCtx *InitContext,
 	topic string,
@@ -92,6 +278,7 @@ Loop:
 			}
 			// drain
 			drainer.Drain(outputIdsInterface)
+			drainer.Wait() // Wait for all items to be processed
 			// update offset
 			if nextOffset != nil {
 				err = deps.IMManager.StoreInitCurrentOffset(nextOffset, topic, "")
@@ -114,50 +301,7 @@ Loop:
 		log.Errorf("failed to MarkInitFinished for %s: %s", topic, err)
 		return
 	}
+	drainer.Close()
 	// log topic finished
 	log.Infof("LedgerInit ... %s finished", topic)
-}
-
-// All nft output fetcher
-// deps.IMManager.QueryNFTIds(ctx, indexerClient, initOffset, 1000, logger)
-var AllNftOutputIdsFetcher = func(initCtx *InitContext, offset *string) ([]string, *string, error) {
-	ids, nextOffset, err := deps.IMManager.QueryNFTIds(initCtx.Ctx, initCtx.IndexerClient, offset, 1000, initCtx.Logger)
-	if err != nil {
-		return nil, nil, err
-	}
-	return ids, nextOffset, nil
-}
-
-// All basic output fetcher
-// outputHexIds, nextOffset, err := deps.IMManager.QueryBasicOutputIds(ctx, indexerClient, initOffset, CoreComponent.Logger(), drainer.FetchSize)
-var AllBasicOutputIdsFetcher = func(initCtx *InitContext, offset *string) ([]string, *string, error) {
-	ids, nextOffset, err := deps.IMManager.QueryBasicOutputIds(initCtx.Ctx, initCtx.IndexerClient, offset, initCtx.Logger, 1000)
-	if err != nil {
-		return nil, nil, err
-	}
-	return ids, nextOffset, nil
-}
-
-// basic output with tag fetcher
-// outputHexIds, nextOffset, err := deps.IMManager.QueryOutputIdsByTag(ctx, indexerClient, tag, initOffset, CoreComponent.Logger())
-var BasicOutputIdsByTagFetcher = func(tag string) OutputIdsFetcher {
-	return func(initCtx *InitContext, offset *string) ([]string, *string, error) {
-		ids, nextOffset, err := deps.IMManager.QueryOutputIdsByTag(initCtx.Ctx, initCtx.IndexerClient, tag, offset, initCtx.Logger)
-		if err != nil {
-			return nil, nil, err
-		}
-		return ids, nextOffset, nil
-	}
-}
-
-// nft output with tag fetcher
-// outputHexIds, nextOffset, err := deps.IMManager.QueryNFTOutputIdsByTag(ctx, indexerClient, tag, initOffset, CoreComponent.Logger())
-var NftOutputIdsByTagFetcher = func(tag string) OutputIdsFetcher {
-	return func(initCtx *InitContext, offset *string) ([]string, *string, error) {
-		ids, nextOffset, err := deps.IMManager.QueryNFTOutputIdsByCollectionId(initCtx.Ctx, initCtx.IndexerClient, tag, offset, initCtx.Logger)
-		if err != nil {
-			return nil, nil, err
-		}
-		return ids, nextOffset, nil
-	}
 }

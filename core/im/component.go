@@ -320,6 +320,7 @@ func run() error {
 		// log start processing group config
 		CoreComponent.LogInfo("Start processing group config ...")
 		ProcessGroupConfig(initCtx)
+
 		// process pairx
 		ProcessPairx(initCtx)
 

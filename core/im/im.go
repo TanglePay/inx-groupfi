@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/TanglePay/inx-groupfi/pkg/im"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -105,6 +106,16 @@ func parseGroupIdQueryParam(c echo.Context) ([]byte, error) {
 		return nil, errors.Errorf("invalid groupId length: %d", len(groupId))
 	}
 	return groupId, nil
+}
+
+// parse outputIds from body
+func parseOutputIdsFromBody(c echo.Context) ([]string, error) {
+	var outputIds []string
+	err := c.Bind(&outputIds)
+	if err != nil {
+		return nil, err
+	}
+	return outputIds, nil
 }
 
 // parse given attrName from query param
@@ -1475,4 +1486,73 @@ func getGroupStateSyncUnderAddress(c echo.Context) (*im.GroupStateSyncResponse, 
 	}
 	return resp, nil
 
+}
+
+// batchCheckOutputId
+func batchCheckOutputId(c echo.Context) ([]*im.OutputIdCheckResponse, error) {
+	// get outputIds from body
+	outputIds, err := parseOutputIdsFromBody(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("batch check outputId from outputIds:%d", len(outputIds))
+	resp := make([]*im.OutputIdCheckResponse, len(outputIds))
+	for i, outputId := range outputIds {
+		outputIdBytes, err := iotago.DecodeHex(outputId)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("batch check outputId from outputIds:%d failed:%s", len(outputIds), err)
+			continue
+		}
+		outputIdFixed := [im.OutputIdLen]byte{}
+		copy(outputIdFixed[:], outputIdBytes)
+
+		checked, err := im.EvmQualifyEffectingOutputIdExists(outputIdFixed, deps.IMManager, CoreComponent.Logger())
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("batch check outputId from outputIds:%d failed:%s", len(outputIds), err)
+			continue
+		}
+		resp[i] = &im.OutputIdCheckResponse{
+			OutputId:    outputId,
+			IsEffecting: checked,
+		}
+	}
+	return resp, nil
+}
+
+// batchOutputIdToOutput
+func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error) {
+	// get outputIds from body
+	outputIds, err := parseOutputIdsFromBody(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("batch outputId to output from outputIds:%d", len(outputIds))
+	chanForResp := make(chan interface{})
+	var resp []*im.OutputIdOutputResponse
+	// map outputIds to OutputIdWithRespChan[]
+	var items []interface{}
+	for _, outputId := range outputIds {
+		req := &im.OutputIdWithRespChan{
+			OutputIdHex: outputId,
+			RespChan:    chanForResp,
+		}
+		items = append(items, req)
+	}
+	im.OutputIdDrainer.Drain(items)
+	// get item from chanForResp, also with 5 sec timeout
+Loop:
+	for i := 0; i < len(outputIds); i++ {
+		select {
+		case item := <-chanForResp:
+			resp = append(resp, item.(*im.OutputIdOutputResponse))
+		case <-time.After(5 * time.Second):
+			// log error then break
+			CoreComponent.LogWarnf("batch outputId to output from outputIds:%d timeout", len(outputIds))
+			break Loop
+		}
+	}
+
+	return resp, nil
 }

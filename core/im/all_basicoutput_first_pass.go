@@ -62,7 +62,9 @@ func ProcessAllBasicOutputFirstPass(initCtx *InitContext) {
 		// handle evm qualify
 		func(outputId []byte, output iotago.Output, milestoneIndex uint32, milestoneTimestamp uint32, initCtx *InitContext) error {
 			// filter evm qualify output
-			evmQualify, err := deps.IMManager.FilterEvmQualifyFromOutput(output, initCtx.Logger)
+			outputIdFixed := [im.OutputIdLen]byte{}
+			copy(outputIdFixed[:], outputId)
+			evmQualify, err := deps.IMManager.FilterEvmQualifyFromOutput(outputIdFixed, output, initCtx.Logger)
 			if err != nil {
 				return err
 			}

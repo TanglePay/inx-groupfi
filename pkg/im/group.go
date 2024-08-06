@@ -9,6 +9,7 @@ import (
 
 var (
 	PublicKeyDrainer *ItemDrainer
+	OutputIdDrainer  *ItemDrainer
 )
 
 // get key for group publickey count, prefix + groupId
@@ -114,9 +115,18 @@ type NFTResponse struct {
 	NFTId        string `json:"nftId"`
 	Timestamp    uint32 `json:"timestamp"`
 }
+type OutputIdOutputResponse struct {
+	OutputIdHex string        `json:"outputIdHex"`
+	Output      iotago.Output `json:"output"`
+}
 
 // NFTWithRespChan
 type NFTWithRespChan struct {
 	NFT      *NFT
 	RespChan chan interface{}
+}
+
+type OutputIdWithRespChan struct {
+	OutputIdHex string
+	RespChan    chan interface{}
 }
