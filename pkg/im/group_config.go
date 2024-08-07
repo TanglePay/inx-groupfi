@@ -589,6 +589,7 @@ func UnmarshalGroupConfigMeta(value []byte) (*MessageGroupMetaJSON, error) {
 		TokenThresValue: tokenThresValue,
 		DappGroupId:     dappGroupId,
 		Symbol:          symbol,
+		ExtraChains:     extraChains,
 	}, nil
 }
 
