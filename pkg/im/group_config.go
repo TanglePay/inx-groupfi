@@ -117,19 +117,25 @@ func (im *Manager) ParseGroupConfigNFT(nftOutput *iotago.NFTOutput) (string, err
 	return ipfsLink, nil
 }
 
-type MessageGroupMetaJSON struct {
+// add extraChains?: {chainId:number,contractAddress:string}[]
+type ExtraChain struct {
 	ChainId         uint32 `json:"chainId"`
-	SchemaVersion   uint16 `json:"schemaVersion"`
-	MessageType     uint8  `json:"messageType"`
-	AuthScheme      uint8  `json:"authScheme"`
-	QualifyType     string `json:"qualifyType"`
 	ContractAddress string `json:"contractAddress"`
-	GroupName       string `json:"groupName"`
-	TokenThres      string `json:"tokenThres"`
-	TokenDecimals   string `json:"tokenDecimals"`
-	TokenThresValue string `json:"tokenThresValue"`
-	Symbol          string `json:"symbol"`
-	DappGroupId     string `json:"dappGroupId"`
+}
+type MessageGroupMetaJSON struct {
+	ChainId         uint32        `json:"chainId"`
+	SchemaVersion   uint16        `json:"schemaVersion"`
+	MessageType     uint8         `json:"messageType"`
+	AuthScheme      uint8         `json:"authScheme"`
+	QualifyType     string        `json:"qualifyType"`
+	ContractAddress string        `json:"contractAddress"`
+	GroupName       string        `json:"groupName"`
+	TokenThres      string        `json:"tokenThres"`
+	TokenDecimals   string        `json:"tokenDecimals"`
+	TokenThresValue string        `json:"tokenThresValue"`
+	Symbol          string        `json:"symbol"`
+	ExtraChains     []*ExtraChain `json:"extraChains"`
+	DappGroupId     string        `json:"dappGroupId"`
 }
 
 // struct for MessageGroupMetaJSON plus isPublic
@@ -379,6 +385,38 @@ func ParseGroupIdFromGroupConfigMetaKey(key kvstore.Key) ([GroupIdLen]byte, erro
 	return groupId, nil
 }
 
+// marshal ExtraChain to bytes
+func MarshalExtraChain(extraChain *ExtraChain) ([]byte, error) {
+	idx := 0
+	var payload []byte
+	// chainId
+	AppendBytesWithUint16Len(&payload, &idx, Uint32ToBytes(extraChain.ChainId), false)
+	// contractAddress
+	AppendBytesWithUint16Len(&payload, &idx, []byte(extraChain.ContractAddress), true)
+	return payload, nil
+}
+
+// unmarshal ExtraChain from bytes
+func UnmarshalExtraChain(value []byte) (*ExtraChain, error) {
+	idx := 0
+	// chainId
+	chainIdBytes, err := ReadBytesWithUint16Len(value, &idx, 4)
+	if err != nil {
+		return nil, err
+	}
+	chainId := BytesToUint32(chainIdBytes)
+	// contractAddress
+	contractAddressBytes, err := ReadBytesWithUint16Len(value, &idx)
+	if err != nil {
+		return nil, err
+	}
+	contractAddress := string(contractAddressBytes)
+	return &ExtraChain{
+		ChainId:         chainId,
+		ContractAddress: contractAddress,
+	}, nil
+}
+
 // marshal groupConfigMeta to bytes
 func MarshalGroupConfigMeta(groupConfig *MessageGroupMetaJSON) ([]byte, error) {
 	idx := 0
@@ -407,6 +445,15 @@ func MarshalGroupConfigMeta(groupConfig *MessageGroupMetaJSON) ([]byte, error) {
 	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.DappGroupId), true)
 	// symbol
 	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.Symbol), true)
+	// extraChains, 1 byte for array length
+	AppendBytesWithUint16Len(&payload, &idx, Uint8ToBytes(uint8(len(groupConfig.ExtraChains))), false)
+	for _, extraChain := range groupConfig.ExtraChains {
+		extraChainBytes, err := MarshalExtraChain(extraChain)
+		if err != nil {
+			return nil, err
+		}
+		AppendBytesWithUint16Len(&payload, &idx, extraChainBytes, true)
+	}
 	return payload, nil
 }
 
@@ -511,6 +558,24 @@ func UnmarshalGroupConfigMeta(value []byte) (*MessageGroupMetaJSON, error) {
 	if err == nil {
 		symbol = string(symbolBytes)
 	}
+	// extraChains
+	extraChainsLenBytes, err := ReadBytesWithUint16Len(value, &idx, 1)
+	if err != nil {
+		return nil, err
+	}
+	extraChainsLen := BytesToUint8(extraChainsLenBytes)
+	var extraChains []*ExtraChain
+	for i := uint8(0); i < extraChainsLen; i++ {
+		extraChainBytes, err := ReadBytesWithUint16Len(value, &idx)
+		if err != nil {
+			return nil, err
+		}
+		extraChain, err := UnmarshalExtraChain(extraChainBytes)
+		if err != nil {
+			return nil, err
+		}
+		extraChains = append(extraChains, extraChain)
+	}
 	return &MessageGroupMetaJSON{
 		ChainId:         chainId,
 		SchemaVersion:   schemaVersion,
@@ -524,6 +589,7 @@ func UnmarshalGroupConfigMeta(value []byte) (*MessageGroupMetaJSON, error) {
 		TokenThresValue: tokenThresValue,
 		DappGroupId:     dappGroupId,
 		Symbol:          symbol,
+		ExtraChains:     extraChains,
 	}, nil
 }
 
