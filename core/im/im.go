@@ -312,6 +312,46 @@ func getSharedFromGroupId(c echo.Context) (*SharedResponse, error) {
 	return resp, nil
 }
 
+type SharedResponseV2 struct {
+	Code     int    `json:"code"`
+	Message  string `json:"message,omitempty"`
+	OutputId string `json:"outputId,omitempty"`
+}
+
+func getSharedFromGroupIdV2(c echo.Context) (*SharedResponseV2, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	groupIdFixed := [im.GroupIdLen]byte{}
+	copy(groupIdFixed[:], groupId)
+	isPublic := deps.IMManager.GetIsGroupPublic(groupIdFixed)
+	if isPublic {
+		resp := &SharedResponseV2{
+			Code:    901,
+			Message: "Public group has no shared",
+		}
+		return resp, nil
+	}
+	shared, err := deps.IMManager.ReadSharedFromGroupId(groupIdFixed)
+	if err != nil {
+		return nil, err
+	}
+	if shared == nil {
+		resp := &SharedResponseV2{
+			Code:     0,
+			OutputId: "",
+		}
+		return resp, nil
+	}
+	CoreComponent.LogInfof("get shared from groupId:%s, found shared with outputid:%s", groupId, iotago.EncodeHex(shared.OutputId[:]))
+	resp := &SharedResponseV2{
+		Code:     0,
+		OutputId: iotago.EncodeHex(shared.OutputId[:]),
+	}
+	return resp, nil
+}
+
 // delete shared from groupId
 func deleteSharedFromGroupId(c echo.Context) error {
 	groupId, err := parseGroupIdQueryParam(c)
