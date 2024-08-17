@@ -118,6 +118,8 @@ const (
 
 	// shared
 	RouteIMShared = "/shared"
+	// shared v2
+	RouteIMSharedV2 = "/shared/v2"
 	// address group ids
 	RouteIMAddressGroupIds = "/addressgroupids"
 	// address group ids v2
@@ -343,6 +345,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
+	// shared v2
+	e.GET(RouteIMSharedV2, func(c echo.Context) error {
+		resp, err := getSharedFromGroupIdV2(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 	// delete shared
 	e.GET("/deleteshared", func(c echo.Context) error {
 		err := deleteSharedFromGroupId(c)

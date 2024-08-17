@@ -708,6 +708,22 @@ func StoreChainIdAndContractAddressHashToGroupId(groupId [GroupIdLen]byte, group
 	if err != nil {
 		return err
 	}
+	// extra chains
+	if groupConfig.ExtraChains != nil {
+		for _, extraChain := range groupConfig.ExtraChains {
+			// key = KeyForChainIdAndContractAddressHashToGroupId
+			key := KeyForChainIdAndContractAddressHashToGroupId(extraChain.ChainId, extraChain.ContractAddress, groupId)
+			// value is empty
+			value := []byte{}
+			// store
+			err := im.imStore.Set(key, value)
+			if err != nil {
+				// log error then continue
+				Logger.Infof("StoreChainIdAndContractAddressHashToGroupId ... extra chains ... imStore.Set failed:%s", err)
+				continue
+			}
+		}
+	}
 	return nil
 }
 
