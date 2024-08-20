@@ -1187,12 +1187,32 @@ func KeyForPublicGroupId(groupId [GroupIdLen]byte) []byte {
 func StorePublicGroupId(groupId [GroupIdLen]byte, im *Manager) error {
 	// key = prefix + groupId
 	key := KeyForPublicGroupId(groupId)
+	// is need push
+	var isNeedPush bool
+	// check if value is exist
+	isExist, err := im.imStore.Has(key)
+	if err != nil {
+		// log error
+		Logger.Infof("StorePublicGroupId ... imStore.Has failed:%s", err)
+		return err
+	}
+	// if exist, means groupId is already public, hence no need to push
+	if isExist {
+		isNeedPush = false
+	} else {
+		isNeedPush = true
+	}
+
 	// value is empty
 	value := []byte{}
 	// store
-	err := im.imStore.Set(key, value)
+	err = im.imStore.Set(key, value)
 	if err != nil {
 		return err
+	}
+	// push
+	if isNeedPush {
+		return GenAndPushGroupIsPublicChangedEvent(groupId, true, im, Logger)
 	}
 	return nil
 }
@@ -1213,10 +1233,29 @@ func CheckIfGroupIdIsPublic(groupId [GroupIdLen]byte, im *Manager) bool {
 func DeletePublicGroupId(groupId [GroupIdLen]byte, im *Manager) error {
 	// key = prefix + groupId
 	key := KeyForPublicGroupId(groupId)
+	// is need push
+	var isNeedPush bool
+	// check if value is exist
+	isExist, err := im.imStore.Has(key)
+	if err != nil {
+		// log error
+		Logger.Infof("DeletePublicGroupId ... imStore.Has failed:%s", err)
+		return err
+	}
+	// if not exist, means groupId is not public, hence no need to push
+	if !isExist {
+		isNeedPush = false
+	} else {
+		isNeedPush = true
+	}
 	// delete
-	err := im.imStore.Delete(key)
+	err = im.imStore.Delete(key)
 	if err != nil {
 		return err
+	}
+	// push
+	if isNeedPush {
+		return GenAndPushGroupIsPublicChangedEvent(groupId, false, im, Logger)
 	}
 	return nil
 }
