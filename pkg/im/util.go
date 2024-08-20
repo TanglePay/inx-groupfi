@@ -349,6 +349,11 @@ func CalculateDiff[T any](created, existing []*T, getKey func(*T) string) (toCre
 
 	return toCreate, toDelete
 }
+func StartOfHour(epochTimestamp uint32) uint32 {
+	t := time.Unix(int64(epochTimestamp), 0).UTC()
+	startOfHour := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, time.UTC)
+	return uint32(startOfHour.Unix())
+}
 
 // push data
 func PushData[T any](data *T, getTopic func(*T) string,
