@@ -63,7 +63,8 @@ func incrementCountForKey(store kvstore.KVStore, key kvstore.Key) error {
 
 	// Increment the count
 	count++
-
+	// log groupId, count
+	Logger.Infof("incrementCountForKey groupId %s, count %d", iotago.EncodeHex(key[1:(1+GroupIdLen)]), count)
 	// Convert back to bytes and store
 	countBytes := Uint32ToBytes(count)
 	return store.Set(key, countBytes)
