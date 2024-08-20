@@ -949,4 +949,22 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
+
+	// New endpoint for getting a list of group message counts after a certain anchor (for synchronization)
+	e.GET("/groupmessagecountsync", func(c echo.Context) error {
+		resp, err := getGroupMessagesWithCount(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// New endpoint for getting message count for a group with an optional time range
+	e.GET("/groupmessagecountwithtimerange", func(c echo.Context) error {
+		resp, err := getMessageCountWithOptionalRange(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 }

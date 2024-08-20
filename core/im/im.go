@@ -2,6 +2,7 @@ package im
 
 import (
 	"math"
+	"net/http"
 	"sort"
 	"strconv"
 	"strings"
@@ -1595,4 +1596,112 @@ Loop:
 	}
 
 	return resp, nil
+}
+
+// getGroupMessagesWithCount handles the request to get a list of {groupId, messageCount, timestampOfHour} after an optional start timestamp.
+func getGroupMessagesWithCount(c echo.Context) ([]GroupMessageCountWithTimestampResponse, error) {
+	// Parse optional start timestampOfHour
+	startTimestampOfHour, err := parseOptionalTimestampOfHourParam(c, "startTimestampOfHour")
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusBadRequest, "Invalid startTimestampOfHour")
+	}
+
+	// If startTimestampOfHour is not provided, use the earliest possible timestamp
+	if startTimestampOfHour == 0 {
+		startTimestampOfHour = 0
+	}
+
+	// Get the list of messages with their respective groupIds, timestamps, and message counts using im.GetGroupMessagesAfterTimestamp
+	groupMessages, err := im.GetGroupMessagesAfterTimestamp(startTimestampOfHour, deps.IMManager)
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, "Failed to get group messages")
+	}
+
+	// Prepare the response
+	response := make([]GroupMessageCountWithTimestampResponse, len(groupMessages))
+	for i, gm := range groupMessages {
+		response[i] = GroupMessageCountWithTimestampResponse{
+			GroupId:         iotago.EncodeHex(gm.GroupId[:]),
+			MessageCount:    gm.MessageCount,
+			TimestampOfHour: gm.TimestampOfHour,
+		}
+	}
+
+	return response, nil
+}
+
+// parseOptionalTimestampOfHourParam parses an optional timestampOfHour from query parameters.
+func parseOptionalTimestampOfHourParam(c echo.Context, paramName string) (uint32, error) {
+	timestampParams := c.QueryParams()[paramName]
+	if len(timestampParams) == 0 {
+		return 0, nil
+	}
+	timestamp, err := strconv.ParseUint(timestampParams[0], 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(timestamp), nil
+}
+
+// GroupMessageCountWithTimestampResponse represents the response structure for the group message count with timestamp request.
+type GroupMessageCountWithTimestampResponse struct {
+	GroupId         string `json:"groupId"`
+	MessageCount    uint32 `json:"messageCount"`
+	TimestampOfHour uint32 `json:"timestampOfHour"`
+}
+
+// getMessageCountWithOptionalRange handles the request to get the message count for a specific groupId within an optional time range.
+func getMessageCountWithOptionalRange(c echo.Context) (*GroupMessageCountResponse, error) {
+	// Parse groupId from query params
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert groupId to fixed-length array
+	groupIdFixed := [im.GroupIdLen]byte{}
+	copy(groupIdFixed[:], groupId)
+
+	// Parse optional start and end timestamps
+	startTimestamp, err := parseOptionalTimestampParam(c, "startTimestamp")
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusBadRequest, "Invalid startTimestamp")
+	}
+
+	endTimestamp, err := parseOptionalTimestampParam(c, "endTimestamp")
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusBadRequest, "Invalid endTimestamp")
+	}
+
+	// Get the message count for the groupId within the specified range using GetMessageCountForGroupInRange
+	totalCount, err := im.GetMessageCountForGroupInRange(groupIdFixed, startTimestamp, endTimestamp, deps.IMManager)
+	if err != nil {
+		return nil, echo.NewHTTPError(http.StatusInternalServerError, "Failed to get message count")
+	}
+
+	// Prepare and return the response
+	resp := &GroupMessageCountResponse{
+		GroupId:      iotago.EncodeHex(groupId),
+		MessageCount: totalCount,
+	}
+	return resp, nil
+}
+
+// GroupMessageCountResponse represents the response structure for the group message count request.
+type GroupMessageCountResponse struct {
+	GroupId      string `json:"groupId"`
+	MessageCount uint32 `json:"messageCount"`
+}
+
+// parseOptionalTimestampParam parses an optional timestamp from query parameters.
+func parseOptionalTimestampParam(c echo.Context, paramName string) (uint32, error) {
+	timestampParams := c.QueryParams()[paramName]
+	if len(timestampParams) == 0 {
+		return 0, nil
+	}
+	timestamp, err := strconv.ParseUint(timestampParams[0], 10, 32)
+	if err != nil {
+		return 0, err
+	}
+	return uint32(timestamp), nil
 }
