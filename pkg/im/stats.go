@@ -27,6 +27,23 @@ func KeyForTimeGroupMessageCount(timestampForHour uint32, groupId [GroupIdLen]by
 	return key
 }
 
+// prefix key for group message count, key = prefix + groupId
+func PrefixForGroupMessageCount(groupId [GroupIdLen]byte) []byte {
+	key := make([]byte, 1+GroupIdLen)
+	key[0] = ImStoreKeyPrefixGroupMessageCount
+	copy(key[1:], groupId[:])
+	return key
+}
+
+// prefix key for time group message count, key = prefix + timestampForHour
+func PrefixForTimeGroupMessageCount(timestampForHour uint32) []byte {
+	key := make([]byte, 1+4)
+	key[0] = ImStoreKeyPrefixTimeGroupMessageCount
+	timeBytes := Uint32ToBytes(timestampForHour)
+	copy(key[1:], timeBytes)
+	return key
+}
+
 // increment message count by groupId, given groupId, using CurrentMilestoneTimestamp and func StartOfHour(epochTimestamp uint32) uint32
 // get update then store to kvstore
 func IncrementGroupMessageCount(groupId [GroupIdLen]byte, im *Manager) error {
@@ -81,11 +98,19 @@ type GroupMessageInfo struct {
 func GetGroupMessagesAfterTimestamp(timestampForHour uint32, im *Manager) ([]GroupMessageInfo, error) {
 	var result []GroupMessageInfo
 
-	// Start key (inclusive)
+	// Prefix key for iteration
+	prefixKey := PrefixForTimeGroupMessageCount(timestampForHour)
+
+	// Start key (inclusive) for iteration
 	startKey := KeyForTimeGroupMessageCount(timestampForHour, [GroupIdLen]byte{})
 
-	// Iterate over the keys starting from the given timestamp
-	err := im.imStore.Iterate(startKey, func(key kvstore.Key, value kvstore.Value) bool {
+	// Iterate over the keys starting from the prefixKey
+	err := im.imStore.Iterate(prefixKey, func(key kvstore.Key, value kvstore.Value) bool {
+		// Stop iteration if the key is less than the start key
+		if bytes.Compare(key, startKey) < 0 {
+			return true // Skip this key and continue iteration
+		}
+
 		// Extract the timestamp and groupId from the key
 		extractedTimestamp := BytesToUint32(key[1:(1 + 4)])
 		var extractedGroupId [GroupIdLen]byte
@@ -125,17 +150,17 @@ func GetMessageCountForGroupInRange(groupId [GroupIdLen]byte, startTimestamp, en
 		endTimestamp = uint32(CurrentMilestoneTimestamp)
 	}
 
+	// Prefix key for iteration
+	prefixKey := PrefixForGroupMessageCount(groupId)
+
 	// Start key (inclusive) for iteration
 	startKey := KeyForGroupMessageCount(groupId, startTimestamp)
 
-	// End key (inclusive) for iteration, add 1 to make it exclusive
-	endKey := KeyForGroupMessageCount(groupId, endTimestamp+1)
-
-	// Iterate over the keys within the range
-	err := im.imStore.Iterate(startKey, func(key kvstore.Key, value kvstore.Value) bool {
-		// Stop iteration if the key exceeds the end key
-		if bytes.Compare(key, endKey) >= 0 {
-			return false
+	// Iterate over the keys starting from the prefixKey
+	err := im.imStore.Iterate(prefixKey, func(key kvstore.Key, value kvstore.Value) bool {
+		// Stop iteration if the key is less than the start key
+		if bytes.Compare(key, startKey) < 0 {
+			return true // Continue iteration without adding to sum
 		}
 
 		// Add the count to the total
@@ -143,6 +168,13 @@ func GetMessageCountForGroupInRange(groupId [GroupIdLen]byte, startTimestamp, en
 			count := BytesToUint32(value)
 			totalCount += count
 		}
+
+		// Stop iteration if the key exceeds the end key
+		endKey := KeyForGroupMessageCount(groupId, endTimestamp+1)
+		if bytes.Compare(key, endKey) >= 0 {
+			return false
+		}
+
 		return true // Continue iteration
 	})
 
