@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // key for group message count, key = prefix + groupId + timestampForHour
@@ -30,6 +31,8 @@ func KeyForTimeGroupMessageCount(timestampForHour uint32, groupId [GroupIdLen]by
 // get update then store to kvstore
 func IncrementGroupMessageCount(groupId [GroupIdLen]byte, im *Manager) error {
 	timestampForHour := StartOfHour(CurrentMilestoneTimestamp)
+	// log method, groupId, timestampForHour
+	Logger.Infof("IncrementGroupMessageCount groupId %s, timestampForHour %d", iotago.EncodeHex(groupId[:]), timestampForHour)
 	groupKey := KeyForGroupMessageCount(groupId, timestampForHour)
 	timeGroupKey := KeyForTimeGroupMessageCount(timestampForHour, groupId)
 
