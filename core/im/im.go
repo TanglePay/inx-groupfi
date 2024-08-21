@@ -1610,7 +1610,7 @@ func getGroupMessagesWithCount(c echo.Context) ([]GroupMessageCountWithTimestamp
 	if startTimestampOfHour == 0 {
 		startTimestampOfHour = 0
 	}
-
+	startTimestampOfHour = im.StartOfHour(startTimestampOfHour)
 	// Get the list of messages with their respective groupIds, timestamps, and message counts using im.GetGroupMessagesAfterTimestamp
 	groupMessages, err := im.GetGroupMessagesAfterTimestamp(startTimestampOfHour, deps.IMManager)
 	if err != nil {

@@ -154,8 +154,10 @@ func GetMessageCountForGroupInRange(groupId [GroupIdLen]byte, startTimestamp, en
 	prefixKey := PrefixForGroupMessageCount(groupId)
 
 	// Start key (inclusive) for iteration
-	startKey := KeyForGroupMessageCount(groupId, startTimestamp)
+	startKey := KeyForGroupMessageCount(groupId, StartOfHour(startTimestamp))
 
+	// Stop iteration if the key exceeds the end key
+	endKey := KeyForGroupMessageCount(groupId, StartOfHour(endTimestamp)+3600)
 	// Iterate over the keys starting from the prefixKey
 	err := im.imStore.Iterate(prefixKey, func(key kvstore.Key, value kvstore.Value) bool {
 		// Stop iteration if the key is less than the start key
@@ -169,8 +171,6 @@ func GetMessageCountForGroupInRange(groupId [GroupIdLen]byte, startTimestamp, en
 			totalCount += count
 		}
 
-		// Stop iteration if the key exceeds the end key
-		endKey := KeyForGroupMessageCount(groupId, endTimestamp+1)
 		if bytes.Compare(key, endKey) >= 0 {
 			return false
 		}
