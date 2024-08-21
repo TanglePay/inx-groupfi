@@ -192,6 +192,9 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 							pl := append([]byte{im.ImInboxEventTypeNewMessage}, sender...)
 							pl = append(pl, meta...)
 							deps.IMManager.PushInbox(groupId, pl, CoreComponent.Logger())
+							var groupIdFixed [im.GroupIdLen]byte
+							copy(groupIdFixed[:], groupId)
+							im.IncrementGroupMessageCount(groupIdFixed, deps.IMManager)
 						}()
 						continue
 					}

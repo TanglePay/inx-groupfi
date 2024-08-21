@@ -94,4 +94,9 @@ const (
 	ImEvmQualifyOutputIdPrefix byte = 47
 
 	ImEvmQualifyEffectingOutputIdPrefix byte = 48
+
+	ImStoreKeyPrefixGroupMessageCount byte = 49
+
+	ImStoreKeyPrefixTimeGroupMessageCount byte = 50
+
 )
