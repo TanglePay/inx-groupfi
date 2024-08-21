@@ -98,4 +98,5 @@ const (
 	ImStoreKeyPrefixGroupMessageCount byte = 49
 
 	ImStoreKeyPrefixTimeGroupMessageCount byte = 50
+
 )
