@@ -165,14 +165,13 @@ func GetMessageCountForGroupInRange(groupId [GroupIdLen]byte, startTimestamp, en
 			return true // Continue iteration without adding to sum
 		}
 
+		if bytes.Compare(key, endKey) >= 0 {
+			return false
+		}
 		// Add the count to the total
 		if len(value) > 0 {
 			count := BytesToUint32(value)
 			totalCount += count
-		}
-
-		if bytes.Compare(key, endKey) >= 0 {
-			return false
 		}
 
 		return true // Continue iteration
