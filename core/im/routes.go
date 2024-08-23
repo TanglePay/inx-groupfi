@@ -120,6 +120,10 @@ const (
 	RouteIMShared = "/shared"
 	// shared v2
 	RouteIMSharedV2 = "/shared/v2"
+
+	// batch fetch group is public
+	RouteBatchFetchGroupIsPublic = "/batchfetchgroupispublic"
+
 	// address group ids
 	RouteIMAddressGroupIds = "/addressgroupids"
 	// address group ids v2
@@ -348,6 +352,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// shared v2
 	e.GET(RouteIMSharedV2, func(c echo.Context) error {
 		resp, err := getSharedFromGroupIdV2(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// RouteBatchFetchGroupIsPublic
+	e.POST(RouteBatchFetchGroupIsPublic, func(c echo.Context) error {
+		resp, err := batchFetchGroupIsPublic(c)
 		if err != nil {
 			return err
 		}

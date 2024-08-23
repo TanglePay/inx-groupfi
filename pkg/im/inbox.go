@@ -12,15 +12,16 @@ import (
 // inbox event types
 const (
 	// plain text, new message
-	ImInboxEventTypeNewMessage         byte   = 1
-	ImInboxEventTypeGroupMemberChanged byte   = 2
-	ImInboxEventTypeMarkChanged        byte   = 4
-	ImInboxEventTypeEvmQualifyChanged  byte   = 5
-	ImInboxEventTypePairXChanged       byte   = 6
-	ImInboxKeyPrefixDidChangedEvent    byte   = 7
-	ImInboxEventTypeMuteChanged        byte   = 8
-	ImInboxEventTypeLikeChanged        byte   = 9
-	DefaultEventTtl                    uint32 = 30 // 30 seconds
+	ImInboxEventTypeNewMessage           byte   = 1
+	ImInboxEventTypeGroupMemberChanged   byte   = 2
+	ImInboxEventTypeMarkChanged          byte   = 4
+	ImInboxEventTypeEvmQualifyChanged    byte   = 5
+	ImInboxEventTypePairXChanged         byte   = 6
+	ImInboxKeyPrefixDidChangedEvent      byte   = 7
+	ImInboxEventTypeMuteChanged          byte   = 8
+	ImInboxEventTypeLikeChanged          byte   = 9
+	ImInboxEventTypeGroupIsPublicChanged byte   = 10
+	DefaultEventTtl                      uint32 = 30 // 30 seconds
 )
 
 type EventCommonFields struct {
@@ -240,6 +241,20 @@ func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte,
 			}
 			eventItem = likeChangedEvent
 		}
+
+		// GroupIsPublicChangedEvent
+		if eventType == ImInboxEventTypeGroupIsPublicChanged {
+			// log
+			logger.Infof("ReadInbox GroupIsPublicChangedEvent key %s", iotago.EncodeHex(key))
+			groupIsPublicChangedEvent, err := im.UnserializeGroupIsPublicChangedEvent(value, logger)
+			if err != nil {
+				// log and continue
+				logger.Errorf("UnserializeGroupIsPublicChangedEvent error %v", err)
+				return true
+			}
+			eventItem = groupIsPublicChangedEvent
+		}
+
 		eventItem.SetToken(token)
 		eventItem.SetEventType(eventType)
 		res = append(res, eventItem)
