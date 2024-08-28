@@ -319,6 +319,12 @@ type SharedResponseV2 struct {
 	OutputId string `json:"outputId,omitempty"`
 }
 
+// IsGroupPublicResponse
+type IsGroupPublicResponse struct {
+	GroupId  string `json:"groupId"`
+	IsPublic bool   `json:"isPublic"`
+}
+
 func getSharedFromGroupIdV2(c echo.Context) (*SharedResponseV2, error) {
 	groupId, err := parseGroupIdQueryParam(c)
 	if err != nil {
@@ -349,6 +355,31 @@ func getSharedFromGroupIdV2(c echo.Context) (*SharedResponseV2, error) {
 	resp := &SharedResponseV2{
 		Code:     0,
 		OutputId: iotago.EncodeHex(shared.OutputId[:]),
+	}
+	return resp, nil
+}
+
+// batchFetchGroupIsPublic
+func batchFetchGroupIsPublic(c echo.Context) ([]*IsGroupPublicResponse, error) {
+	var groupIds []string
+	err := c.Bind(&groupIds)
+	if err != nil {
+		return nil, err
+	}
+	// loop groupIds, get isPublic
+	var resp []*IsGroupPublicResponse
+	for _, groupId := range groupIds {
+		groupIdBytes, err := iotago.DecodeHex(groupId)
+		if err != nil {
+			continue
+		}
+		var groupIdFixed [im.GroupIdLen]byte
+		copy(groupIdFixed[:], groupIdBytes)
+		isPublic := deps.IMManager.GetIsGroupPublic(groupIdFixed)
+		resp = append(resp, &IsGroupPublicResponse{
+			GroupId:  groupId,
+			IsPublic: isPublic,
+		})
 	}
 	return resp, nil
 }
