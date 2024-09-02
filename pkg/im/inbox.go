@@ -21,7 +21,7 @@ const (
 	ImInboxEventTypeMuteChanged          byte   = 8
 	ImInboxEventTypeLikeChanged          byte   = 9
 	ImInboxEventTypeGroupIsPublicChanged byte   = 10
-	DefaultEventTtl                      uint32 = 30 // 30 seconds
+	DefaultEventTtl                      uint32 = 15 // 15 seconds
 )
 
 type EventCommonFields struct {

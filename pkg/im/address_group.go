@@ -8,6 +8,7 @@ import (
 const (
 	GroupQualifyTypeNft = iota
 	GroupQualifyTypeToken
+	GroupQualifyTypeCustom
 )
 
 type AddressGroup struct {

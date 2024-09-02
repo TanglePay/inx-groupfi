@@ -152,7 +152,7 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 		} else if groupQualifyType == "token" {
 			qualifyType = GroupQualifyTypeToken
 		} else {
-			return fmt.Errorf("invalid group qualify type %s", groupQualifyType)
+			qualifyType = GroupQualifyTypeCustom
 		}
 		qualification := NewGroupQualification(evmQualify.GroupId, addressStr, hash, "", qualifyType, "")
 		// log store group qualification

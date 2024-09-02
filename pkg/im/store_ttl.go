@@ -17,7 +17,7 @@ func GetTtlStoreKey(val kvstore.Value, ttl uint32) []byte {
 	ttlKey[0] = ImStoreKeyPrefixTtl
 	timeBytes := Uint32ToBytes(CurrentMilestoneTimestamp + ttl)
 	copy(ttlKey[1:], timeBytes)
-	copy(ttlKey[1+4:], Sha256HashBytes(val))
+	copy(ttlKey[(1+4):], Sha256HashBytes(val))
 	return ttlKey
 }
 
