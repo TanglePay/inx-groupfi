@@ -268,7 +268,7 @@ func (im *Manager) HandleUserLikeGroupMemberBasicOutputCreated(output *iotago.Ba
 		return joined
 	}
 	createdUserLikeGroupMembers, address := im.GetUserLikeGroupMembersFromBasicOutput(output)
-	addressSha256Hash := Sha256HashFixed(address)
+	addressSha256Hash := Sha256HashFixedAddress(address)
 	existingUserLikeGroupMembers, err := im.GetAllLikeGroupMembersFromAddress(addressSha256Hash, logger)
 	if err != nil {
 		return

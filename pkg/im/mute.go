@@ -317,7 +317,7 @@ func (im *Manager) HandleUserMuteGroupMemberBasicOutputCreated(output *iotago.Ba
 		return joined
 	}
 	createdUserMuteGroupMembers, address := im.GetUserMuteGroupMembersFromBasicOutput(output)
-	addressSha256Hash := Sha256HashFixed(address)
+	addressSha256Hash := Sha256HashFixedAddress(address)
 	existingUserMuteGroupMembers, err := im.GetAllMuteGroupMembersFromAddress(addressSha256Hash, logger)
 	if err != nil {
 		return

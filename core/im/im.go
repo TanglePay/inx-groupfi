@@ -1000,7 +1000,7 @@ func getAddressVotes(c echo.Context) ([]*VoteResponse, error) {
 		return nil, err
 	}
 	CoreComponent.LogInfof("get address votes from address:%s", address)
-	addressSha256 := im.Sha256HashFixed(address)
+	addressSha256 := im.Sha256HashFixedAddress(address)
 	votes, err := deps.IMManager.GetAllVotesFromAddressSha256Hash(addressSha256, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
@@ -1022,7 +1022,7 @@ func getAddressMutes(c echo.Context) ([]*MuteResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	addressSha256 := im.Sha256HashFixed(address)
+	addressSha256 := im.Sha256HashFixedAddress(address)
 	mutes, err := deps.IMManager.GetAllMuteGroupMembersFromAddress(addressSha256, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
@@ -1045,7 +1045,7 @@ func getAddressLikes(c echo.Context) ([]*LikeResponse, error) {
 		return nil, err
 	}
 	CoreComponent.LogInfof("get address likes from address:%s", address)
-	addressSha256 := im.Sha256HashFixed(address)
+	addressSha256 := im.Sha256HashFixedAddress(address)
 	likes, err := deps.IMManager.GetAllLikeGroupMembersFromAddress(addressSha256, CoreComponent.Logger())
 	if err != nil {
 		return nil, err

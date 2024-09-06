@@ -72,6 +72,11 @@ func Sha256HashBytes(bytes []byte) []byte {
 func Sha256HashAddress(address string) []byte {
 	return Sha256Hash(strings.ToLower(address))
 }
+
+// Sha256HashFixedAddress, to lower case first, reuse actual sha method with fixed
+func Sha256HashFixedAddress(address string) [Sha256HashLen]byte {
+	return Sha256HashFixed(strings.ToLower(address))
+}
 func ConcatByteSlices(slices ...[]byte) []byte {
 	var totalLen int
 	for _, s := range slices {
