@@ -182,7 +182,7 @@ func (im *Manager) DeleteGroupQualification(groupQualification *GroupQualificati
 func (im *Manager) GroupQualificationExists(groupId [GroupIdLen]byte, address string, logger *logger.Logger) (bool, error) {
 	// log group qualification exists
 	//logger.Infof("GroupQualificationExists groupId %s, address %s", iotago.EncodeHex(groupId[:]), address)
-	addressHash := Sha256Hash(address)
+	addressHash := Sha256HashAddress(address)
 	var addressHash32 [Sha256HashLen]byte
 	copy(addressHash32[:], addressHash)
 	prefix := im.GroupQualificationKeyPrefixForExist(groupId, addressHash32)

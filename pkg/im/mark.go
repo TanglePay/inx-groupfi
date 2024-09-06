@@ -169,7 +169,7 @@ func (im *Manager) AddressMarkKeyPrefix(address string) []byte {
 	index := 0
 	key[index] = ImStoreKeyPrefixAddressMark
 	index++
-	copy(key[index:], Sha256Hash(address))
+	copy(key[index:], Sha256HashAddress(address))
 	return key
 }
 

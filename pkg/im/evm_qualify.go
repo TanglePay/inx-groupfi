@@ -145,7 +145,7 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 		}
 
 		hash := [Sha256HashLen]byte{}
-		copy(hash[:], Sha256Hash(addressStr))
+		copy(hash[:], Sha256HashAddress(addressStr))
 		var qualifyType int
 		if groupQualifyType == "nft" {
 			qualifyType = GroupQualifyTypeNft

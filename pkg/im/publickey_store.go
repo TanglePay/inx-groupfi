@@ -15,7 +15,7 @@ var PublicKeyTag = []byte(publicKeyTagRawStr)
 var PublicKeyTagStr = iotago.EncodeHex(PublicKeyTag)
 
 func keyFromAddressPublicKey(address string) []byte {
-	return ConcatByteSlices([]byte{ImStoreKeyPrefixAddressPublicKey}, Sha256Hash(address))
+	return ConcatByteSlices([]byte{ImStoreKeyPrefixAddressPublicKey}, Sha256HashAddress(address))
 }
 func (im *Manager) StoreOnePublickKey(bech32Address string, publicKey []byte) error {
 	key := keyFromAddressPublicKey(bech32Address)

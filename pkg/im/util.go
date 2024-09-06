@@ -12,6 +12,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"strings"
 	"sync"
 	"time"
 
@@ -67,6 +68,10 @@ func Sha256HashBytes(bytes []byte) []byte {
 	return hasher.Sum(nil)
 }
 
+// sha256 hash address, to lower case first, reuse actual sha method
+func Sha256HashAddress(address string) []byte {
+	return Sha256Hash(strings.ToLower(address))
+}
 func ConcatByteSlices(slices ...[]byte) []byte {
 	var totalLen int
 	for _, s := range slices {
