@@ -290,7 +290,7 @@ func (im *Manager) deserializeUserMuteGroupMember(muteAddress string, data []byt
 		var mutedAddrSha256HashBytes [Sha256HashLen]byte
 		copy(mutedAddrSha256HashBytes[:], mutedAddrSha256Hash)
 		var muteAddrSha256HashBytes [Sha256HashLen]byte
-		copy(muteAddrSha256HashBytes[:], Sha256Hash(muteAddress))
+		copy(muteAddrSha256HashBytes[:], Sha256HashAddress(muteAddress))
 		userMuteGroupMember := NewUserMuteGroupMember(groupIdBytes, muteAddrSha256HashBytes, mutedAddrSha256HashBytes)
 		userMuteGroupMembers = append(userMuteGroupMembers, userMuteGroupMember)
 	}

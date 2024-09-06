@@ -241,7 +241,7 @@ func (im *Manager) deserializeUserLikeGroupMember(likeAddress string, data []byt
 		var likedAddrSha256HashBytes [Sha256HashLen]byte
 		copy(likedAddrSha256HashBytes[:], likedAddrSha256Hash)
 		var likerAddrSha256HashBytes [Sha256HashLen]byte
-		copy(likerAddrSha256HashBytes[:], Sha256Hash(likeAddress))
+		copy(likerAddrSha256HashBytes[:], Sha256HashAddress(likeAddress))
 		userLikeGroupMember := NewUserLikeGroupMember(groupIdBytes, likerAddrSha256HashBytes, likedAddrSha256HashBytes)
 		userLikeGroupMembers = append(userLikeGroupMembers, userLikeGroupMember)
 	}

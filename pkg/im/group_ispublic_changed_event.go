@@ -87,7 +87,7 @@ func getInboxOfGroupIsPublicChangedEvent(groupIsPublicChangedEvent *GroupIsPubli
 	// loop group members
 	for _, groupMember := range groupMembers {
 		gaddress := groupMember.Address
-		gaddressSha256Hash := Sha256Hash(gaddress)
+		gaddressSha256Hash := Sha256HashAddress(gaddress)
 		keys = append(keys, gaddressSha256Hash)
 	}
 

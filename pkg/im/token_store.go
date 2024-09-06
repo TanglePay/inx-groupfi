@@ -15,7 +15,7 @@ func (im *Manager) TokenKeyFromToken(token *TokenStat) []byte {
 	AppendBytesWithUint16Len(&key, &index, []byte{ImStoreKeyPrefixToken}, false)
 	AppendBytesWithUint16Len(&key, &index, token.TokenIdHash[:], false)
 	// append Sha256Hash(token.address)
-	AppendBytesWithUint16Len(&key, &index, Sha256Hash(token.Address), false)
+	AppendBytesWithUint16Len(&key, &index, Sha256HashAddress(token.Address), false)
 	// append instanceId
 	AppendBytesWithUint16Len(&key, &index, token.InstanceIdHash[:], false)
 	// append status using AppendBytesWithUint16Len

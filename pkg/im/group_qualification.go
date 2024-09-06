@@ -46,7 +46,7 @@ func (im *Manager) GroupQualificationKey(groupQualification *GroupQualification)
 	index++
 	copy(key[index:], groupQualification.GroupId[:])
 	index += GroupIdLen
-	copy(key[index:], Sha256Hash(groupQualification.Address))
+	copy(key[index:], Sha256HashAddress(groupQualification.Address))
 	index += Sha256HashLen
 	copy(key[index:], groupQualification.NFTId[:])
 	return key

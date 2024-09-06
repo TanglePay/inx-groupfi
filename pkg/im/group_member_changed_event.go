@@ -84,7 +84,7 @@ func GetPayloadOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberCha
 // getInbox func(*T) []byte, getEventType func(*T) byte,
 func getInboxOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChangedEvent) [][]byte {
 	// get addressSha256Hash
-	addressSha256Hash := Sha256Hash(groupMemberChangedEvent.Address)
+	addressSha256Hash := Sha256HashAddress(groupMemberChangedEvent.Address)
 	// get group members
 	groupMembers, err := Im.GetGroupMembers(groupMemberChangedEvent.GroupID)
 	if err != nil {
@@ -97,7 +97,7 @@ func getInboxOfGroupMemberChangedEvent(groupMemberChangedEvent *GroupMemberChang
 	// loop group members
 	for _, groupMember := range groupMembers {
 		gaddress := groupMember.Address
-		gaddressSha256Hash := Sha256Hash(gaddress)
+		gaddressSha256Hash := Sha256HashAddress(gaddress)
 		if !bytes.Equal(addressSha256Hash, gaddressSha256Hash) {
 			keys = append(keys, gaddressSha256Hash)
 		}

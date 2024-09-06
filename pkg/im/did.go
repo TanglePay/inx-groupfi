@@ -42,7 +42,7 @@ func (im *Manager) DidKey(did *Did) []byte {
 	// prefix
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImStoreKeyPrefixDid}, false)
 	// addressHash
-	addresHash := Sha256Hash(did.Bech32Address)
+	addresHash := Sha256HashAddress(did.Bech32Address)
 	AppendBytesWithUint16Len(&bytes, &idx, addresHash, false)
 	// outputIdSha256Hash
 	AppendBytesWithUint16Len(&bytes, &idx, did.OutputIdSha256Hash[:], false)
@@ -107,7 +107,7 @@ func (im *Manager) DeleteDid(did *Did) error {
 
 // get all dids from address
 func (im *Manager) GetDidsFromAddress(bech32Address string) ([]*Did, error) {
-	addressHash := Sha256Hash(bech32Address)
+	addressHash := Sha256HashAddress(bech32Address)
 	prefix := im.DidPrefixFromAddressHash(addressHash)
 	dids := make([]*Did, 0)
 	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {

@@ -474,7 +474,7 @@ func getInboxOfEvmQualifyChangedEvent(e *EvmQualifyChangedEvent) [][]byte {
 	var inboxs [][]byte
 	for _, groupQualification := range groupQualifications {
 		gaddress := groupQualification.Address
-		gaddressSha256Hash := Sha256Hash(gaddress)
+		gaddressSha256Hash := Sha256HashAddress(gaddress)
 
 		inboxs = append(inboxs, gaddressSha256Hash)
 
