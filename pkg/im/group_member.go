@@ -45,7 +45,7 @@ func (im *Manager) GroupMemberKey(groupMember *GroupMember) []byte {
 	index++
 	copy(key[index:], groupMember.GroupId[:])
 	index += GroupIdLen
-	copy(key[index:], Sha256Hash(groupMember.Address))
+	copy(key[index:], Sha256HashAddress(groupMember.Address))
 	return key
 }
 
@@ -55,7 +55,7 @@ func (im *Manager) MemberGroupKey(groupMember *GroupMember) []byte {
 	index := 0
 	key[index] = ImStoreKeyPrefixMemberGroup
 	index++
-	copy(key[index:], Sha256Hash(groupMember.Address))
+	copy(key[index:], Sha256HashAddress(groupMember.Address))
 	index += Sha256HashLen
 	copy(key[index:], groupMember.GroupId[:])
 	return key
@@ -193,7 +193,7 @@ func (im *Manager) MemberGroupKeyPrefix(address string) []byte {
 	index := 0
 	key[index] = ImStoreKeyPrefixMemberGroup
 	index++
-	copy(key[index:], Sha256Hash(address))
+	copy(key[index:], Sha256HashAddress(address))
 	return key
 }
 

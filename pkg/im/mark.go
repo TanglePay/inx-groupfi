@@ -39,7 +39,7 @@ func (im *Manager) MarkKey(mark *Mark) []byte {
 	index++
 	copy(key[index:], mark.GroupId[:])
 	index += GroupIdLen
-	copy(key[index:], Sha256Hash(mark.Address))
+	copy(key[index:], Sha256HashAddress(mark.Address))
 	return key
 }
 
@@ -50,7 +50,7 @@ func (im *Manager) AddressMarkKey(mark *Mark) []byte {
 	index := 0
 	key[index] = ImStoreKeyPrefixAddressMark
 	index++
-	copy(key[index:], Sha256Hash(mark.Address))
+	copy(key[index:], Sha256HashAddress(mark.Address))
 	index += Sha256HashLen
 	copy(key[index:], mark.GroupId[:])
 	return key
@@ -169,7 +169,7 @@ func (im *Manager) AddressMarkKeyPrefix(address string) []byte {
 	index := 0
 	key[index] = ImStoreKeyPrefixAddressMark
 	index++
-	copy(key[index:], Sha256Hash(address))
+	copy(key[index:], Sha256HashAddress(address))
 	return key
 }
 

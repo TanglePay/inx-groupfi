@@ -23,7 +23,7 @@ func NewUserGroupReputation(groupId [GroupIdLen]byte, addrSha256Hash [Sha256Hash
 
 // new user group reputation from groupId and address
 func NewUserGroupReputationFromGroupIdAndAddress(groupId [GroupIdLen]byte, address string) *UserGroupRepuation {
-	addressSha256Hash := Sha256Hash(address)
+	addressSha256Hash := Sha256HashAddress(address)
 	var addressSha256HashFixedLen [Sha256HashLen]byte
 	copy(addressSha256HashFixedLen[:], addressSha256Hash)
 	return &UserGroupRepuation{

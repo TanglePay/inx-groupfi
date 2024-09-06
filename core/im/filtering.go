@@ -478,7 +478,7 @@ func messageFromINXOutput(iotaOutput iotago.Output, outputId []byte, milestone u
 	if !commonHeader.IsActAsSelf {
 		senderAddressStr = deps.IMManager.ConvertAddressToActualAddress(senderAddressStr)
 	}
-	senderAddressSha256 := im.Sha256Hash(senderAddressStr)
+	senderAddressSha256 := im.Sha256HashAddress(senderAddressStr)
 	CoreComponent.LogInfof("Found GROUPFI Message output,payload len:%d,groupId len:%d,groupid:%s,outputId:%s,milestoneIndex:%d,milestoneTimestamp:%d，senderAddress:%s",
 		len(metaPayload),
 		len(groupId),

@@ -145,7 +145,7 @@ func (im *Manager) StoreSingleEvmQualify(evmQualify *EvmQualify, logger *logger.
 		}
 
 		hash := [Sha256HashLen]byte{}
-		copy(hash[:], Sha256Hash(addressStr))
+		copy(hash[:], Sha256HashAddress(addressStr))
 		var qualifyType int
 		if groupQualifyType == "nft" {
 			qualifyType = GroupQualifyTypeNft
@@ -474,7 +474,7 @@ func getInboxOfEvmQualifyChangedEvent(e *EvmQualifyChangedEvent) [][]byte {
 	var inboxs [][]byte
 	for _, groupQualification := range groupQualifications {
 		gaddress := groupQualification.Address
-		gaddressSha256Hash := Sha256Hash(gaddress)
+		gaddressSha256Hash := Sha256HashAddress(gaddress)
 
 		inboxs = append(inboxs, gaddressSha256Hash)
 

@@ -193,7 +193,7 @@ func (im *Manager) deserializeUserVoteGroup(address string, data []byte) []*Vote
 			return nil
 		}
 		var addressSha256Bytes [Sha256HashLen]byte
-		copy(addressSha256Bytes[:], Sha256Hash(address))
+		copy(addressSha256Bytes[:], Sha256HashAddress(address))
 		userVoteGroups = append(userVoteGroups, NewVote(groupIdBytes, addressSha256Bytes, vote[0]))
 	}
 	return userVoteGroups

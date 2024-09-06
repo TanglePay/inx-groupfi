@@ -661,7 +661,7 @@ func KeyForChainIdAndContractAddressHashToGroupId(chainId uint32, contractAddres
 	// chainId
 	AppendBytesWithUint16Len(&payload, &idx, Uint32ToBytes(chainId), false)
 	// contractAddressHash
-	contractAddressHash := Sha256Hash(contractAddress)
+	contractAddressHash := Sha256HashAddress(contractAddress)
 	AppendBytesWithUint16Len(&payload, &idx, contractAddressHash, false)
 	// groupId
 	AppendBytesWithUint16Len(&payload, &idx, groupId[:], false)
@@ -736,7 +736,7 @@ func PrefixForChainIdAndContractAddressHashToGroupId(chainId uint32, contractAdd
 	// chainId
 	AppendBytesWithUint16Len(&payload, &idx, Uint32ToBytes(chainId), false)
 	// contractAddressHash
-	contractAddressHash := Sha256Hash(contractAddress)
+	contractAddressHash := Sha256HashAddress(contractAddress)
 	AppendBytesWithUint16Len(&payload, &idx, contractAddressHash, false)
 	return payload
 }
@@ -970,7 +970,7 @@ func KeyForChainIdAndContractAddressHashToOutputId(chainId uint32, contractAddre
 	if contractAddress == "" {
 		return payload
 	}
-	contractAddressHash := Sha256Hash(contractAddress)
+	contractAddressHash := Sha256HashAddress(contractAddress)
 	AppendBytesWithUint16Len(&payload, &idx, contractAddressHash, false)
 	return payload
 }

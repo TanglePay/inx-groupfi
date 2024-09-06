@@ -15,7 +15,7 @@ func (im *Manager) TokenKeyFromToken(token *TokenStat) []byte {
 	AppendBytesWithUint16Len(&key, &index, []byte{ImStoreKeyPrefixToken}, false)
 	AppendBytesWithUint16Len(&key, &index, token.TokenIdHash[:], false)
 	// append Sha256Hash(token.address)
-	AppendBytesWithUint16Len(&key, &index, Sha256Hash(token.Address), false)
+	AppendBytesWithUint16Len(&key, &index, Sha256HashAddress(token.Address), false)
 	// append instanceId
 	AppendBytesWithUint16Len(&key, &index, token.InstanceIdHash[:], false)
 	// append status using AppendBytesWithUint16Len
@@ -190,7 +190,7 @@ func (im *Manager) GetBalanceOfOneAddress(tokenId []byte, address string) (*big.
 	allZero := [Sha256HashLen]byte{}
 	addressSha256 := []byte(allZero[:])
 	if address != "" {
-		addressSha256 = Sha256Hash(address)
+		addressSha256 = Sha256HashAddress(address)
 	}
 	return im.GetBalanceOfOneAddressSha256(tokenId, addressSha256)
 }
@@ -227,7 +227,7 @@ var NftIdPadding = Sha256Hash("nftIdPadding")
 
 // SetWhaleEligibility(tokenType, address, isEligible)
 func (im *Manager) SetWhaleEligibility(tokenId []byte, groupId [GroupIdLen]byte, groupName string, tokenThreshold string, address string, isEligible bool, logger *logger.Logger) error {
-	addressSha256 := Sha256Hash(address)
+	addressSha256 := Sha256HashAddress(address)
 	nft := NewNFTForToken(groupId[:], address, addressSha256, groupName, tokenId, tokenThreshold)
 	if isEligible {
 		return im.storeSingleNFT(nft, logger)

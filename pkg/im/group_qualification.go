@@ -46,7 +46,7 @@ func (im *Manager) GroupQualificationKey(groupQualification *GroupQualification)
 	index++
 	copy(key[index:], groupQualification.GroupId[:])
 	index += GroupIdLen
-	copy(key[index:], Sha256Hash(groupQualification.Address))
+	copy(key[index:], Sha256HashAddress(groupQualification.Address))
 	index += Sha256HashLen
 	copy(key[index:], groupQualification.NFTId[:])
 	return key
@@ -182,7 +182,7 @@ func (im *Manager) DeleteGroupQualification(groupQualification *GroupQualificati
 func (im *Manager) GroupQualificationExists(groupId [GroupIdLen]byte, address string, logger *logger.Logger) (bool, error) {
 	// log group qualification exists
 	//logger.Infof("GroupQualificationExists groupId %s, address %s", iotago.EncodeHex(groupId[:]), address)
-	addressHash := Sha256Hash(address)
+	addressHash := Sha256HashAddress(address)
 	var addressHash32 [Sha256HashLen]byte
 	copy(addressHash32[:], addressHash)
 	prefix := im.GroupQualificationKeyPrefixForExist(groupId, addressHash32)

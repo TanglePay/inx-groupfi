@@ -241,7 +241,7 @@ func (im *Manager) deserializeUserLikeGroupMember(likeAddress string, data []byt
 		var likedAddrSha256HashBytes [Sha256HashLen]byte
 		copy(likedAddrSha256HashBytes[:], likedAddrSha256Hash)
 		var likerAddrSha256HashBytes [Sha256HashLen]byte
-		copy(likerAddrSha256HashBytes[:], Sha256Hash(likeAddress))
+		copy(likerAddrSha256HashBytes[:], Sha256HashAddress(likeAddress))
 		userLikeGroupMember := NewUserLikeGroupMember(groupIdBytes, likerAddrSha256HashBytes, likedAddrSha256HashBytes)
 		userLikeGroupMembers = append(userLikeGroupMembers, userLikeGroupMember)
 	}
@@ -268,7 +268,7 @@ func (im *Manager) HandleUserLikeGroupMemberBasicOutputCreated(output *iotago.Ba
 		return joined
 	}
 	createdUserLikeGroupMembers, address := im.GetUserLikeGroupMembersFromBasicOutput(output)
-	addressSha256Hash := Sha256HashFixed(address)
+	addressSha256Hash := Sha256HashFixedAddress(address)
 	existingUserLikeGroupMembers, err := im.GetAllLikeGroupMembersFromAddress(addressSha256Hash, logger)
 	if err != nil {
 		return

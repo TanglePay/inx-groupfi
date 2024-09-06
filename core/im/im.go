@@ -417,7 +417,7 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 	isEvmAddress := im.IsEvmAddress(address)
 	// if isEvmAddress, return all groupIds
 	if isEvmAddress {
-		addressSha256 := im.Sha256Hash(address)
+		addressSha256 := im.Sha256HashAddress(address)
 		var addressSha256Fixed [im.Sha256HashLen]byte
 		copy(addressSha256Fixed[:], addressSha256)
 		groupIds, err := deps.IMManager.GetGroupIdsFromAddress(addressSha256)
@@ -447,7 +447,7 @@ func getGroupIdsFromAddress(c echo.Context) ([]string, error) {
 		}
 		return groupIdsToSubsribe, nil
 	}
-	addressSha256 := im.Sha256Hash(address)
+	addressSha256 := im.Sha256HashAddress(address)
 	groupIds, err := deps.IMManager.GetGroupIdsFromAddress(addressSha256)
 	if err != nil {
 		return nil, err
@@ -499,7 +499,7 @@ func getGroupIdsFromAddressV2(c echo.Context) ([]string, error) {
 		}
 		return groupIds, nil
 	}
-	addressSha256 := im.Sha256Hash(address)
+	addressSha256 := im.Sha256HashAddress(address)
 	groupIds, err := deps.IMManager.GetGroupIdsFromAddress(addressSha256)
 	if err != nil {
 		return nil, err
@@ -790,7 +790,7 @@ func getAddressGroupDetails(c echo.Context) ([]*AddressGroupDetailsResponse, err
 		return nil, err
 	}
 	CoreComponent.LogInfof("get address group details from address:%s", address)
-	addressSha256 := im.Sha256Hash(address)
+	addressSha256 := im.Sha256HashAddress(address)
 	groupDetails, err := deps.IMManager.GetAddressGroupFromAddress(addressSha256)
 	if err != nil {
 		return nil, err
@@ -1000,7 +1000,7 @@ func getAddressVotes(c echo.Context) ([]*VoteResponse, error) {
 		return nil, err
 	}
 	CoreComponent.LogInfof("get address votes from address:%s", address)
-	addressSha256 := im.Sha256HashFixed(address)
+	addressSha256 := im.Sha256HashFixedAddress(address)
 	votes, err := deps.IMManager.GetAllVotesFromAddressSha256Hash(addressSha256, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
@@ -1022,7 +1022,7 @@ func getAddressMutes(c echo.Context) ([]*MuteResponse, error) {
 	if err != nil {
 		return nil, err
 	}
-	addressSha256 := im.Sha256HashFixed(address)
+	addressSha256 := im.Sha256HashFixedAddress(address)
 	mutes, err := deps.IMManager.GetAllMuteGroupMembersFromAddress(addressSha256, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
@@ -1045,7 +1045,7 @@ func getAddressLikes(c echo.Context) ([]*LikeResponse, error) {
 		return nil, err
 	}
 	CoreComponent.LogInfof("get address likes from address:%s", address)
-	addressSha256 := im.Sha256HashFixed(address)
+	addressSha256 := im.Sha256HashFixedAddress(address)
 	likes, err := deps.IMManager.GetAllLikeGroupMembersFromAddress(addressSha256, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
@@ -1228,7 +1228,7 @@ func getUserGroupReputation(c echo.Context) (*GroupUserReputationResponse, error
 	if reputation != nil {
 		score = reputation.Reputation
 	}
-	addressSha256Hash := im.Sha256Hash(address)
+	addressSha256Hash := im.Sha256HashAddress(address)
 	CoreComponent.LogInfof("get user group reputation from groupId:%s,address:%s,score is:%f", iotago.EncodeHex(groupId), address, score)
 	resp := &GroupUserReputationResponse{
 		GroupId:           iotago.EncodeHex(groupId),
@@ -1256,7 +1256,7 @@ func getInboxList(c echo.Context) (*InboxItemsResponse, error) {
 		return nil, err
 	}
 	// get inbox message
-	inboxItems, err := deps.IMManager.ReadInbox(im.Sha256Hash(address), token, size, CoreComponent.Logger())
+	inboxItems, err := deps.IMManager.ReadInbox(im.Sha256HashAddress(address), token, size, CoreComponent.Logger())
 	if err != nil {
 		return nil, err
 	}
@@ -1736,4 +1736,3 @@ func parseOptionalTimestampParam(c echo.Context, paramName string) (uint32, erro
 	}
 	return uint32(timestamp), nil
 }
-

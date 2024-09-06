@@ -54,7 +54,7 @@ func (im *Manager) PairXKey(pairX *PairX) []byte {
 	// prefix
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImStoreKeyPrefixPairXData}, false)
 	// evmAddressSha256Hash
-	evmAddressSha256Hash := Sha256Hash(pairX.EvmAddress)
+	evmAddressSha256Hash := Sha256HashAddress(pairX.EvmAddress)
 	AppendBytesWithUint16Len(&bytes, &idx, evmAddressSha256Hash, false)
 	return bytes
 }
@@ -88,7 +88,7 @@ func (im *Manager) PairXEvmAddressSceneryProxyAddressKey(pairX *PairX) []byte {
 	// prefix
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImStoreKeyPrefixPairXData}, false)
 	// evmAddressSha256Hash
-	evmAddressSha256Hash := Sha256Hash(pairX.EvmAddress)
+	evmAddressSha256Hash := Sha256HashAddress(pairX.EvmAddress)
 	AppendBytesWithUint16Len(&bytes, &idx, evmAddressSha256Hash, false)
 	// scenery
 	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(uint32(pairX.Scenery)), false)
@@ -126,7 +126,7 @@ func (im *Manager) PairXProxyAddressEvmAddressKey(pairX *PairX) []byte {
 	// prefix
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImStoreKeyPrefixPairXProxyAddressEvmAddress}, false)
 	// proxyAddressSha256Hash
-	proxyAddressSha256Hash := Sha256Hash(pairX.ProxyAddress)
+	proxyAddressSha256Hash := Sha256HashAddress(pairX.ProxyAddress)
 	AppendBytesWithUint16Len(&bytes, &idx, proxyAddressSha256Hash, false)
 	return bytes
 }
@@ -481,7 +481,7 @@ func (pairXChangedEventJson *PairXChangedEventJson) SetEventType(eventType byte)
 // new PairXChangedEvent
 func NewPairXChangedEvent(evmAddress string, timestamp uint32) *PairXChangedEvent {
 	var addressSha256Hash [Sha256HashLen]byte
-	copy(addressSha256Hash[:], Sha256Hash(evmAddress))
+	copy(addressSha256Hash[:], Sha256HashAddress(evmAddress))
 	return &PairXChangedEvent{
 		AddressSha256Hash: addressSha256Hash,
 		Timestamp:         timestamp,

@@ -192,7 +192,7 @@ func GetGroupStateSyncKey(addressHash [Sha256HashLen]byte, outputId [OutputIdLen
 func StoreGroupStateSync(groupStateSync *GroupStateSyncForStorage,
 	address string,
 	im *Manager) error {
-	addressHash := Sha256HashFixed(address)
+	addressHash := Sha256HashFixedAddress(address)
 	key := GetGroupStateSyncKey(addressHash, groupStateSync.OutputId)
 	value := marshalGroupStateSyncStorage(groupStateSync)
 	err := im.imStore.Set(key, value)
@@ -211,7 +211,7 @@ func DeleteGroupStateSync(address string, im *Manager) error {
 
 // keyprefix = prefix + address hash
 func GetGroupStateSyncKeyPrefix(address string) []byte {
-	addressHash := Sha256HashFixed(address)
+	addressHash := Sha256HashFixedAddress(address)
 	idx := 0
 	var key []byte
 	AppendBytesWithUint16Len(&key, &idx, []byte{ImStoreKeyPrefixGroupStateSync}, false)

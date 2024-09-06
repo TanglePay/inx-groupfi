@@ -499,7 +499,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		allZero := [im.Sha256HashLen]byte{}
 		addressSha256 := []byte(allZero[:])
 		if address != "" {
-			addressSha256 = im.Sha256Hash(address)
+			addressSha256 = im.Sha256HashAddress(address)
 		}
 		totalAmount := big.NewInt(0)
 		keyPrefix := deps.IMManager.TokenKeyPrefixFromTokenIdAndAddress(tokenId, addressSha256)
@@ -855,7 +855,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		if err != nil {
 			return err
 		}
-		addressSha256Hash := im.Sha256Hash(address)
+		addressSha256Hash := im.Sha256HashAddress(address)
 		var groupId32 [32]byte
 		copy(groupId32[:], groupId)
 		var addressSha256Hash32 [32]byte
