@@ -122,6 +122,12 @@ type ExtraChain struct {
 	ChainId         uint32 `json:"chainId"`
 	ContractAddress string `json:"contractAddress"`
 }
+
+// customField {key:string,value:string}
+type CustomField struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
 type MessageGroupMetaJSON struct {
 	ChainId         uint32        `json:"chainId"`
 	SchemaVersion   uint16        `json:"schemaVersion"`
@@ -135,6 +141,8 @@ type MessageGroupMetaJSON struct {
 	TokenThresValue string        `json:"tokenThresValue"`
 	Symbol          string        `json:"symbol"`
 	ExtraChains     []*ExtraChain `json:"extraChains"`
+	Icon            string        `json:"icon"`
+	CustomFields    []CustomField `json:"customFields"`
 	DappGroupId     string        `json:"dappGroupId"`
 }
 
@@ -419,42 +427,12 @@ func UnmarshalExtraChain(value []byte) (*ExtraChain, error) {
 
 // marshal groupConfigMeta to bytes
 func MarshalGroupConfigMeta(groupConfig *MessageGroupMetaJSON) ([]byte, error) {
-	idx := 0
-	var payload []byte
-	// chainId
-	AppendBytesWithUint16Len(&payload, &idx, Uint32ToBytes(groupConfig.ChainId), false)
-	// schemaVersion
-	AppendBytesWithUint16Len(&payload, &idx, Uint16ToBytes(groupConfig.SchemaVersion), false)
-	// messageType
-	AppendBytesWithUint16Len(&payload, &idx, Uint8ToBytes(groupConfig.MessageType), false)
-	// authScheme
-	AppendBytesWithUint16Len(&payload, &idx, Uint8ToBytes(groupConfig.AuthScheme), false)
-	// qualifyType
-	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.QualifyType), true)
-	// contractAddress
-	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.ContractAddress), true)
-	// groupName
-	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.GroupName), true)
-	// tokenThres
-	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.TokenThres), true)
-	// tokenDecimals
-	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.TokenDecimals), true)
-	// tokenThresValue
-	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.TokenThresValue), true)
-	// dappGroupId
-	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.DappGroupId), true)
-	// symbol
-	AppendBytesWithUint16Len(&payload, &idx, []byte(groupConfig.Symbol), true)
-	// extraChains, 1 byte for array length
-	AppendBytesWithUint16Len(&payload, &idx, Uint8ToBytes(uint8(len(groupConfig.ExtraChains))), false)
-	for _, extraChain := range groupConfig.ExtraChains {
-		extraChainBytes, err := MarshalExtraChain(extraChain)
-		if err != nil {
-			return nil, err
-		}
-		AppendBytesWithUint16Len(&payload, &idx, extraChainBytes, true)
+	// just marshal as json, then convert string to bytes
+	jsonStr, err := json.Marshal(groupConfig)
+	if err != nil {
+		return nil, err
 	}
-	return payload, nil
+	return []byte(jsonStr), nil
 }
 
 // store groupConfigMeta for groupId to groupConfig
@@ -485,112 +463,13 @@ func PrefixForGroupConfigMeta() []byte {
 
 // UnmarshalGroupConfigMeta
 func UnmarshalGroupConfigMeta(value []byte) (*MessageGroupMetaJSON, error) {
-	idx := 0
-	// chainId
-	chainIdBytes, err := ReadBytesWithUint16Len(value, &idx, 4)
+	// to string first, then json unmarshal it
+	var groupConfig MessageGroupMetaJSON
+	err := json.Unmarshal(value, &groupConfig)
 	if err != nil {
 		return nil, err
 	}
-	chainId := BytesToUint32(chainIdBytes)
-	// schemaVersion
-	schemaVersionBytes, err := ReadBytesWithUint16Len(value, &idx, 2)
-	if err != nil {
-		return nil, err
-	}
-	schemaVersion := BytesToUint16(schemaVersionBytes)
-	// messageType
-	messageTypeBytes, err := ReadBytesWithUint16Len(value, &idx, 1)
-	if err != nil {
-		return nil, err
-	}
-	messageType := BytesToUint8(messageTypeBytes)
-	// authScheme
-	authSchemeBytes, err := ReadBytesWithUint16Len(value, &idx, 1)
-	if err != nil {
-		return nil, err
-	}
-	authScheme := BytesToUint8(authSchemeBytes)
-	// qualifyType
-	qualifyTypeBytes, err := ReadBytesWithUint16Len(value, &idx)
-	if err != nil {
-		return nil, err
-	}
-	qualifyType := string(qualifyTypeBytes)
-	// contractAddress
-	contractAddressBytes, err := ReadBytesWithUint16Len(value, &idx)
-	if err != nil {
-		return nil, err
-	}
-	contractAddress := string(contractAddressBytes)
-	// groupName
-	groupNameBytes, err := ReadBytesWithUint16Len(value, &idx)
-	if err != nil {
-		return nil, err
-	}
-	groupName := string(groupNameBytes)
-	// tokenThres
-	tokenThresBytes, err := ReadBytesWithUint16Len(value, &idx)
-	if err != nil {
-		return nil, err
-	}
-	tokenThres := string(tokenThresBytes)
-	// tokenDecimals
-	tokenDecimalsBytes, err := ReadBytesWithUint16Len(value, &idx)
-	if err != nil {
-		return nil, err
-	}
-	tokenDecimals := string(tokenDecimalsBytes)
-	// tokenThresValue
-	tokenThresValueBytes, err := ReadBytesWithUint16Len(value, &idx)
-	if err != nil {
-		return nil, err
-	}
-	tokenThresValue := string(tokenThresValueBytes)
-	// dappGroupId
-	dappGroupIdBytes, err := ReadBytesWithUint16Len(value, &idx)
-	if err != nil {
-		return nil, err
-	}
-	dappGroupId := string(dappGroupIdBytes)
-	// symbol
-	var symbol string
-	symbolBytes, err := ReadBytesWithUint16Len(value, &idx)
-	if err == nil {
-		symbol = string(symbolBytes)
-	}
-	// extraChains
-	extraChainsLenBytes, err := ReadBytesWithUint16Len(value, &idx, 1)
-	if err != nil {
-		return nil, err
-	}
-	extraChainsLen := BytesToUint8(extraChainsLenBytes)
-	var extraChains []*ExtraChain
-	for i := uint8(0); i < extraChainsLen; i++ {
-		extraChainBytes, err := ReadBytesWithUint16Len(value, &idx)
-		if err != nil {
-			return nil, err
-		}
-		extraChain, err := UnmarshalExtraChain(extraChainBytes)
-		if err != nil {
-			return nil, err
-		}
-		extraChains = append(extraChains, extraChain)
-	}
-	return &MessageGroupMetaJSON{
-		ChainId:         chainId,
-		SchemaVersion:   schemaVersion,
-		MessageType:     messageType,
-		AuthScheme:      authScheme,
-		QualifyType:     qualifyType,
-		ContractAddress: contractAddress,
-		GroupName:       groupName,
-		TokenThres:      tokenThres,
-		TokenDecimals:   tokenDecimals,
-		TokenThresValue: tokenThresValue,
-		DappGroupId:     dappGroupId,
-		Symbol:          symbol,
-		ExtraChains:     extraChains,
-	}, nil
+	return &groupConfig, nil
 }
 
 // read groupConfigMeta from groupId
