@@ -1429,22 +1429,24 @@ func listGroupConfigsLitev2(c echo.Context) (map[string]interface{}, error) {
 	}
 	CoreComponent.LogInfof("list group configs from chainId:%d,contractAddress:%s,page:%d,pageSize:%d", chainId, contractAddress, page, pageSize)
 
-	currentPage, _, total, resp, err := im.ListOutputIdAndGroupIdFromChainIdAndContractAddressv2(chainId, contractAddress, int(page), int(pageSize), deps.IMManager)
+	// Use the new ListConfigWithOutputIdFromChainIdAndContractAddressv2 function
+	currentPage, pageSizeInt, total, resp, err := im.ListConfigWithOutputIdFromChainIdAndContractAddressv2(chainId, contractAddress, int(page), int(pageSize), deps.IMManager)
 	if err != nil {
 		return nil, err
 	}
 
-	CoreComponent.LogInfof("list group configs from chainId:%d,contractAddress:%s,page:%d,pageSize:%d,found groupConfigs:%d", chainId, contractAddress, currentPage, pageSize, len(resp))
+	CoreComponent.LogInfof("list group configs from chainId:%d,contractAddress:%s,page:%d,pageSize:%d,found groupConfigs:%d", chainId, contractAddress, currentPage, pageSizeInt, len(resp))
 
 	result := map[string]interface{}{
-		"currentPage":  currentPage,
-		"pageSize":     pageSize,
-		"total":        total,
-		"groupConfigs": resp,
+		"currentPage": currentPage,
+		"pageSize":    pageSizeInt,
+		"total":       total,
+		"list":        resp,
 	}
 
 	return result, nil
 }
+
 func listGroupConfigsLite(c echo.Context) ([]*im.GroupConfigNftListResponse, error) {
 	// get param include chainId uint32, contractAddress string, page int, pageSize int
 	// chainId and contract address are optional
