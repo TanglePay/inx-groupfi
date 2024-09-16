@@ -964,6 +964,8 @@ func ListConfigWithOutputIdFromChainIdAndContractAddressv2(chainId uint32, contr
 
 	var result []*ConfigWithOutputId
 	prefix := PrefixForChainIdAndContractAddressHashToGroupId(chainId, contractAddress)
+	// log method chainId:%d, contractAddress:%s, prefix:%s
+	Logger.Infof("ListConfigWithOutputIdFromChainIdAndContractAddressv2 ... chainId:%d, contractAddress:%s, prefix:%s", chainId, contractAddress, prefix)
 	total := 0
 	skipLefted := (page - 1) * pageSize
 
