@@ -153,13 +153,7 @@ type MessageGroupMetaJSONPlus struct {
 }
 
 // checkGroupExists
-func (im *Manager) CheckGroupExists(groupIdHex string) bool {
-	groupIdBytes, err := iotago.DecodeHex(groupIdHex)
-	if err != nil {
-		return false
-	}
-	var groupIdFixed [GroupIdLen]byte
-	copy(groupIdFixed[:], groupIdBytes)
+func (im *Manager) CheckGroupExists(groupIdFixed [GroupIdLen]byte) bool {
 	isExist := IsGroupExists(groupIdFixed, im)
 	return isExist
 }
@@ -504,8 +498,12 @@ func StoreChainIdAndContractAddressHashToGroupId(chainId uint32, contractAddress
 	// store
 	err := im.imStore.Set(key, value)
 	if err != nil {
+		// log error then return
+		Logger.Infof("StoreChainIdAndContractAddressHashToGroupId ... imStore.Set failed:%s", err)
 		return err
 	}
+	// log success
+	Logger.Infof("StoreChainIdAndContractAddressHashToGroupId ... chainId:%d, contractAddress:%s, groupId:%s, outputId:%s", chainId, contractAddress, iotago.EncodeHex(groupId[:]), iotago.EncodeHex(outputId[:]))
 	// extra chains
 	if groupConfig.ExtraChains != nil {
 		for _, extraChain := range groupConfig.ExtraChains {
@@ -976,6 +974,8 @@ func ListConfigWithOutputIdFromChainIdAndContractAddressv2(chainId uint32, contr
 		if total > skipLefted && len(result) < pageSize {
 			groupId, err := ParseGroupIdFromChainIdAndContractAddressHashKey(key)
 			if err != nil {
+				// log error
+				Logger.Infof("ListConfigWithOutputIdFromChainIdAndContractAddressv2 ... ParseGroupIdFromChainIdAndContractAddressHashKey failed:%s", err)
 				return true
 			}
 

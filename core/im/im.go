@@ -1631,6 +1631,26 @@ Loop:
 	return resp, nil
 }
 
+// checkGroupIdExists
+func checkGroupIdExists(c echo.Context) (*im.GroupIdCheckResponse, error) {
+	groupId, err := parseGroupIdQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("check groupId exists from groupId:%s", iotago.EncodeHex(groupId))
+	groupId32 := [32]byte{}
+	copy(groupId32[:], groupId)
+	exists := deps.IMManager.CheckGroupExists(groupId32)
+	if err != nil {
+		return nil, err
+	}
+	resp := &im.GroupIdCheckResponse{
+		GroupIdHex: iotago.EncodeHex(groupId),
+		IsExist:    exists,
+	}
+	return resp, nil
+}
+
 // getGroupMessagesWithCount handles the request to get a list of {groupId, messageCount, timestampOfHour} after an optional start timestamp.
 func getGroupMessagesWithCount(c echo.Context) ([]GroupMessageCountWithTimestampResponse, error) {
 	// Parse optional start timestampOfHour
