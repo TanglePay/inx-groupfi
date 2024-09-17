@@ -527,19 +527,16 @@ func PrefixForChainIdAndContractAddressHashToGroupId(chainId uint32, contractAdd
 	var payload []byte
 	// prefix
 	AppendBytesWithUint16Len(&payload, &idx, []byte{ImStoreKeyPrefixChainIdAndContractAddressHashToGroupId}, false)
+	// return in case of default or nil
 	// chainId
-	AppendBytesWithUint16Len(&payload, &idx, Uint32ToBytes(chainId), false)
-	// contractAddressHash, default highest bytes of [Sha256Len]
-	var contractAddressHash []byte
-	if contractAddress != "" {
-		contractAddressHash = Sha256HashAddress(contractAddress)
-	} else {
-		// highest bytes of [Sha256Len], all 255
-		contractAddressHash = make([]byte, Sha256HashLen)
-		for i := 0; i < Sha256HashLen; i++ {
-			contractAddressHash[i] = 255
-		}
+	if chainId == math.MaxUint32 {
+		return payload
 	}
+	AppendBytesWithUint16Len(&payload, &idx, Uint32ToBytes(chainId), false)
+	if contractAddress == "" {
+		return payload
+	}
+	contractAddressHash := Sha256HashAddress(contractAddress)
 	AppendBytesWithUint16Len(&payload, &idx, contractAddressHash, false)
 	return payload
 }
