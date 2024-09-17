@@ -28,15 +28,20 @@ type GroupIdAndGroupNamePair struct {
 // get dapp groupId from groupId and group meta
 // dappGroupId = 'groupfi'+ groupNamespacestriped + keccak256(groupId)
 func GetDappGroupId(groupIdHex string, groupMeta *MessageGroupMetaJSON) string {
-	groupNamespaceStriped := groupMeta.GroupName
+	var name string
+	if groupMeta.QualifyType == "token" {
+		name = groupMeta.Symbol
+	} else if groupMeta.QualifyType == "nft" {
+		name = groupMeta.CollectionName
+	}
 	// strip white space and tab
-	groupNamespaceStriped = strings.ReplaceAll(groupNamespaceStriped, " ", "")
+	name = strings.ReplaceAll(name, " ", "")
 	groupId, err := iotago.DecodeHex(groupIdHex)
 	if err != nil {
 		return ""
 	}
 	groupIdShortHash := SHA256HashBytesReturnString(groupId)
-	return "groupfi" + groupNamespaceStriped + groupIdShortHash
+	return "groupfi" + name + groupIdShortHash
 }
 func ChainIdAndCollectionIdToGroupIdAndGroupNamePairs(chainId uint32, contractAddress string, im *Manager) []*GroupIdAndGroupNamePair {
 	var res []*GroupIdAndGroupNamePair
@@ -139,6 +144,7 @@ type MessageGroupMetaJSON struct {
 	TokenThres      string        `json:"tokenThres"`
 	TokenDecimals   string        `json:"tokenDecimals"`
 	TokenThresValue string        `json:"tokenThresValue"`
+	CollectionName  string        `json:"collectionName"`
 	Symbol          string        `json:"symbol"`
 	ExtraChains     []*ExtraChain `json:"extraChains"`
 	Icon            string        `json:"icon"`
