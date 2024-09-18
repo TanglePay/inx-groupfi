@@ -120,6 +120,12 @@ type OutputIdOutputResponse struct {
 	Output      iotago.Output `json:"output"`
 }
 
+// GroupIdCheckResponse
+type GroupIdCheckResponse struct {
+	GroupIdHex string `json:"groupIdHex"`
+	IsExist    bool   `json:"isExist"`
+}
+
 // NFTWithRespChan
 type NFTWithRespChan struct {
 	NFT      *NFT

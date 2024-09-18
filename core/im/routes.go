@@ -222,8 +222,8 @@ const (
 	// list group configs Nft
 	RouteListGroupConfigsNft = "/listgroupconfigsnft"
 
-	// list group configs Nft v2
-	RouteListGroupConfigsNftV2 = "/listgroupconfigsnftv2"
+	// list group configs v2
+	RouteListGroupConfigsV2 = "/listgroupconfigsv2"
 	// get group config under one nft
 	RouteGroupConfigUnderNft = "/groupconfigundernft"
 
@@ -235,6 +235,9 @@ const (
 
 	// batch convert outputid to output
 	RouteBatchOutputIdToOutput = "/batchoutputidtooutput"
+
+	// check if groupId exists
+	RouteCheckGroupIdExists = "/checkgroupidexists"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -911,17 +914,8 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
-	// RouteListGroupConfigsNft
-	e.GET(RouteListGroupConfigsNft, func(c echo.Context) error {
-		resp, err := listGroupConfigsLite(c)
-		if err != nil {
-			return err
-		}
-		return httpserver.JSONResponse(c, http.StatusOK, resp)
-	})
-
 	// RouteListGroupConfigsNftV2
-	e.GET(RouteListGroupConfigsNftV2, func(c echo.Context) error {
+	e.GET(RouteListGroupConfigsV2, func(c echo.Context) error {
 		resp, err := listGroupConfigsLitev2(c)
 		if err != nil {
 			return err
@@ -963,6 +957,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
+	// RouteCheckGroupIdExists
+	e.GET(RouteCheckGroupIdExists, func(c echo.Context) error {
+		resp, err := checkGroupIdExists(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 	// New endpoint for getting a list of group message counts after a certain anchor (for synchronization)
 	e.GET("/groupmessagecountsync", func(c echo.Context) error {
 		resp, err := getGroupMessagesWithCount(c)
