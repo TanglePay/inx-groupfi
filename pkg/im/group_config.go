@@ -527,6 +527,32 @@ func StoreChainIdAndContractAddressHashToGroupId(chainId uint32, contractAddress
 	return nil
 }
 
+// delete chainId + contract address hash + groupId -> outputId
+func DeleteChainIdAndContractAddressHashToGroupId(chainId uint32, contractAddress string, groupId [GroupIdLen]byte, groupConfig *MessageGroupMetaJSON, im *Manager) error {
+	// key = prefix + chainId + contractAddressHash + groupId
+	key := KeyForChainIdAndContractAddressHashToGroupId(chainId, contractAddress, groupId)
+	// delete
+	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	// extra chains
+	if groupConfig.ExtraChains != nil {
+		for _, extraChain := range groupConfig.ExtraChains {
+			// key = KeyForChainIdAndContractAddressHashToGroupId
+			key := KeyForChainIdAndContractAddressHashToGroupId(extraChain.ChainId, extraChain.ContractAddress, groupId)
+			// delete
+			err := im.imStore.Delete(key)
+			if err != nil {
+				// log error then continue
+				Logger.Infof("DeleteChainIdAndContractAddressHashToGroupId ... extra chains ... imStore.Delete failed:%s", err)
+				continue
+			}
+		}
+	}
+	return nil
+}
+
 // prefix for chainId + contract address hash + -> groupId
 func PrefixForChainIdAndContractAddressHashToGroupId(chainId uint32, contractAddress string) []byte {
 	idx := 0
@@ -1237,24 +1263,23 @@ func FilterLedgerOutputForConfigNftOutputWrapper(inxOutput *inx.LedgerOutput, im
 func HandleGroupNFTOutputConsumed(configWrapper *ConfigNftOutputWrapper, logger *logger.Logger, im *Manager) error {
 	// get outputId and contract address
 	//outputId := configWrapper.OutputId
-	contractAddress := configWrapper.ContractAddress
-	chainId := configWrapper.ChainId
-	// delte all by chainId + contract address hash
-	err := DeleteAllGroupIdFromChainIdAndContractAddressHash(chainId, contractAddress, im)
-	if err != nil {
-		return err
-	}
+
 	configs := configWrapper.Configs
 	// get groupId from outputId and contract address
 	for _, config := range configs {
 		// delete public groupId
 		groupId := GetGroupIdFromGroupConfig(config)
-		err = DeletePublicGroupId(groupId, im)
+		err := DeletePublicGroupId(groupId, im)
 		if err != nil {
 			return err
 		}
 		// delete chainId + qualifyType + -> groupId
-		err = DeleteGroupIdFromChainIdAndQualifyType(chainId, config.QualifyType, groupId, im)
+		err = DeleteGroupIdFromChainIdAndQualifyType(config.ChainId, config.QualifyType, groupId, im)
+		if err != nil {
+			return err
+		}
+		// delete chainId + contract address hash + groupId -> outputId
+		err = DeleteChainIdAndContractAddressHashToGroupId(configWrapper.ChainId, configWrapper.ContractAddress, groupId, config, im)
 		if err != nil {
 			return err
 		}
@@ -1269,6 +1294,7 @@ func HandleGroupNFTOutputConsumed(configWrapper *ConfigNftOutputWrapper, logger 
 		if err != nil {
 			return err
 		}
+
 	}
 	return nil
 }
