@@ -1283,6 +1283,18 @@ func HandleGroupNFTOutputConsumed(configWrapper *ConfigNftOutputWrapper, logger 
 		if err != nil {
 			return err
 		}
+		// delete extrachains
+		if config.ExtraChains != nil {
+			for _, extraChain := range config.ExtraChains {
+				// delete chainId + contract address hash + groupId -> outputId
+				err = DeleteChainIdAndContractAddressHashToGroupId(extraChain.ChainId, extraChain.ContractAddress, groupId, config, im)
+				if err != nil {
+					// log error then continue
+					Logger.Infof("HandleGroupNFTOutputConsumed ... extra chains ... DeleteChainIdAndContractAddressHashToGroupId failed:%s", err)
+					continue
+				}
+			}
+		}
 		// delete groupId from group config meta
 		err = im.DeleteGroupConfigMetaFromGroupId(groupId)
 		if err != nil {
