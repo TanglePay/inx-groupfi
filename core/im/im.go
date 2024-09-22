@@ -111,12 +111,17 @@ func parseGroupIdQueryParam(c echo.Context) ([]byte, error) {
 
 // parse outputIds from body
 func parseOutputIdsFromBody(c echo.Context) ([]string, error) {
-	var outputIds []string
-	err := c.Bind(&outputIds)
+	return parseIdsFromBody(c)
+}
+
+// parse ids from body
+func parseIdsFromBody(c echo.Context) ([]string, error) {
+	var ids []string
+	err := c.Bind(&ids)
 	if err != nil {
 		return nil, err
 	}
-	return outputIds, nil
+	return ids, nil
 }
 
 // parse given attrName from query param
@@ -1645,6 +1650,33 @@ func checkGroupIdExists(c echo.Context) (*im.GroupIdCheckResponse, error) {
 	resp := &im.GroupIdCheckResponse{
 		GroupIdHex: iotago.EncodeHex(groupId),
 		IsExist:    exists,
+	}
+	return resp, nil
+}
+
+// checkGroupIdExists batched version
+func checkGroupIdExistsBatch(c echo.Context) ([]*im.GroupIdCheckResponse, error) {
+	// get groupIds from body
+	groupIds, err := parseIdsFromBody(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("batch check groupId exists from groupIds:%d", len(groupIds))
+	resp := make([]*im.GroupIdCheckResponse, len(groupIds))
+	for i, groupIdHex := range groupIds {
+		groupId, err := iotago.DecodeHex(groupIdHex)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("batch check groupId exists from groupIds:%d failed:%s", len(groupIds), err)
+			continue
+		}
+		groupId32 := [32]byte{}
+		copy(groupId32[:], groupId)
+		exists := deps.IMManager.CheckGroupExists(groupId32)
+		resp[i] = &im.GroupIdCheckResponse{
+			GroupIdHex: groupIdHex,
+			IsExist:    exists,
+		}
 	}
 	return resp, nil
 }
