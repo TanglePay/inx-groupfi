@@ -1641,9 +1641,7 @@ func checkGroupIdExists(c echo.Context) (*im.GroupIdCheckResponse, error) {
 	groupId32 := [32]byte{}
 	copy(groupId32[:], groupId)
 	exists := deps.IMManager.CheckGroupExists(groupId32)
-	if err != nil {
-		return nil, err
-	}
+
 	resp := &im.GroupIdCheckResponse{
 		GroupIdHex: iotago.EncodeHex(groupId),
 		IsExist:    exists,
