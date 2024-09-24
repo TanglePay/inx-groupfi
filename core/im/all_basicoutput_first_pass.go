@@ -81,7 +81,7 @@ func ProcessAllBasicOutputFirstPass(initCtx *InitContext) {
 			copy(outputIdFixed[:], outputId)
 
 			// Call the filter function to extract the profile from the output
-			profile, err := deps.IMManager.FilterOutputForProfile(output, outputIdFixed)
+			profile, err := deps.IMManager.FilterProfileOutput(output, outputIdFixed, initCtx.Logger)
 			if err != nil {
 				return err
 			}

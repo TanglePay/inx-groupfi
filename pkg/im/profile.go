@@ -2,6 +2,9 @@ package im
 
 import (
 	"github.com/iotaledger/hive.go/core/kvstore"
+	"github.com/iotaledger/hive.go/core/logger"
+	"github.com/iotaledger/hive.go/serializer/v2"
+	inx "github.com/iotaledger/inx/go"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -108,6 +111,33 @@ func (im *Manager) ParseProfileValue(key kvstore.Key, value kvstore.Value) (*Pro
 		JsonData: string(jsonData),
 		OutputId: outputId, // Keep outputId stored
 	}, nil
+}
+
+var profileTagRawStr = "GROUPFIPROFILEV1"
+var profileTag = []byte(profileTagRawStr)
+var ProfileTagStr = iotago.EncodeHex(profileTag)
+
+// filter out profile output from output
+func (im *Manager) FilterProfileOutput(output iotago.Output, outputId iotago.OutputID, logger *logger.Logger) (*Profile, error) {
+	output, is := im.FilterOutputByTag(output, profileTag, logger)
+	if !is {
+		return nil, nil
+	}
+	profile, err := im.FilterOutputForProfile(output, outputId)
+	if err != nil {
+		return nil, err
+	}
+	return profile, nil
+}
+
+// filter out profile output from LedgerOutput
+func (im *Manager) FilterProfileOutputFromLedgerOutput(output *inx.LedgerOutput, logger *logger.Logger) (*Profile, error) {
+	iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
+	if err != nil {
+		return nil, err
+	}
+	outputId := output.UnwrapOutputID()
+	return im.FilterProfileOutput(iotaOutput, outputId, logger)
 }
 
 // filter output for profile

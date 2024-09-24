@@ -218,7 +218,7 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 						continue
 					}
 
-					profile, err := deps.IMManager.FilterOutputForProfile(output, outputId)
+					profile, err := deps.IMManager.FilterProfileOutput(output, outputId, CoreComponent.Logger())
 					if err != nil {
 						// log error
 						CoreComponent.LogErrorf("LedgerUpdate FilterOutputForProfile error: %s", err.Error())
