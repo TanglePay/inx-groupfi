@@ -8,37 +8,34 @@ import (
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
-// struct for Profile
 type Profile struct {
-	Bech32Address string
-	JsonData      string
-	OutputId      []byte // store entire outputId
-	Timestamp     uint32 // Timestamp is not stored anymore
+	Address   string
+	JsonData  string
+	OutputId  []byte // store entire outputId
+	Timestamp uint32 // Timestamp is not stored anymore
 }
 
 // new profile
-func NewProfile(bech32Address string, jsonData string, outputId []byte) *Profile {
+func NewProfile(address string, jsonData string, outputId []byte) *Profile {
 	timestamp := GetCurrentEpochTimestamp()
 
 	return &Profile{
-		Bech32Address: bech32Address,
-		JsonData:      jsonData,
-		OutputId:      outputId,
-		Timestamp:     timestamp, // Timestamp will be kept for in-memory usage, but not stored in DB
+		Address:   address,
+		JsonData:  jsonData,
+		OutputId:  outputId,
+		Timestamp: timestamp, // Timestamp will be kept for in-memory usage, but not stored in DB
 	}
 }
 
-// key = prefix + addressHash + outputId
+// key = prefix + addressHash
 func (im *Manager) ProfileKey(profile *Profile) []byte {
 	bytes := make([]byte, 0)
 	idx := 0
 	// prefix
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{ImStoreKeyPrefixProfile}, false)
 	// addressHash
-	addressHash := Sha256HashAddress(profile.Bech32Address)
+	addressHash := Sha256HashAddress(profile.Address)
 	AppendBytesWithUint16Len(&bytes, &idx, addressHash, false)
-	// outputId
-	AppendBytesWithUint16Len(&bytes, &idx, profile.OutputId, false) // store entire outputId
 	return bytes
 }
 
@@ -56,7 +53,11 @@ func (im *Manager) ProfileValue(profile *Profile) []byte {
 func (im *Manager) StoreProfile(profile *Profile) error {
 	key := im.ProfileKey(profile)
 	value := im.ProfileValue(profile)
-	return im.imStore.Set(key, value)
+	err := im.imStore.Set(key, value)
+	if err != nil {
+		return err
+	}
+	return GenAndPushProfileChangedEvent(profile, im, Logger)
 }
 
 // delete one profile without generating and pushing an event
@@ -76,20 +77,26 @@ func (im *Manager) ProfilePrefixFromAddressHash(addressHash []byte) []byte {
 	return bytes
 }
 
-// get all profiles from address
-func (im *Manager) GetProfilesFromAddress(bech32Address string) ([]*Profile, error) {
-	addressHash := Sha256HashAddress(bech32Address)
-	prefix := im.ProfilePrefixFromAddressHash(addressHash)
-	profiles := make([]*Profile, 0)
-	err := im.imStore.Iterate(prefix, func(key kvstore.Key, value kvstore.Value) bool {
-		profile, err := im.ParseProfileValue(key, value)
-		if err != nil {
-			return false
-		}
-		profiles = append(profiles, profile)
-		return true
+func (im *Manager) GetProfileFromAddress(address string) (*Profile, error) {
+	// Create profile key using the address
+	profileKey := im.ProfileKey(&Profile{
+		Address: address,
 	})
-	return profiles, err
+
+	// Fetch the profile value from the store using the profileKey
+	value, err := im.imStore.Get(profileKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse the profile from the value
+	profile, err := im.ParseProfileValue(profileKey, value)
+	if err != nil {
+		return nil, err
+	}
+
+	// Return the profile
+	return profile, nil
 }
 
 // parse key and value to Profile (reads only jsonData and outputId)
@@ -167,7 +174,9 @@ func (im *Manager) FilterOutputForProfile(output iotago.Output, outputId iotago.
 	}
 	// convert address to Bech32 format
 	bech32Address := address.Address.Bech32(iotago.NetworkPrefix(HornetChainName))
+	// to evm address
+	evmAddress := im.ConvertAddressToActualAddress(bech32Address)
 	// create profile
-	profile := NewProfile(bech32Address, string(jsonData), outputId[:])
+	profile := NewProfile(evmAddress, string(jsonData), outputId[:])
 	return profile, nil
 }

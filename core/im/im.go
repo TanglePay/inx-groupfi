@@ -1379,18 +1379,15 @@ func getEvmAddressPair(address string) (*EvmAddressPairResponse, error) {
 // getProfileByEvmAddress, given an EVM address
 func getProfileByEvmAddress(evmAddress string) (*ProfileResponse, error) {
 	// Retrieve profiles associated with the EVM address
-	profiles, err := deps.IMManager.GetProfilesFromAddress(evmAddress)
+	profile, err := deps.IMManager.GetProfileFromAddress(evmAddress)
 	if err != nil {
 		return nil, err
 	}
 
 	// If no profiles are found, return nil
-	if len(profiles) == 0 {
+	if profile == nil {
 		return nil, nil
 	}
-
-	// Get the first profile from the slice
-	profile := profiles[0]
 
 	// Construct and return the response with the first profile
 	resp := &ProfileResponse{

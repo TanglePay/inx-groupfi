@@ -21,6 +21,7 @@ const (
 	ImInboxEventTypeMuteChanged          byte   = 8
 	ImInboxEventTypeLikeChanged          byte   = 9
 	ImInboxEventTypeGroupIsPublicChanged byte   = 10
+	ImInboxKeyPrefixProfileChangedEvent  byte   = 11
 	DefaultEventTtl                      uint32 = 15 // 15 seconds
 )
 
