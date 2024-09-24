@@ -10,7 +10,7 @@ type Profile struct {
 	Bech32Address string
 	JsonData      string
 	OutputId      []byte // store entire outputId
-	Timestamp     uint32
+	Timestamp     uint32 // Timestamp is not stored anymore
 }
 
 // new profile
@@ -20,8 +20,8 @@ func NewProfile(bech32Address string, jsonData string, outputId []byte) *Profile
 	return &Profile{
 		Bech32Address: bech32Address,
 		JsonData:      jsonData,
-		OutputId:      outputId, // store entire outputId directly
-		Timestamp:     timestamp,
+		OutputId:      outputId,
+		Timestamp:     timestamp, // Timestamp will be kept for in-memory usage, but not stored in DB
 	}
 }
 
@@ -39,12 +39,13 @@ func (im *Manager) ProfileKey(profile *Profile) []byte {
 	return bytes
 }
 
-// value = jsonData + timestamp
+// value = jsonData + outputId
 func (im *Manager) ProfileValue(profile *Profile) []byte {
 	bytes := make([]byte, 0)
 	idx := 0
 	AppendBytesWithUint16Len(&bytes, &idx, []byte(profile.JsonData), true)
-	AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(profile.Timestamp), false)
+	// Append the outputId directly into the value (optional, if needed for cross-reference)
+	AppendBytesWithUint16Len(&bytes, &idx, profile.OutputId, false)
 	return bytes
 }
 
@@ -88,27 +89,24 @@ func (im *Manager) GetProfilesFromAddress(bech32Address string) ([]*Profile, err
 	return profiles, err
 }
 
-// parse key and value to Profile
+// parse key and value to Profile (reads only jsonData and outputId)
 func (im *Manager) ParseProfileValue(key kvstore.Key, value kvstore.Value) (*Profile, error) {
 	idx := 0
+	// Read jsonData
 	jsonData, err := ReadBytesWithUint16Len(value, &idx)
 	if err != nil {
 		return nil, err
 	}
-	timestampBytes, err := ReadBytesWithUint16Len(value, &idx, 4)
+
+	// Extract outputId from key (assuming outputId is part of the key)
+	outputId, err := ReadBytesWithUint16Len(key, &idx, OutputIdLen)
 	if err != nil {
 		return nil, err
 	}
-	timestamp := BytesToUint32(timestampBytes)
-	// extract outputId from key
-	outputId, err := ReadBytesWithUint16Len(key, &idx)
-	if err != nil {
-		return nil, err
-	}
+
 	return &Profile{
-		JsonData:  string(jsonData),
-		Timestamp: timestamp,
-		OutputId:  outputId, // retrieve the entire outputId
+		JsonData: string(jsonData),
+		OutputId: outputId, // Keep outputId stored
 	}, nil
 }
 
