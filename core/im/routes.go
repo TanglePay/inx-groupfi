@@ -230,6 +230,8 @@ const (
 	// get group state sync under one address
 	RouteGroupStateSyncUnderAddress = "/groupstatesyncunderaddress"
 
+	RouteProfileUnderEvmAddress = "/profileunderevmaddress"
+
 	// batch check if outputid is effecting evm qualify outputid
 	RouteBatchCheckOutputId = "/batchcheckqualifyoutputid"
 
@@ -938,6 +940,17 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		if err != nil {
 			return err
 		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+	// RouteProfileUnderEvmAddress
+	e.GET(RouteProfileUnderEvmAddress, func(c echo.Context) error {
+		// Call the function to get the profile by EVM address
+		resp, err := getProfileByEvmAddress(c.Param("evmAddress"))
+		if err != nil {
+			return err
+		}
+
+		// Return the profile response as JSON
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 

@@ -1376,6 +1376,32 @@ func getEvmAddressPair(address string) (*EvmAddressPairResponse, error) {
 	return resp, nil
 }
 
+// getProfileByEvmAddress, given an EVM address
+func getProfileByEvmAddress(evmAddress string) (*ProfileResponse, error) {
+	// Retrieve profiles associated with the EVM address
+	profiles, err := deps.IMManager.GetProfilesFromAddress(evmAddress)
+	if err != nil {
+		return nil, err
+	}
+
+	// If no profiles are found, return nil
+	if len(profiles) == 0 {
+		return nil, nil
+	}
+
+	// Get the first profile from the slice
+	profile := profiles[0]
+
+	// Construct and return the response with the first profile
+	resp := &ProfileResponse{
+		EvmAddress: evmAddress,
+		JsonData:   profile.JsonData,
+		Timestamp:  profile.Timestamp,
+	}
+
+	return resp, nil
+}
+
 // batchSmrAddressToEvmAddress
 func batchSmrAddressToEvmAddress(c echo.Context) ([]string, error) {
 	addresses, err := parseAddressesFromBody(c)
