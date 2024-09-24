@@ -97,9 +97,8 @@ type EvmAddressPairResponse struct {
 
 // ProfileResponse represents the structure for profile data returned via API
 type ProfileResponse struct {
-	EvmAddress string `json:"evmAddress"`
-	JsonData   string `json:"jsonData"`
-	Timestamp  uint32 `json:"timestamp"`
+	Data     string `json:"data"`
+	OutputId string `json:"outputId"`
 }
 
 // enum for output type created or consumed

@@ -1394,9 +1394,8 @@ func getProfileByEvmAddress(evmAddress string) (*ProfileResponse, error) {
 
 	// Construct and return the response with the first profile
 	resp := &ProfileResponse{
-		EvmAddress: evmAddress,
-		JsonData:   profile.JsonData,
-		Timestamp:  profile.Timestamp,
+		Data:     profile.JsonData,
+		OutputId: iotago.EncodeHex(profile.OutputId[:]),
 	}
 
 	return resp, nil

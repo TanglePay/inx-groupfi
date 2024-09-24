@@ -7,28 +7,25 @@ import (
 
 // struct for Profile
 type Profile struct {
-	Bech32Address      string
-	JsonData           string
-	OutputIdSha256Hash [Sha256HashLen]byte
-	Timestamp          uint32
+	Bech32Address string
+	JsonData      string
+	OutputId      []byte // store entire outputId
+	Timestamp     uint32
 }
 
 // new profile
 func NewProfile(bech32Address string, jsonData string, outputId []byte) *Profile {
 	timestamp := GetCurrentEpochTimestamp()
-	outputIdSha256Hash := Sha256HashBytes(outputId)
-	outputIdSha256HashFixed := [Sha256HashLen]byte{}
-	copy(outputIdSha256HashFixed[:], outputIdSha256Hash)
 
 	return &Profile{
-		Bech32Address:      bech32Address,
-		JsonData:           jsonData,
-		OutputIdSha256Hash: outputIdSha256HashFixed,
-		Timestamp:          timestamp,
+		Bech32Address: bech32Address,
+		JsonData:      jsonData,
+		OutputId:      outputId, // store entire outputId directly
+		Timestamp:     timestamp,
 	}
 }
 
-// key = prefix + addressHash + outputIdSha256Hash
+// key = prefix + addressHash + outputId
 func (im *Manager) ProfileKey(profile *Profile) []byte {
 	bytes := make([]byte, 0)
 	idx := 0
@@ -37,8 +34,8 @@ func (im *Manager) ProfileKey(profile *Profile) []byte {
 	// addressHash
 	addressHash := Sha256HashAddress(profile.Bech32Address)
 	AppendBytesWithUint16Len(&bytes, &idx, addressHash, false)
-	// outputIdSha256Hash
-	AppendBytesWithUint16Len(&bytes, &idx, profile.OutputIdSha256Hash[:], false)
+	// outputId
+	AppendBytesWithUint16Len(&bytes, &idx, profile.OutputId, false) // store entire outputId
 	return bytes
 }
 
@@ -51,7 +48,6 @@ func (im *Manager) ProfileValue(profile *Profile) []byte {
 	return bytes
 }
 
-// store one profile
 // store one profile without generating and pushing an event
 func (im *Manager) StoreProfile(profile *Profile) error {
 	key := im.ProfileKey(profile)
@@ -100,10 +96,19 @@ func (im *Manager) ParseProfileValue(key kvstore.Key, value kvstore.Value) (*Pro
 		return nil, err
 	}
 	timestampBytes, err := ReadBytesWithUint16Len(value, &idx, 4)
+	if err != nil {
+		return nil, err
+	}
 	timestamp := BytesToUint32(timestampBytes)
+	// extract outputId from key
+	outputId, err := ReadBytesWithUint16Len(key, &idx)
+	if err != nil {
+		return nil, err
+	}
 	return &Profile{
 		JsonData:  string(jsonData),
 		Timestamp: timestamp,
+		OutputId:  outputId, // retrieve the entire outputId
 	}, nil
 }
 
