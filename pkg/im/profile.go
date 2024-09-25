@@ -45,7 +45,7 @@ func (im *Manager) ProfileValue(profile *Profile) []byte {
 	idx := 0
 	AppendBytesWithUint16Len(&bytes, &idx, []byte(profile.JsonData), true)
 	// Append the outputId directly into the value (optional, if needed for cross-reference)
-	AppendBytesWithUint16Len(&bytes, &idx, profile.OutputId, false)
+	AppendBytesWithUint16Len(&bytes, &idx, profile.OutputId[:], false)
 	return bytes
 }
 
