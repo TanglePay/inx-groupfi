@@ -57,7 +57,8 @@ func (im *Manager) StoreProfile(profile *Profile) error {
 	if err != nil {
 		return err
 	}
-	return GenAndPushProfileChangedEvent(profile, im, Logger)
+	return nil
+	//return GenAndPushProfileChangedEvent(profile, im, Logger)
 }
 
 // delete one profile without generating and pushing an event
