@@ -186,6 +186,8 @@ func (im *Manager) FilterOutputForProfile(output iotago.Output, outputId iotago.
 	bech32Address := address.Address.Bech32(iotago.NetworkPrefix(HornetChainName))
 	// to evm address
 	evmAddress := im.ConvertAddressToActualAddress(bech32Address)
+	// log bech32 address, evm address
+	Logger.Infof("FilterOutputForProfile: %v %v", bech32Address, evmAddress)
 	// create profile
 	profile := NewProfile(evmAddress, string(jsonData), outputId[:])
 	return profile, nil
