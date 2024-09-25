@@ -232,6 +232,9 @@ const (
 
 	RouteProfileUnderEvmAddress = "/profileunderevmaddress"
 
+	// batch RouteProfileUnderEvmAddress
+	RouteBatchProfileUnderEvmAddress = "/batchprofileunderevmaddress"
+
 	// batch check if outputid is effecting evm qualify outputid
 	RouteBatchCheckOutputId = "/batchcheckqualifyoutputid"
 
@@ -953,7 +956,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		// Return the profile response as JSON
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
-
+	//RouteBatchProfileUnderEvmAddress
+	e.POST(RouteBatchProfileUnderEvmAddress, func(c echo.Context) error {
+		resp, err := batchProfileByEvmAddress(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 	// RouteBatchCheckOutputId
 	e.POST(RouteBatchCheckOutputId, func(c echo.Context) error {
 		resp, err := batchCheckOutputId(c)

@@ -94,6 +94,8 @@ func (im *Manager) GetProfileFromAddress(address string) (*Profile, error) {
 		return nil, err
 	}
 
+	// set address to profile
+	profile.Address = address
 	// Return the profile
 	return profile, nil
 }

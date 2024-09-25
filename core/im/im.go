@@ -1402,6 +1402,39 @@ func getProfileByEvmAddress(c echo.Context) (*ProfileResponse, error) {
 	return resp, nil
 }
 
+// batchProfileByEvmAddress
+func batchProfileByEvmAddress(c echo.Context) ([]*ProfileResponse, error) {
+	addresses, err := parseAddressesFromBody(c)
+	if err != nil {
+		return nil, err
+	}
+	// Retrieve profiles associated with the EVM addresses
+	var profiles []*im.Profile
+	for _, address := range addresses {
+		profile, err := deps.IMManager.GetProfileFromAddress(address)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("batch profile by evm address from addresses:%s failed:%s", addresses, err)
+			continue
+		}
+		if profile != nil {
+			profiles = append(profiles, profile)
+		}
+	}
+
+	// Construct and return the response with the first profile
+	var resp []*ProfileResponse
+	for _, profile := range profiles {
+		resp = append(resp, &ProfileResponse{
+			Address:  profile.Address,
+			Data:     profile.JsonData,
+			OutputId: iotago.EncodeHex(profile.OutputId[:]),
+		})
+	}
+
+	return resp, nil
+}
+
 // batchSmrAddressToEvmAddress
 func batchSmrAddressToEvmAddress(c echo.Context) ([]string, error) {
 	addresses, err := parseAddressesFromBody(c)
