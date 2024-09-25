@@ -105,6 +105,8 @@ func (im *Manager) ProfileValue(profile *Profile) []byte {
 	Logger.Infof("ProfileValue: %s %s", iotago.EncodeHex(profile.OutputId[:]), profile.JsonData)
 	AppendBytesWithUint16Len(&bytes, &idx, profile.OutputId[:], false)
 	AppendBytesWithUint16Len(&bytes, &idx, []byte(profile.JsonData), true)
+	// log bytes
+	Logger.Infof("ProfileValue: %s", iotago.EncodeHex(bytes))
 	return bytes
 }
 
@@ -112,6 +114,8 @@ func (im *Manager) ProfileValue(profile *Profile) []byte {
 func (im *Manager) ParseProfileValue(key kvstore.Key, value kvstore.Value) (*Profile, error) {
 	idx := 0
 
+	// log value
+	Logger.Infof("ParseProfileValue: %s", iotago.EncodeHex(value))
 	// Extract outputId from key (assuming outputId is part of the key)
 	outputId, err := ReadBytesWithUint16Len(key, &idx, iotago.OutputIDLength)
 	if err != nil {
@@ -120,7 +124,7 @@ func (im *Manager) ParseProfileValue(key kvstore.Key, value kvstore.Value) (*Pro
 	var outputIdFixed iotago.OutputID
 	copy(outputIdFixed[:], outputId)
 	// log outputIdfixed
-	Logger.Infof("ParseProfileValue: %s", iotago.EncodeHex(outputIdFixed[:]))
+	Logger.Infof("ParseProfileValueOutputId: %s", iotago.EncodeHex(outputIdFixed[:]))
 	// Read jsonData
 	jsonData, err := ReadBytesWithUint16Len(value, &idx)
 	if err != nil {
