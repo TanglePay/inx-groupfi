@@ -51,7 +51,11 @@ func (im *Manager) ProfileValue(profile *Profile) []byte {
 
 // store one profile without generating and pushing an event
 func (im *Manager) StoreProfile(profile *Profile) error {
+
 	key := im.ProfileKey(profile)
+	// log profile then key
+	Logger.Infof("StoreProfile: %v %v", profile, iotago.EncodeHex(key))
+
 	value := im.ProfileValue(profile)
 	err := im.imStore.Set(key, value)
 	if err != nil {
@@ -84,6 +88,8 @@ func (im *Manager) GetProfileFromAddress(address string) (*Profile, error) {
 		Address: address,
 	})
 
+	// log profile, then profileKey
+	Logger.Infof("GetProfileFromAddress: %v %v", address, iotago.EncodeHex(profileKey))
 	// Fetch the profile value from the store using the profileKey
 	value, err := im.imStore.Get(profileKey)
 	if err != nil {
