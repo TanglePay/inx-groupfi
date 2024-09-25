@@ -900,6 +900,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
+
 	// RouteEvmAddressPair, using post
 	e.POST(RouteEvmAddressPair, func(c echo.Context) error {
 		address, err := parseAddressQueryParam(c)
