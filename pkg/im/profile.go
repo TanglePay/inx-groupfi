@@ -11,12 +11,12 @@ import (
 type Profile struct {
 	Address   string
 	JsonData  string
-	OutputId  []byte // store entire outputId
-	Timestamp uint32 // Timestamp is not stored anymore
+	OutputId  iotago.OutputID // store entire outputId
+	Timestamp uint32          // Timestamp is not stored anymore
 }
 
 // new profile
-func NewProfile(address string, jsonData string, outputId []byte) *Profile {
+func NewProfile(address string, jsonData string, outputId iotago.OutputID) *Profile {
 	timestamp := GetCurrentEpochTimestamp()
 
 	return &Profile{
@@ -119,7 +119,7 @@ func (im *Manager) ParseProfileValue(key kvstore.Key, value kvstore.Value) (*Pro
 	}
 
 	// Extract outputId from key (assuming outputId is part of the key)
-	outputId, err := ReadBytesWithUint16Len(key, &idx, OutputIdLen)
+	outputId, err := ReadBytesWithUint16Len(key, &idx, iotago.OutputIDLength)
 	if err != nil {
 		return nil, err
 	}
@@ -189,6 +189,6 @@ func (im *Manager) FilterOutputForProfile(output iotago.Output, outputId iotago.
 	// log bech32 address, evm address
 	Logger.Infof("FilterOutputForProfile: %v %v", bech32Address, evmAddress)
 	// create profile
-	profile := NewProfile(evmAddress, string(jsonData), outputId[:])
+	profile := NewProfile(evmAddress, string(jsonData), outputId)
 	return profile, nil
 }
