@@ -39,16 +39,6 @@ func (im *Manager) ProfileKey(profile *Profile) []byte {
 	return bytes
 }
 
-// value = jsonData + outputId
-func (im *Manager) ProfileValue(profile *Profile) []byte {
-	bytes := make([]byte, 0)
-	idx := 0
-	AppendBytesWithUint16Len(&bytes, &idx, []byte(profile.JsonData), true)
-	// Append the outputId directly into the value (optional, if needed for cross-reference)
-	AppendBytesWithUint16Len(&bytes, &idx, profile.OutputId[:], false)
-	return bytes
-}
-
 // store one profile without generating and pushing an event
 func (im *Manager) StoreProfile(profile *Profile) error {
 
@@ -108,15 +98,19 @@ func (im *Manager) GetProfileFromAddress(address string) (*Profile, error) {
 	// Return the profile
 	return profile, nil
 }
+func (im *Manager) ProfileValue(profile *Profile) []byte {
+	var bytes []byte
+	idx := 0
+	// log outputId, jsonData
+	Logger.Infof("ProfileValue: %s %s", iotago.EncodeHex(profile.OutputId[:]), profile.JsonData)
+	AppendBytesWithUint16Len(&bytes, &idx, profile.OutputId[:], false)
+	AppendBytesWithUint16Len(&bytes, &idx, []byte(profile.JsonData), true)
+	return bytes
+}
 
 // parse key and value to Profile (reads only jsonData and outputId)
 func (im *Manager) ParseProfileValue(key kvstore.Key, value kvstore.Value) (*Profile, error) {
 	idx := 0
-	// Read jsonData
-	jsonData, err := ReadBytesWithUint16Len(value, &idx)
-	if err != nil {
-		return nil, err
-	}
 
 	// Extract outputId from key (assuming outputId is part of the key)
 	outputId, err := ReadBytesWithUint16Len(key, &idx, iotago.OutputIDLength)
@@ -125,6 +119,13 @@ func (im *Manager) ParseProfileValue(key kvstore.Key, value kvstore.Value) (*Pro
 	}
 	var outputIdFixed iotago.OutputID
 	copy(outputIdFixed[:], outputId)
+	// log outputIdfixed
+	Logger.Infof("ParseProfileValue: %s", iotago.EncodeHex(outputIdFixed[:]))
+	// Read jsonData
+	jsonData, err := ReadBytesWithUint16Len(value, &idx)
+	if err != nil {
+		return nil, err
+	}
 	return &Profile{
 		JsonData: string(jsonData),
 		OutputId: outputIdFixed, // Keep outputId stored
