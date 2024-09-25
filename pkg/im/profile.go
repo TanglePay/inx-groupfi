@@ -123,10 +123,11 @@ func (im *Manager) ParseProfileValue(key kvstore.Key, value kvstore.Value) (*Pro
 	if err != nil {
 		return nil, err
 	}
-
+	var outputIdFixed iotago.OutputID
+	copy(outputIdFixed[:], outputId)
 	return &Profile{
 		JsonData: string(jsonData),
-		OutputId: outputId, // Keep outputId stored
+		OutputId: outputIdFixed, // Keep outputId stored
 	}, nil
 }
 
