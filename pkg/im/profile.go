@@ -117,7 +117,7 @@ func (im *Manager) ParseProfileValue(key kvstore.Key, value kvstore.Value) (*Pro
 	// log value
 	Logger.Infof("ParseProfileValue: %s", iotago.EncodeHex(value))
 	// Extract outputId from key (assuming outputId is part of the key)
-	outputId, err := ReadBytesWithUint16Len(key, &idx, iotago.OutputIDLength)
+	outputId, err := ReadBytesWithUint16Len(value, &idx, iotago.OutputIDLength)
 	if err != nil {
 		return nil, err
 	}
