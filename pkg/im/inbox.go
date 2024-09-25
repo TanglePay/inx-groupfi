@@ -256,6 +256,19 @@ func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte,
 			eventItem = groupIsPublicChangedEvent
 		}
 
+		// ProfileChangedEvent
+		if eventType == ImInboxKeyPrefixProfileChangedEvent {
+			// log
+			logger.Infof("ReadInbox ProfileChangedEvent key %s", iotago.EncodeHex(key))
+			profileChangedEvent, err := UnserializeProfileChangedEvent(value, logger)
+			if err != nil {
+				// log and continue
+				logger.Errorf("UnserializeProfileChangedEvent error %v", err)
+				return true
+			}
+			eventItem = profileChangedEvent
+		}
+
 		eventItem.SetToken(token)
 		eventItem.SetEventType(eventType)
 		res = append(res, eventItem)
