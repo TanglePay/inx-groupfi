@@ -1377,7 +1377,8 @@ func getEvmAddressPair(address string) (*EvmAddressPairResponse, error) {
 }
 
 // getProfileByEvmAddress, given an EVM address
-func getProfileByEvmAddress(evmAddress string) (*ProfileResponse, error) {
+func getProfileByEvmAddress(c echo.Context) (*ProfileResponse, error) {
+	address, err := parseAddressQueryParam(c)
 	// Retrieve profiles associated with the EVM address
 	profile, err := deps.IMManager.GetProfileFromAddress(evmAddress)
 	if err != nil {

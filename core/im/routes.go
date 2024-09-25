@@ -945,7 +945,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// RouteProfileUnderEvmAddress
 	e.GET(RouteProfileUnderEvmAddress, func(c echo.Context) error {
 		// Call the function to get the profile by EVM address
-		resp, err := getProfileByEvmAddress(c.Param("evmAddress"))
+		resp, err := getProfileByEvmAddress(c)
 		if err != nil {
 			return err
 		}
