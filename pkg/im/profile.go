@@ -86,6 +86,9 @@ func (im *Manager) GetProfileFromAddress(address string) (*Profile, error) {
 	// Fetch the profile value from the store using the profileKey
 	value, err := im.imStore.Get(profileKey)
 	if err != nil {
+		if err == kvstore.ErrKeyNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 
