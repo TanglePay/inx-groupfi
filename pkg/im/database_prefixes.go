@@ -99,4 +99,7 @@ const (
 
 	ImStoreKeyPrefixTimeGroupMessageCount byte = 50
 
+	ImStoreKeyPrefixGroupIdToBech32Address byte = 51
+
+	ImStoreKeyPrefixProfile byte = 52
 )

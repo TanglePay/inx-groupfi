@@ -610,6 +610,59 @@ func DeleteAllGroupIdFromChainIdAndContractAddressHash(chainId uint32, contractA
 	return nil
 }
 
+// store read and delete for groupId + -> bech32 address
+// key = prefix + groupId
+// value = bech32 address
+func KeyForGroupIdToBech32Address(groupId [GroupIdLen]byte) []byte {
+	idx := 0
+	var payload []byte
+	// prefix
+	AppendBytesWithUint16Len(&payload, &idx, []byte{ImStoreKeyPrefixGroupIdToBech32Address}, false)
+	// groupId
+	AppendBytesWithUint16Len(&payload, &idx, groupId[:], false)
+	return payload
+}
+
+// store groupId + -> bech32 address
+func StoreGroupIdToBech32Address(groupId [GroupIdLen]byte, bech32Address string, im *Manager) error {
+	// key = prefix + groupId
+	key := KeyForGroupIdToBech32Address(groupId)
+	// value = bech32 address
+	value := []byte(bech32Address)
+	// store
+	err := im.imStore.Set(key, value)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// read bech32 address from groupId
+func ReadBech32AddressFromGroupId(groupId [GroupIdLen]byte, im *Manager) (string, error) {
+	// key = prefix + groupId
+	key := KeyForGroupIdToBech32Address(groupId)
+	// read
+	value, err := im.imStore.Get(key)
+	if err != nil {
+		return "", err
+	}
+	// value to bech32 address
+	bech32Address := string(value)
+	return bech32Address, nil
+}
+
+// delete bech32 address from groupId
+func DeleteBech32AddressFromGroupId(groupId [GroupIdLen]byte, im *Manager) error {
+	// key = prefix + groupId
+	key := KeyForGroupIdToBech32Address(groupId)
+	// delete
+	err := im.imStore.Delete(key)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 // store read and delete for chainId + qualifyType + -> groupId
 // key = prefix + chainId + qualifyTypeHash + groupId
 // value is empty
@@ -963,6 +1016,7 @@ func ListOutputIdAndGroupIdFromChainIdAndContractAddress(chainId uint32, contrac
 // ConfigWithOutputId represents a combination of a group config and the corresponding outputId
 type ConfigWithOutputId struct {
 	OutputId        string                `json:"outputId"`
+	Bech32Address   string                `json:"bech32Address"`
 	GroupConfigMeta *MessageGroupMetaJSON `json:"config"`
 }
 
@@ -1028,11 +1082,15 @@ func ListConfigWithOutputIdFromChainIdAndContractAddressv2(chainId uint32, contr
 			if err != nil {
 				return true
 			}
-
+			bech32Address, err := ReadBech32AddressFromGroupId(groupId, im)
+			if err != nil {
+				return true
+			}
 			// Create the ConfigWithOutputId object
 			result = append(result, &ConfigWithOutputId{
 				OutputId:        iotago.EncodeHex(outputId[:]),
 				GroupConfigMeta: groupConfigMeta,
+				Bech32Address:   bech32Address,
 			})
 		}
 		return true
@@ -1140,6 +1198,7 @@ type ConfigNftOutputWrapper struct {
 	Configs         []*MessageGroupMetaJSON
 	ChainId         uint32
 	ContractAddress string
+	Bech32Address   string
 }
 type ConfigNftOutputMetaJson struct {
 	Uri             string `json:"uri"`
@@ -1172,6 +1231,10 @@ func (im *Manager) HandleGroupConfigNFTOutputConsumedOrCreated(consumed []*Confi
 
 // extract group config meta list from nft output
 func ExtractConfigNftOutputWrapperFromNFTOutput(outputId [OutputIdLen]byte, nftOutput *iotago.NFTOutput, im *Manager) (*ConfigNftOutputWrapper, error) {
+	// unlock address
+	unlockConditionSet := nftOutput.UnlockConditionSet()
+	bech32Address := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
+
 	if nftOutput.ImmutableFeatureSet() == nil || nftOutput.ImmutableFeatureSet().MetadataFeature() == nil || nftOutput.ImmutableFeatureSet().MetadataFeature().Data == nil {
 		return nil, errors.New("nftOutput.ImmutableFeatureSet().MetadataFeature().Data is nil")
 	}
@@ -1203,6 +1266,7 @@ func ExtractConfigNftOutputWrapperFromNFTOutput(outputId [OutputIdLen]byte, nftO
 		Configs:         groupConfigMeta,
 		ChainId:         configNftOutputMetaJson.ChainId,
 		ContractAddress: configNftOutputMetaJson.ContractAddress,
+		Bech32Address:   bech32Address,
 	}, nil
 }
 
@@ -1283,6 +1347,11 @@ func HandleGroupNFTOutputConsumed(configWrapper *ConfigNftOutputWrapper, logger 
 		if err != nil {
 			return err
 		}
+		// delete groupId -> bech32 address
+		err = DeleteBech32AddressFromGroupId(groupId, im)
+		if err != nil {
+			return err
+		}
 		// delete extrachains
 		if config.ExtraChains != nil {
 			for _, extraChain := range config.ExtraChains {
@@ -1347,6 +1416,11 @@ func HandleGroupNFTOutputCreated(configWrapper *ConfigNftOutputWrapper, logger *
 		}
 		// CalculateIfGroupIsPublic
 		err = im.CalculateIfGroupIsPublic(groupId, logger)
+		if err != nil {
+			return err
+		}
+		// store groupId -> bech32 address
+		err = StoreGroupIdToBech32Address(groupId, configWrapper.Bech32Address, im)
 		if err != nil {
 			return err
 		}

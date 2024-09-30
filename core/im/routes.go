@@ -230,6 +230,11 @@ const (
 	// get group state sync under one address
 	RouteGroupStateSyncUnderAddress = "/groupstatesyncunderaddress"
 
+	RouteProfileUnderEvmAddress = "/profileunderevmaddress"
+
+	// batch RouteProfileUnderEvmAddress
+	RouteBatchProfileUnderEvmAddress = "/batchprofileunderevmaddress"
+
 	// batch check if outputid is effecting evm qualify outputid
 	RouteBatchCheckOutputId = "/batchcheckqualifyoutputid"
 
@@ -238,6 +243,8 @@ const (
 
 	// check if groupId exists
 	RouteCheckGroupIdExists = "/checkgroupidexists"
+	// check if groupId exists batch
+	RouteCheckGroupIdExistsBatch = "/checkgroupidexistsbatch"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -893,6 +900,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
+
 	// RouteEvmAddressPair, using post
 	e.POST(RouteEvmAddressPair, func(c echo.Context) error {
 		address, err := parseAddressQueryParam(c)
@@ -938,7 +946,25 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
+	// RouteProfileUnderEvmAddress
+	e.GET(RouteProfileUnderEvmAddress, func(c echo.Context) error {
+		// Call the function to get the profile by EVM address
+		resp, err := getProfileByEvmAddress(c)
+		if err != nil {
+			return err
+		}
 
+		// Return the profile response as JSON
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+	//RouteBatchProfileUnderEvmAddress
+	e.POST(RouteBatchProfileUnderEvmAddress, func(c echo.Context) error {
+		resp, err := batchProfileByEvmAddress(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 	// RouteBatchCheckOutputId
 	e.POST(RouteBatchCheckOutputId, func(c echo.Context) error {
 		resp, err := batchCheckOutputId(c)
@@ -965,6 +991,16 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
+
+	// RouteCheckGroupIdExistsBatch
+	e.POST(RouteCheckGroupIdExistsBatch, func(c echo.Context) error {
+		resp, err := checkGroupIdExistsBatch(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
 	// New endpoint for getting a list of group message counts after a certain anchor (for synchronization)
 	e.GET("/groupmessagecountsync", func(c echo.Context) error {
 		resp, err := getGroupMessagesWithCount(c)

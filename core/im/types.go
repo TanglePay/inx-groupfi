@@ -95,6 +95,13 @@ type EvmAddressPairResponse struct {
 	TPProxyAddress string `json:"tpProxyAddress"`
 }
 
+// ProfileResponse represents the structure for profile data returned via API
+type ProfileResponse struct {
+	Address  string `json:"address"`
+	Data     string `json:"data"`
+	OutputId string `json:"outputId"`
+}
+
 // enum for output type created or consumed
 const (
 	ImOutputTypeCreated = iota

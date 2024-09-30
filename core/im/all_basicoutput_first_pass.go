@@ -74,6 +74,32 @@ func ProcessAllBasicOutputFirstPass(initCtx *InitContext) {
 			deps.IMManager.HandleEvmQualifyCreated(evmQualify, initCtx.Logger)
 			return nil
 		},
+		// handle profile
+		func(outputId []byte, output iotago.Output, milestoneIndex uint32, milestoneTimestamp uint32, initCtx *InitContext) error {
+			// filter profile from output
+			outputIdFixed := [im.OutputIdLen]byte{}
+			copy(outputIdFixed[:], outputId)
+
+			// Call the filter function to extract the profile from the output
+			profile, err := deps.IMManager.FilterProfileOutput(output, outputIdFixed, initCtx.Logger)
+			if err != nil {
+				return err
+			}
+
+			// If no profile is found, return without error
+			if profile == nil {
+				return nil
+			}
+
+			// Handle the newly created profile
+			err = deps.IMManager.StoreProfile(profile)
+			if err != nil {
+				initCtx.Logger.Errorf("Error storing profile: %s", err.Error())
+				return err
+			}
+
+			return nil
+		},
 		// handle group state sync
 		func(outputId []byte, output iotago.Output, milestoneIndex uint32, milestoneTimestamp uint32, initCtx *InitContext) error {
 			// filter group state sync output
