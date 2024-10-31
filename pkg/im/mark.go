@@ -18,16 +18,19 @@ type Mark struct {
 	GroupId [GroupIdLen]byte
 
 	OutputId iotago.OutputID
+
+	MilestoneIndex uint32
 	// timestamp
-	Timestamp [TimestampLen]byte
+	MilestoneTimestamp uint32
 }
 
 // newMark creates a new Mark.
-func NewMark(address string, groupId [GroupIdLen]byte, timestamp [4]byte) *Mark {
+func NewMark(address string, groupId [GroupIdLen]byte, milestoneIndex uint32, milestoneTimestamp uint32) *Mark {
 	return &Mark{
-		Address:   address,
-		GroupId:   groupId,
-		Timestamp: timestamp,
+		Address:            address,
+		GroupId:            groupId,
+		MilestoneIndex:     milestoneIndex,
+		MilestoneTimestamp: milestoneTimestamp,
 	}
 }
 
@@ -62,7 +65,7 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 	addressKey := im.AddressMarkKey(mark)
 	value := make([]byte, 4+len(mark.Address))
 	index := 0
-	binary.LittleEndian.PutUint32(value[index:], binary.LittleEndian.Uint32(mark.Timestamp[:]))
+	binary.LittleEndian.PutUint32(value[index:], mark.MilestoneTimestamp)
 	index += 4
 	copy(value[index:], mark.Address)
 	// log mark key and value
@@ -85,7 +88,7 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 	logger.Infof("StoreMark,group qualification exists,groupId:%s,address:%s,exists:%t", iotago.EncodeHex(mark.GroupId[:]), mark.Address, exists)
 	if exists && isActuallyMarked {
 
-		groupMember := NewGroupMember(mark.GroupId, mark.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
+		groupMember := NewGroupMember(mark.GroupId, mark.Address, mark.MilestoneIndex, mark.MilestoneTimestamp)
 
 		_, err = im.StoreGroupMember(groupMember, logger)
 		if err != nil {
@@ -121,7 +124,7 @@ func (im *Manager) DeleteMark(mark *Mark, isActuallyUnmarked bool, logger *logge
 		return err
 	}
 	// delete group member as well
-	groupMember := NewGroupMember(mark.GroupId, mark.Address, CurrentMilestoneIndex, CurrentMilestoneTimestamp)
+	groupMember := NewGroupMember(mark.GroupId, mark.Address, mark.MilestoneIndex, mark.MilestoneTimestamp)
 	isActuallyDeleted, err := im.DeleteGroupMember(groupMember, logger)
 	if err != nil {
 		return err
@@ -149,7 +152,7 @@ func (im *Manager) DeleteMark(mark *Mark, isActuallyUnmarked bool, logger *logge
 
 // check if mark exists, input is group id and address
 func (im *Manager) MarkExists(groupId [GroupIdLen]byte, address string) (bool, error) {
-	key := im.MarkKey(NewMark(address, groupId, [4]byte{}))
+	key := im.MarkKey(NewMark(address, groupId, 0, 0))
 	return im.imStore.Has(key)
 }
 
@@ -180,7 +183,8 @@ func (im *Manager) MarkKeyAndValueToMark(key kvstore.Key, value kvstore.Value) *
 	var timestamp [TimestampLen]byte
 	copy(timestamp[:], value[:TimestampLen])
 	address := string(value[TimestampLen:])
-	return NewMark(address, groupId, timestamp)
+	timestampUint32 := binary.LittleEndian.Uint32(value[:4])
+	return NewMark(address, groupId, 0, timestampUint32)
 }
 
 // address mark key to mark
@@ -191,7 +195,8 @@ func (im *Manager) AddressMarkKeyAndValueToMark(key kvstore.Key, value kvstore.V
 	var timestamp [TimestampLen]byte
 	copy(timestamp[:], value[:TimestampLen])
 	address := string(value[TimestampLen:])
-	return NewMark(address, groupId, timestamp)
+	timestampUint32 := binary.LittleEndian.Uint32(value[:4])
+	return NewMark(address, groupId, 0, timestampUint32)
 }
 
 // get marks from group id
@@ -248,15 +253,14 @@ func (im *Manager) DeserializeUserMarkedGroupIds(address string, data []byte) ([
 		if err != nil {
 			return nil, "", err
 		}
-		var timestampBytes [TimestampLen]byte
-		copy(timestampBytes[:], timestamp)
-		marks = append(marks, NewMark(address, groupIdBytes, timestampBytes))
+		timestamp32 := binary.LittleEndian.Uint32(timestamp[:])
+		marks = append(marks, NewMark(address, groupIdBytes, 0, timestamp32))
 	}
 	return marks, address, nil
 }
 
 // get unlock address and []*Mark from BasicOutput
-func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputId) ([]*Mark, string, error) {
+func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputIdAndMilestoneIndexAndMilestoneTimestamp) ([]*Mark, string, error) {
 	unlockConditionSet := output.Output.UnlockConditionSet()
 	ownerAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
 	featureSet := output.Output.FeatureSet()
@@ -271,12 +275,14 @@ func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputId) ([]*Mark, 
 	}
 	for _, mark := range marks {
 		mark.OutputId = outputId
+		mark.MilestoneIndex = output.MilestoneIndex
+		mark.MilestoneTimestamp = output.MilestoneTimestamp
 	}
 	return marks, address, nil
 }
 
 // handle group mark basic output created
-func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(createdOutput *OutputAndOutputId, logger *logger.Logger) {
+func (im *Manager) HandleGroupMarkBasicOutputConsumedAndCreated(createdOutput *OutputAndOutputIdAndMilestoneIndexAndMilestoneTimestamp, logger *logger.Logger) {
 
 	// log entering
 	logger.Infof("HandleGroupMarkBasicOutputConsumedAndCreated ...")

@@ -122,7 +122,7 @@ func (im *Manager) StoreGroupQualification(groupQualification *GroupQualificatio
 	}
 	if !IsIniting {
 		// check if mark exists, if so, store group member
-		mark := NewMark(groupQualification.Address, groupQualification.GroupId, [4]byte{0, 0, 0, 0})
+		mark := NewMark(groupQualification.Address, groupQualification.GroupId, 0, 0)
 		exists, err := im.MarkExists(mark.GroupId, mark.Address)
 		if err != nil {
 			return err

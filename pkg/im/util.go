@@ -288,6 +288,14 @@ type OutputAndOutputId struct {
 	OutputId iotago.OutputID
 }
 
+// OutputAndOutputIdAndMilestoneIndexAndMilestoneTimestamp
+type OutputAndOutputIdAndMilestoneIndexAndMilestoneTimestamp struct {
+	Output             *iotago.BasicOutput
+	OutputId           iotago.OutputID
+	MilestoneIndex     uint32
+	MilestoneTimestamp uint32
+}
+
 // process output to OutputPair map
 func ProcessOutputToOutputPair(pair map[string]*OutputPair, output *OutputAndOutputId, isConsumed bool) {
 	unlockConditionSet := output.Output.UnlockConditionSet()
