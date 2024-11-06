@@ -21,9 +21,11 @@ func handleMarkInit(initCtx *InitContext) {
 			}
 			outputIdIota := iotago.OutputID{}
 			copy(outputIdIota[:], outputId)
-			outputAndOutputId := &im.OutputAndOutputId{
-				Output:   basicOutput,
-				OutputId: outputIdIota,
+			outputAndOutputId := &im.OutputAndOutputIdAndMilestoneIndexAndMilestoneTimestamp{
+				Output:             basicOutput,
+				OutputId:           outputIdIota,
+				MilestoneIndex:     milestoneIndex,
+				MilestoneTimestamp: milestoneTimestamp,
 			}
 			deps.IMManager.HandleGroupMarkBasicOutputConsumedAndCreated(outputAndOutputId, initCtx.Logger)
 			return nil

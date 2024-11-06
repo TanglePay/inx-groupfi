@@ -1153,7 +1153,7 @@ func getAddressMarkGroupDetails(c echo.Context) ([]*AddressGroupDetailsResponseL
 	for i, mark := range marks {
 		groupDetails[i] = &AddressGroupDetailsResponseLite{
 			GroupId:   iotago.EncodeHex(mark.GroupId[:]),
-			Timestamp: im.BytesToUint32(mark.Timestamp[:]),
+			Timestamp: mark.MilestoneTimestamp,
 		}
 	}
 	return groupDetails, nil

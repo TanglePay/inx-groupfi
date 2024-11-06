@@ -235,9 +235,11 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 					mark, is := deps.IMManager.FilterMarkOutput(output, CoreComponent.Logger())
 
 					if is {
-						markAndOutputId := &im.OutputAndOutputId{
-							Output:   mark,
-							OutputId: outputId,
+						markAndOutputId := &im.OutputAndOutputIdAndMilestoneIndexAndMilestoneTimestamp{
+							Output:             mark,
+							OutputId:           outputId,
+							MilestoneIndex:     im.CurrentMilestoneIndex,
+							MilestoneTimestamp: im.CurrentMilestoneTimestamp,
 						}
 						deps.IMManager.HandleGroupMarkBasicOutputConsumedAndCreated(markAndOutputId, CoreComponent.Logger())
 						continue
