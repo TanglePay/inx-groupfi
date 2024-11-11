@@ -15,6 +15,7 @@ type ItemDrainer struct {
 	closeOnce sync.Once
 }
 
+// NewItemDrainer initializes the ItemDrainer with panic recovery in workers
 func NewItemDrainer(ctx context.Context, consume func(item interface{}), concurrency int, chanSpace int, fetchSize int) *ItemDrainer {
 	// Create a derived context from the global context
 	ctx, cancel := context.WithCancel(ctx)
@@ -27,22 +28,32 @@ func NewItemDrainer(ctx context.Context, consume func(item interface{}), concurr
 		wg:        &sync.WaitGroup{},
 	}
 	for i := 0; i < concurrency; i++ {
-		go func() {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case item, ok := <-res.itemInput:
-					if !ok {
-						return
-					}
-					res.consume(item)
-					res.wg.Done()
-				}
-			}
-		}()
+		go res.worker(i)
 	}
 	return res
+}
+
+// worker represents a single worker goroutine with panic recovery
+func (drainer *ItemDrainer) worker(id int) {
+	defer func() {
+		if r := recover(); r != nil {
+			Logger.Errorf("ItemDrainer worker %d panicked: %v", id, r)
+			// Optionally, you can decide to restart the worker here
+			go drainer.worker(id) // Restart the worker
+		}
+	}()
+	for {
+		select {
+		case <-drainer.ctx.Done():
+			return
+		case item, ok := <-drainer.itemInput:
+			if !ok {
+				return
+			}
+			drainer.consume(item)
+			drainer.wg.Done()
+		}
+	}
 }
 
 // Drain items and push to channel

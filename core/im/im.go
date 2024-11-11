@@ -1,6 +1,7 @@
 package im
 
 import (
+	"context"
 	"math"
 	"net/http"
 	"sort"
@@ -1668,6 +1669,8 @@ func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error)
 	}
 	CoreComponent.LogInfof("batch outputId to output from outputIds:%d", len(outputIds))
 	chanForResp := make(chan interface{})
+	defer close(chanForResp)
+
 	var resp []*im.OutputIdOutputResponse
 	// map outputIds to OutputIdWithRespChan[]
 	var items []interface{}
@@ -1680,14 +1683,30 @@ func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error)
 	}
 	im.OutputIdDrainer.Drain(items)
 	// get item from chanForResp, also with 5 sec timeout
+
+	// Create a context with a total timeout of 5 seconds
+	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	defer cancel()
+
 Loop:
 	for i := 0; i < len(outputIds); i++ {
 		select {
-		case item := <-chanForResp:
-			resp = append(resp, item.(*im.OutputIdOutputResponse))
-		case <-time.After(5 * time.Second):
-			// log error then break
-			CoreComponent.LogWarnf("batch outputId to output from outputIds:%d timeout", len(outputIds))
+		case item, ok := <-chanForResp:
+			if !ok {
+				CoreComponent.LogWarnf("Channel closed unexpectedly after receiving %d responses", len(resp))
+				break Loop
+			}
+
+			response, ok := item.(*im.OutputIdOutputResponse)
+			if !ok {
+				CoreComponent.LogErrorf("Received unexpected type from channel")
+				continue // Skip this item or handle the error as needed
+			}
+
+			resp = append(resp, response)
+
+		case <-ctx.Done():
+			CoreComponent.LogWarnf("Batch processing of outputIds:%d timed out after receiving %d responses", len(outputIds), len(resp))
 			break Loop
 		}
 	}
