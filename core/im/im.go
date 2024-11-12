@@ -1672,18 +1672,27 @@ func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error)
 	}
 	CoreComponent.LogInfof("batch outputId to output from outputIds:%d", len(outputIds))
 
+	// Initialize batch-level status
+	batchStatus := &im.BatchStatus{
+		IsCanceled: false,
+	}
+
 	// Create a buffered channel for responses to prevent blocking
 	chanForResp := make(chan interface{}, len(outputIds))
-	defer close(chanForResp) // Ensure the channel is closed when the function exits
+	defer func() {
+		batchStatus.Cancel()
+		close(chanForResp)
+	}()
 
 	var resp []*im.OutputIdOutputResponse
 
-	// Map outputIds to OutputIdWithRespChan and prepare items for draining
+	// Prepare items for draining
 	var items []interface{}
 	for _, outputId := range outputIds {
 		req := &im.OutputIdWithRespChan{
 			OutputIdHex: outputId,
 			RespChan:    chanForResp,
+			BatchStatus: batchStatus,
 		}
 		items = append(items, req)
 	}

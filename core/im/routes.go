@@ -297,6 +297,11 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	im.OutputIdDrainer = im.NewItemDrainer(ctx, func(item interface{}) {
 		// unwrap to *OutputIdWithRespChan
 		outputIdWithRespChan := item.(*im.OutputIdWithRespChan)
+
+		// Check if the batch has been canceled (RespChan is closed)
+		if outputIdWithRespChan.BatchStatus != nil && outputIdWithRespChan.BatchStatus.IsBatchCanceled() {
+			return // Skip processing and do not send any response
+		}
 		// get output id
 		outputIdHex := outputIdWithRespChan.OutputIdHex
 		outputId, err := iotago.OutputIDFromHex(outputIdHex)
