@@ -1661,18 +1661,24 @@ func batchCheckOutputId(c echo.Context) ([]*im.OutputIdCheckResponse, error) {
 }
 
 // batchOutputIdToOutput
+// batchOutputIdToOutput processes a batch of output IDs and retrieves their corresponding outputs.
+// It sets up a timeout before initiating the drain and performs the draining asynchronously.
+// The response channel is closed in the main function to handle potential ongoing usage after Drain.
 func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error) {
-	// get outputIds from body
+	// Parse outputIds from the request body
 	outputIds, err := parseOutputIdsFromBody(c)
 	if err != nil {
 		return nil, err
 	}
 	CoreComponent.LogInfof("batch outputId to output from outputIds:%d", len(outputIds))
-	chanForResp := make(chan interface{})
-	defer close(chanForResp)
+
+	// Create a buffered channel for responses to prevent blocking
+	chanForResp := make(chan interface{}, len(outputIds))
+	defer close(chanForResp) // Ensure the channel is closed when the function exits
 
 	var resp []*im.OutputIdOutputResponse
-	// map outputIds to OutputIdWithRespChan[]
+
+	// Map outputIds to OutputIdWithRespChan and prepare items for draining
 	var items []interface{}
 	for _, outputId := range outputIds {
 		req := &im.OutputIdWithRespChan{
@@ -1681,12 +1687,13 @@ func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error)
 		}
 		items = append(items, req)
 	}
-	im.OutputIdDrainer.Drain(items)
-	// get item from chanForResp, also with 5 sec timeout
 
 	// Create a context with a total timeout of 5 seconds
 	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
 	defer cancel()
+
+	// Start draining in a separate goroutine
+	go im.OutputIdDrainer.Drain(items)
 
 Loop:
 	for i := 0; i < len(outputIds); i++ {

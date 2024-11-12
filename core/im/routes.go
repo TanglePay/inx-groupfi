@@ -324,7 +324,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			Output:      output,
 		}
 		outputIdWithRespChan.RespChan <- resp
-	}, 5000, 1000, 1000)
+	}, 7000, 3000, 1000)
 	//e.Use(AddCORS)
 	e.Use(ServiceUnavailableMiddleware)
 	//nft
