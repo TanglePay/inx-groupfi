@@ -88,11 +88,5 @@ func FilterGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, im *M
 		return nil, false
 	}
 
-	// Store the output in the cache
-	if err := StoreGroupFIOutput(output, outputID, im); err != nil {
-		Logger.Errorf("FilterGroupFIOutput: failed to store GroupFIOutput: %v", err)
-		return nil, false
-	}
-
 	return output, true
 }
