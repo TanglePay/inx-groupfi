@@ -1698,9 +1698,13 @@ func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error)
 		var outputIdFixed [im.OutputIdLen]byte
 		copy(outputIdFixed[:], outputIdBytes)
 		output, err := im.GetGroupFIOutput(outputIdFixed, deps.IMManager)
+		// log err
+		if err != nil {
+			CoreComponent.LogInfof("GetGroupFIOutput outputId:%s, err:%s", outputId, err)
+		}
 		if err != nil || output == nil {
 			// Assume that an error indicates the output is not found and needs to be fetched
-			CoreComponent.LogInfof("OutputId %x not found in GetGroupFIOutput, will fetch", outputId)
+			CoreComponent.LogInfof("OutputId %s not found in GetGroupFIOutput, will fetch", outputId)
 			toFetch = append(toFetch, outputId)
 		} else {
 			// Create a response from fetched output
