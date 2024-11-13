@@ -158,3 +158,15 @@ type OutputIdWithRespChan struct {
 	RespChan    chan interface{}
 	BatchStatus *BatchStatus
 }
+
+func (o *OutputIdWithRespChan) CheckThenInsertToChan(response interface{}) bool {
+	// Check if the batch is canceled.
+	// check nil
+	if o.BatchStatus == nil || o.BatchStatus.IsBatchCanceled() {
+		return false
+	}
+
+	// Insert the response into the channel.
+	o.RespChan <- response
+	return true
+}

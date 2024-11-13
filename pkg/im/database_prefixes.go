@@ -102,4 +102,6 @@ const (
 	ImStoreKeyPrefixGroupIdToBech32Address byte = 51
 
 	ImStoreKeyPrefixProfile byte = 52
+
+	ImStoreKeyPrefixGroupFI byte = 53
 )
