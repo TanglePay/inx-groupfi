@@ -1703,7 +1703,6 @@ func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error)
 	go im.OutputIdDrainer.Drain(items)
 
 	var fetchedResponses []*im.OutputIdOutputResponse
-
 Loop:
 	for i := 0; i < len(outputIds); i++ {
 		select {
