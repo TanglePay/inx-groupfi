@@ -39,7 +39,7 @@ func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, im *Ma
 	}
 
 	// log Stored GroupFI output, with outputID and key
-	Logger.Infof("Stored GroupFI output with outputID %s and key %s", iotago.EncodeHex(outputID[:]), iotago.EncodeHex(key))
+	Logger.Infof("Stored GroupFI output with outputID %s and key %s and value %s", iotago.EncodeHex(outputID[:]), iotago.EncodeHex(key), iotago.EncodeHex(valueBytes))
 	return nil
 }
 
