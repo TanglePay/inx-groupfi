@@ -34,7 +34,8 @@ func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, im *Ma
 
 	valueBytes = append(valueBytes, byte(outputType))
 	// Store in KV store
-	if err := im.imStore.Set(key, valueBytes); err != nil {
+	err = im.imStore.Set(key, valueBytes)
+	if err != nil {
 		return fmt.Errorf("failed to store GroupFIOutput in KV store: %w", err)
 	}
 
