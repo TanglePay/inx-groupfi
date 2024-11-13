@@ -323,6 +323,22 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			return
 		}
 
+		// Check the cache first
+		if cachedResp, found := im.OutputCache.Get(outputIdHex); found {
+			CoreComponent.LogInfof("OutputID: %s found in cache", outputIdHex)
+			resp, ok := cachedResp.(*im.OutputIdOutputResponse)
+			if ok {
+				if outputIdWithRespChan.BatchStatus != nil {
+					outputIdWithRespChan.CheckThenInsertToChan(resp)
+				} else {
+					outputIdWithRespChan.RespChan <- resp
+				}
+				return
+			}
+			CoreComponent.LogWarnf("Cached response has incorrect type for OutputID: %s", outputIdHex)
+			// Proceed to fetch if type assertion fails
+		}
+
 		// Attempt to fetch the output using GetGroupFIOutput
 		output, err := im.GetGroupFIOutput(outputId, deps.IMManager)
 		if err != nil {
@@ -330,12 +346,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 
 		if output != nil && err == nil {
-			// Output found via GetGroupFIOutput, send the response
+			// Output found via GetGroupFIOutput, send the response and cache it
 			CoreComponent.LogInfof("OutputID: %s found via GetGroupFIOutput", outputIdHex)
 			resp := &im.OutputIdOutputResponse{
 				OutputIdHex: outputIdHex,
 				Output:      output,
 			}
+			// Store in cache
+			im.OutputCache.Put(outputIdHex, resp)
+
 			if outputIdWithRespChan.BatchStatus != nil {
 				outputIdWithRespChan.CheckThenInsertToChan(resp)
 			} else {
@@ -357,11 +376,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			return
 		}
 
-		// Successfully fetched the output using client.OutputByID, send the response
+		// Successfully fetched the output using client.OutputByID, send the response and cache it
 		resp := &im.OutputIdOutputResponse{
 			OutputIdHex: outputIdHex,
 			Output:      output,
 		}
+		// Store in cache
+		im.OutputCache.Put(outputIdHex, resp)
+
 		if outputIdWithRespChan.BatchStatus != nil {
 			outputIdWithRespChan.CheckThenInsertToChan(resp)
 		} else {
