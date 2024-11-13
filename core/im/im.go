@@ -1684,11 +1684,44 @@ func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error)
 		close(chanForResp)
 	}()
 
-	var resp []*im.OutputIdOutputResponse
+	var fetchedResponses []*im.OutputIdOutputResponse
+	var toFetch []string
+
+	// First, attempt to get from GetGroupFIOutput
+	for _, outputId := range outputIds {
+		outputIdBytes, err := iotago.DecodeHex(outputId)
+		if err != nil {
+			// log error then continue
+			CoreComponent.LogWarnf("batch outputId to output from outputIds:%d failed:%s", len(outputIds), err)
+			continue
+		}
+		var outputIdFixed [im.OutputIdLen]byte
+		copy(outputIdFixed[:], outputIdBytes)
+		output, err := im.GetGroupFIOutput(outputIdFixed, deps.IMManager)
+		if err != nil || output == nil {
+			// Assume that an error indicates the output is not found and needs to be fetched
+			CoreComponent.LogInfof("OutputId %x not found in GetGroupFIOutput, will fetch", outputId)
+			toFetch = append(toFetch, outputId)
+		} else {
+			// Create a response from fetched output
+			response := &im.OutputIdOutputResponse{
+				OutputIdHex: outputId,
+				Output:      output,
+			}
+			fetchedResponses = append(fetchedResponses, response)
+		}
+	}
+
+	// If there are no missing outputs, return the fetched responses
+	if len(toFetch) == 0 {
+		return fetchedResponses, nil
+	}
+
+	CoreComponent.LogInfof("Fetching %d missing outputIds from store", len(toFetch))
 
 	// Prepare items for draining
 	var items []interface{}
-	for _, outputId := range outputIds {
+	for _, outputId := range toFetch {
 		req := &im.OutputIdWithRespChan{
 			OutputIdHex: outputId,
 			RespChan:    chanForResp,
@@ -1709,7 +1742,7 @@ Loop:
 		select {
 		case item, ok := <-chanForResp:
 			if !ok {
-				CoreComponent.LogWarnf("Channel closed unexpectedly after receiving %d responses", len(resp))
+				CoreComponent.LogWarnf("Channel closed unexpectedly after receiving %d responses", len(fetchedResponses))
 				break Loop
 			}
 
@@ -1719,15 +1752,15 @@ Loop:
 				continue // Skip this item or handle the error as needed
 			}
 
-			resp = append(resp, response)
+			fetchedResponses = append(fetchedResponses, response)
 
 		case <-ctx.Done():
-			CoreComponent.LogWarnf("Batch processing of outputIds:%d timed out after receiving %d responses", len(outputIds), len(resp))
+			CoreComponent.LogWarnf("Batch processing of outputIds:%d timed out after receiving %d responses", len(outputIds), len(fetchedResponses))
 			break Loop
 		}
 	}
 
-	return resp, nil
+	return fetchedResponses, nil
 }
 
 // checkGroupIdExists
