@@ -40,7 +40,7 @@ func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, im *Ma
 	}
 
 	// log Stored GroupFI output, with outputID and key
-	Logger.Infof("Stored GroupFI output with outputID %s and key %s and value %s", iotago.EncodeHex(outputID[:]), iotago.EncodeHex(key), iotago.EncodeHex(valueBytes))
+	// Logger.Infof("Stored GroupFI output with outputID %s and key %s and value %s", iotago.EncodeHex(outputID[:]), iotago.EncodeHex(key), iotago.EncodeHex(valueBytes))
 	return nil
 }
 
@@ -50,7 +50,7 @@ func GetGroupFIOutput(outputID [OutputIdLen]byte, im *Manager) (iotago.Output, e
 	key := GetGroupFIKey(outputID)
 	value, err := im.imStore.Get(key)
 	// log
-	Logger.Infof("GetGroupFIOutput key %s, value %s, err %v", iotago.EncodeHex(key), iotago.EncodeHex(value), err)
+	//Logger.Infof("GetGroupFIOutput key %s, value %s, err %v", iotago.EncodeHex(key), iotago.EncodeHex(value), err)
 	if err != nil {
 		if err == kvstore.ErrKeyNotFound {
 			return nil, nil // Not found

@@ -1684,48 +1684,9 @@ func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error)
 		close(chanForResp)
 	}()
 
-	var fetchedResponses []*im.OutputIdOutputResponse
-	var toFetch []string
-
-	// First, attempt to get from GetGroupFIOutput
-	for _, outputId := range outputIds {
-		outputIdBytes, err := iotago.DecodeHex(outputId)
-		if err != nil {
-			// log error then continue
-			CoreComponent.LogWarnf("batch outputId to output from outputIds:%d failed:%s", len(outputIds), err)
-			continue
-		}
-		var outputIdFixed [im.OutputIdLen]byte
-		copy(outputIdFixed[:], outputIdBytes)
-		output, err := im.GetGroupFIOutput(outputIdFixed, deps.IMManager)
-		// log err
-		if err != nil {
-			CoreComponent.LogInfof("GetGroupFIOutput outputId:%s, err:%s", outputId, err)
-		}
-		if err != nil || output == nil {
-			// Assume that an error indicates the output is not found and needs to be fetched
-			CoreComponent.LogInfof("OutputId %s not found in GetGroupFIOutput, will fetch", outputId)
-			toFetch = append(toFetch, outputId)
-		} else {
-			// Create a response from fetched output
-			response := &im.OutputIdOutputResponse{
-				OutputIdHex: outputId,
-				Output:      output,
-			}
-			fetchedResponses = append(fetchedResponses, response)
-		}
-	}
-
-	// If there are no missing outputs, return the fetched responses
-	if len(toFetch) == 0 {
-		return fetchedResponses, nil
-	}
-
-	CoreComponent.LogInfof("Fetching %d missing outputIds from store", len(toFetch))
-
 	// Prepare items for draining
 	var items []interface{}
-	for _, outputId := range toFetch {
+	for _, outputId := range outputIds {
 		req := &im.OutputIdWithRespChan{
 			OutputIdHex: outputId,
 			RespChan:    chanForResp,
@@ -1740,6 +1701,8 @@ func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error)
 
 	// Start draining in a separate goroutine
 	go im.OutputIdDrainer.Drain(items)
+
+	var fetchedResponses []*im.OutputIdOutputResponse
 
 Loop:
 	for i := 0; i < len(outputIds); i++ {

@@ -295,17 +295,26 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	}, 2000, 1000, 1000)
 
 	im.OutputIdDrainer = im.NewItemDrainer(ctx, func(item interface{}) {
-		// unwrap to *OutputIdWithRespChan
-		outputIdWithRespChan := item.(*im.OutputIdWithRespChan)
+		// Unwrap to *OutputIdWithRespChan
+		outputIdWithRespChan, ok := item.(*im.OutputIdWithRespChan)
+		if !ok {
+			CoreComponent.LogErrorf("Invalid item type received by drainer")
+			return
+		}
 
-		// Check if the batch has been canceled (RespChan is closed)
+		// Check if the batch has been canceled
 		if outputIdWithRespChan.BatchStatus != nil && outputIdWithRespChan.BatchStatus.IsBatchCanceled() {
+			CoreComponent.LogInfof("Batch canceled, skipping outputId: %s", outputIdWithRespChan.OutputIdHex)
 			return // Skip processing and do not send any response
 		}
-		// get output id
+
+		// Retrieve the output ID in hex format
 		outputIdHex := outputIdWithRespChan.OutputIdHex
+
+		// Attempt to convert the hex string to OutputID
 		outputId, err := iotago.OutputIDFromHex(outputIdHex)
 		if err != nil {
+			CoreComponent.LogWarnf("Invalid OutputID hex: %s, error: %v", outputIdHex, err)
 			resp := &im.OutputIdOutputResponse{
 				OutputIdHex: outputIdHex,
 				Output:      nil,
@@ -314,9 +323,32 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			return
 		}
 
-		// get output using node client
-		output, err := client.OutputByID(ctx, outputId)
+		// Attempt to fetch the output using GetGroupFIOutput
+		output, err := im.GetGroupFIOutput(outputId, deps.IMManager)
 		if err != nil {
+			CoreComponent.LogInfof("GetGroupFIOutput failed for OutputID: %s, error: %v", outputIdHex, err)
+		}
+
+		if output != nil && err == nil {
+			// Output found via GetGroupFIOutput, send the response
+			CoreComponent.LogInfof("OutputID: %s found via GetGroupFIOutput", outputIdHex)
+			resp := &im.OutputIdOutputResponse{
+				OutputIdHex: outputIdHex,
+				Output:      output,
+			}
+			if outputIdWithRespChan.BatchStatus != nil {
+				outputIdWithRespChan.CheckThenInsertToChan(resp)
+			} else {
+				outputIdWithRespChan.RespChan <- resp
+			}
+			return
+		}
+
+		// Output not found via GetGroupFIOutput, proceed to fetch using client.OutputByID
+		CoreComponent.LogInfof("OutputID: %s not found via GetGroupFIOutput, fetching using client.OutputByID", outputIdHex)
+		output, err = client.OutputByID(ctx, outputId)
+		if err != nil {
+			CoreComponent.LogWarnf("client.OutputByID failed for OutputID: %s, error: %v", outputIdHex, err)
 			resp := &im.OutputIdOutputResponse{
 				OutputIdHex: outputIdHex,
 				Output:      nil,
@@ -324,6 +356,8 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			outputIdWithRespChan.RespChan <- resp
 			return
 		}
+
+		// Successfully fetched the output using client.OutputByID, send the response
 		resp := &im.OutputIdOutputResponse{
 			OutputIdHex: outputIdHex,
 			Output:      output,
