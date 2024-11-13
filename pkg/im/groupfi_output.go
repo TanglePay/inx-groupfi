@@ -38,6 +38,8 @@ func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, im *Ma
 		return fmt.Errorf("failed to store GroupFIOutput in KV store: %w", err)
 	}
 
+	// log Stored GroupFI output, with outputID and key
+	Logger.Infof("Stored GroupFI output with outputID %s and key %s", iotago.EncodeHex(outputID[:]), iotago.EncodeHex(key))
 	return nil
 }
 
