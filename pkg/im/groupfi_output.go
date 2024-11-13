@@ -28,9 +28,11 @@ func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, im *Ma
 	if err != nil {
 		return fmt.Errorf("failed to marshal iotago.Output to JSON: %w", err)
 	}
+	outputType := output.Type()
 	// Generate the storage key
 	key := GetGroupFIKey(outputID)
 
+	valueBytes = append(valueBytes, byte(outputType))
 	// Store in KV store
 	if err := im.imStore.Set(key, valueBytes); err != nil {
 		return fmt.Errorf("failed to store GroupFIOutput in KV store: %w", err)
@@ -50,7 +52,16 @@ func GetGroupFIOutput(outputID [OutputIdLen]byte, im *Manager) (iotago.Output, e
 		}
 		return nil, fmt.Errorf("failed to get GroupFIOutput from KV store: %w", err)
 	}
+	// last byte is output type
+	outputType := iotago.OutputType(value[len(value)-1])
+	value = value[:len(value)-1]
+
 	var output iotago.Output
+	if outputType == iotago.OutputBasic {
+		output = &iotago.BasicOutput{}
+	} else if outputType == iotago.OutputNFT {
+		output = &iotago.NFTOutput{}
+	}
 	err = output.UnmarshalJSON(value)
 
 	if err != nil {
