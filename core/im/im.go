@@ -1672,18 +1672,25 @@ func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error)
 	}
 	CoreComponent.LogInfof("batch outputId to output from outputIds:%d", len(outputIds))
 
+	// Initialize batch-level status
+	batchStatus := &im.BatchStatus{
+		IsCanceled: false,
+	}
+
 	// Create a buffered channel for responses to prevent blocking
 	chanForResp := make(chan interface{}, len(outputIds))
-	defer close(chanForResp) // Ensure the channel is closed when the function exits
+	defer func() {
+		batchStatus.Cancel()
+		close(chanForResp)
+	}()
 
-	var resp []*im.OutputIdOutputResponse
-
-	// Map outputIds to OutputIdWithRespChan and prepare items for draining
+	// Prepare items for draining
 	var items []interface{}
 	for _, outputId := range outputIds {
 		req := &im.OutputIdWithRespChan{
 			OutputIdHex: outputId,
 			RespChan:    chanForResp,
+			BatchStatus: batchStatus,
 		}
 		items = append(items, req)
 	}
@@ -1695,12 +1702,13 @@ func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error)
 	// Start draining in a separate goroutine
 	go im.OutputIdDrainer.Drain(items)
 
+	var fetchedResponses []*im.OutputIdOutputResponse
 Loop:
 	for i := 0; i < len(outputIds); i++ {
 		select {
 		case item, ok := <-chanForResp:
 			if !ok {
-				CoreComponent.LogWarnf("Channel closed unexpectedly after receiving %d responses", len(resp))
+				CoreComponent.LogWarnf("Channel closed unexpectedly after receiving %d responses", len(fetchedResponses))
 				break Loop
 			}
 
@@ -1710,15 +1718,15 @@ Loop:
 				continue // Skip this item or handle the error as needed
 			}
 
-			resp = append(resp, response)
+			fetchedResponses = append(fetchedResponses, response)
 
 		case <-ctx.Done():
-			CoreComponent.LogWarnf("Batch processing of outputIds:%d timed out after receiving %d responses", len(outputIds), len(resp))
+			CoreComponent.LogWarnf("Batch processing of outputIds:%d timed out after receiving %d responses", len(outputIds), len(fetchedResponses))
 			break Loop
 		}
 	}
 
-	return resp, nil
+	return fetchedResponses, nil
 }
 
 // checkGroupIdExists

@@ -1,6 +1,7 @@
 package im
 
 import (
+	"sync"
 	"time"
 
 	"github.com/iotaledger/hive.go/core/logger"
@@ -132,7 +133,40 @@ type NFTWithRespChan struct {
 	RespChan chan interface{}
 }
 
+// BatchStatus holds the cancellation status of the entire batch.
+type BatchStatus struct {
+	IsCanceled bool
+	mu         sync.Mutex
+}
+
+// Cancel sets the batch as canceled in a thread-safe manner.
+func (b *BatchStatus) Cancel() {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	b.IsCanceled = true
+}
+
+// IsBatchCanceled safely retrieves the cancellation state of the batch.
+func (b *BatchStatus) IsBatchCanceled() bool {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	return b.IsCanceled
+}
+
 type OutputIdWithRespChan struct {
 	OutputIdHex string
 	RespChan    chan interface{}
+	BatchStatus *BatchStatus
+}
+
+func (o *OutputIdWithRespChan) CheckThenInsertToChan(response interface{}) bool {
+	// Check if the batch is canceled.
+	// check nil
+	if o.BatchStatus == nil || o.BatchStatus.IsBatchCanceled() {
+		return false
+	}
+
+	// Insert the response into the channel.
+	o.RespChan <- response
+	return true
 }

@@ -115,6 +115,16 @@ func ProcessAllBasicOutputFirstPass(initCtx *InitContext) {
 			err := im.StoreGroupStateSync(groupStateSync, address, deps.IMManager)
 			return err
 		},
+		// handle output cache
+		func(outputId []byte, output iotago.Output, milestoneIndex, milestoneTimestamp uint32, initCtx *InitContext) error {
+			var outputIdFixed [im.OutputIdLen]byte
+			copy(outputIdFixed[:], outputId)
+			output, is := im.FilterGroupFIOutput(output, outputIdFixed, deps.IMManager)
+			if is {
+				return im.StoreGroupFIOutput(output, outputIdFixed, deps.IMManager)
+			}
+			return nil
+		},
 	}
 	HandleGenericInit(initCtx, "allbasicoutputfirstpass", idsFetcher, processors)
 	// HandleTotalInit after all basic output first pass

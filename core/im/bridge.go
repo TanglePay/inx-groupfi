@@ -47,6 +47,23 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		var createdGroupConfig []*im.ConfigNftOutputWrapper
 		var consumedGroupConfig []*im.ConfigNftOutputWrapper
 		for _, output := range update.Created {
+			iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
+			if err != nil {
+				// log error
+				CoreComponent.LogErrorf("LedgerUpdate UnwrapOutput error:%s", err.Error())
+				continue
+			}
+			iotaOutputId := output.OutputId.Id
+			var iotaOutputIdFix [im.OutputIdLen]byte
+			copy(iotaOutputIdFix[:], iotaOutputId)
+			iotaOutputFiltered, isGroupfiOutput := im.FilterGroupFIOutput(iotaOutput, iotaOutputIdFix, deps.IMManager)
+			if isGroupfiOutput {
+				err := im.StoreGroupFIOutput(iotaOutputFiltered, iotaOutputIdFix, deps.IMManager)
+				if err != nil {
+					// log error
+					CoreComponent.LogErrorf("LedgerUpdate StoreGroupFIOutput error:%s", err.Error())
+				}
+			}
 			// im.CurrentMilestoneTimestamp = max(im.CurrentMilestoneTimestamp, output.MilestoneTimestampBooked)
 			if output.MilestoneTimestampBooked > im.CurrentMilestoneTimestamp {
 				im.CurrentMilestoneTimestamp = output.MilestoneTimestampBooked
@@ -84,6 +101,24 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		}
 		for _, spent := range update.Consumed {
 			output := spent.GetOutput()
+			iotaOutput, err := output.UnwrapOutput(serializer.DeSeriModeNoValidation, nil)
+			if err != nil {
+				// log error
+				CoreComponent.LogErrorf("LedgerUpdate UnwrapOutput error:%s", err.Error())
+				continue
+			}
+			iotaOutputId := output.OutputId.Id
+			var iotaOutputIdFix [im.OutputIdLen]byte
+			copy(iotaOutputIdFix[:], iotaOutputId)
+			_, isGroupfiOutput := im.FilterGroupFIOutput(iotaOutput, iotaOutputIdFix, deps.IMManager)
+			if isGroupfiOutput {
+				err := im.DeleteGroupFIOutput(iotaOutputIdFix, deps.IMManager)
+				if err != nil {
+					// log error
+					CoreComponent.LogErrorf("LedgerUpdate DeleteGroupFIOutput error:%s", err.Error())
+				}
+			}
+
 			o := messageFromINXLedgerOutput(output)
 			if o != nil {
 				// found consumed message
