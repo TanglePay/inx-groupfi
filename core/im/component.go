@@ -304,7 +304,7 @@ func run() error {
 		}
 		im.CurrentNodeProtocol = &resp.Protocol
 		im.ListeningCtx = ctx
-		im.InitializeOutputCache(1000)
+		im.InitializeOutputCache(1500)
 		indexerClient, err := nodeHTTPAPIClient.Indexer(ctx)
 		if err != nil {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
