@@ -58,7 +58,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			copy(iotaOutputIdFix[:], iotaOutputId)
 			iotaOutputFiltered, isGroupfiOutput := im.FilterGroupFIOutput(iotaOutput, iotaOutputIdFix, deps.IMManager)
 			if isGroupfiOutput {
-				err := im.StoreGroupFIOutput(iotaOutputFiltered, iotaOutputIdFix, deps.IMManager)
+				err := im.StoreGroupFIOutput(iotaOutputFiltered, iotaOutputIdFix, output.MilestoneTimestampBooked, deps.IMManager)
 				if err != nil {
 					// log error
 					CoreComponent.LogErrorf("LedgerUpdate StoreGroupFIOutput error:%s", err.Error())
