@@ -22,7 +22,7 @@ func GetGroupFIKey(outputID [OutputIdLen]byte) []byte {
 
 // StoreGroupFIOutput stores the GroupFI output in the KV store.
 // It marshals the iotago.Output to JSON and stores it under the key prefix + outputId.
-func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, im *Manager) error {
+func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, milestoneTimestamp uint32, im *Manager) error {
 	// Marshal the iotago.Output to JSON
 	valueBytes, err := output.MarshalJSON()
 	if err != nil {
@@ -31,7 +31,8 @@ func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, im *Ma
 	outputType := output.Type()
 	// Generate the storage key
 	key := GetGroupFIKey(outputID)
-
+	timestampBytes := Uint32ToBytes(milestoneTimestamp)
+	valueBytes = append(valueBytes, timestampBytes...)
 	valueBytes = append(valueBytes, byte(outputType))
 	// Store in KV store
 	err = im.imStore.Set(key, valueBytes)
@@ -46,21 +47,23 @@ func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, im *Ma
 
 // GetGroupFIOutput retrieves the GroupFI output from the KV store based on outputID.
 // It unmarshals the JSON data back into an iotago.Output.
-func GetGroupFIOutput(outputID [OutputIdLen]byte, im *Manager) (iotago.Output, error) {
+func GetGroupFIOutput(outputID [OutputIdLen]byte, im *Manager) (iotago.Output, uint32, error) {
 	key := GetGroupFIKey(outputID)
 	value, err := im.imStore.Get(key)
 	// log
 	//Logger.Infof("GetGroupFIOutput key %s, value %s, err %v", iotago.EncodeHex(key), iotago.EncodeHex(value), err)
 	if err != nil {
 		if err == kvstore.ErrKeyNotFound {
-			return nil, nil // Not found
+			return nil, 0, nil
 		}
-		return nil, fmt.Errorf("failed to get GroupFIOutput from KV store: %w", err)
+		return nil, 0, fmt.Errorf("failed to get GroupFIOutput from KV store: %w", err)
 	}
 	// last byte is output type
 	outputType := iotago.OutputType(value[len(value)-1])
 	value = value[:len(value)-1]
-
+	timestampBytes := value[len(value)-4:]
+	milestoneTimestamp := BytesToUint32(timestampBytes)
+	value = value[:len(value)-4]
 	var output iotago.Output
 	if outputType == iotago.OutputBasic {
 		output = &iotago.BasicOutput{}
@@ -70,10 +73,10 @@ func GetGroupFIOutput(outputID [OutputIdLen]byte, im *Manager) (iotago.Output, e
 	err = output.UnmarshalJSON(value)
 
 	if err != nil {
-		return nil, fmt.Errorf("failed to unmarshal iotago.Output from JSON: %w", err)
+		return nil, 0, fmt.Errorf("failed to unmarshal iotago.Output from JSON: %w", err)
 	}
 
-	return output, nil
+	return output, milestoneTimestamp, nil
 }
 
 // DeleteGroupFIOutput deletes a GroupFI output from the KV store based on outputID.

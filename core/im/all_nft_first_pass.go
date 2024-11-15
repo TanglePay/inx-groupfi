@@ -47,7 +47,7 @@ func ProcessAllNftFirstPass(initCtx *InitContext) {
 			copy(outputIdFixed[:], outputId)
 			output, is := im.FilterGroupFIOutput(output, outputIdFixed, deps.IMManager)
 			if is {
-				return im.StoreGroupFIOutput(output, outputIdFixed, deps.IMManager)
+				return im.StoreGroupFIOutput(output, outputIdFixed, milestoneTimestamp, deps.IMManager)
 			}
 			return nil
 		},

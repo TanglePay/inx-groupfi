@@ -324,7 +324,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 
 		// Attempt to fetch the output using GetGroupFIOutput
-		output, err := im.GetGroupFIOutput(outputId, deps.IMManager)
+		output, milestoneTimestamp, err := im.GetGroupFIOutput(outputId, deps.IMManager)
 		if err != nil {
 			CoreComponent.LogInfof("GetGroupFIOutput failed for OutputID: %s, error: %v", outputIdHex, err)
 		}
@@ -333,8 +333,9 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			// Output found via GetGroupFIOutput, send the response
 			CoreComponent.LogInfof("OutputID: %s found via GetGroupFIOutput", outputIdHex)
 			resp := &im.OutputIdOutputResponse{
-				OutputIdHex: outputIdHex,
-				Output:      output,
+				OutputIdHex:        outputIdHex,
+				Output:             output,
+				MilestoneTimestamp: milestoneTimestamp,
 			}
 
 			if outputIdWithRespChan.BatchStatus != nil {
@@ -357,11 +358,22 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 			outputIdWithRespChan.RespChan <- resp
 			return
 		}
+		meta, err := client.OutputMetadataByID(ctx, outputId)
+		if err != nil {
+			CoreComponent.LogWarnf("client.OutputMetadataByID failed for OutputID: %s, error: %v", outputIdHex, err)
+			resp := &im.OutputIdOutputResponse{
+				OutputIdHex: outputIdHex,
+				Output:      nil,
+			}
+			outputIdWithRespChan.RespChan <- resp
+			return
+		}
 
 		// Successfully fetched the output using client.OutputByID, send the response
 		resp := &im.OutputIdOutputResponse{
-			OutputIdHex: outputIdHex,
-			Output:      output,
+			OutputIdHex:        outputIdHex,
+			Output:             output,
+			MilestoneTimestamp: meta.MilestoneTimestampBooked,
 		}
 
 		if outputIdWithRespChan.BatchStatus != nil {

@@ -117,8 +117,9 @@ type NFTResponse struct {
 	Timestamp    uint32 `json:"timestamp"`
 }
 type OutputIdOutputResponse struct {
-	OutputIdHex string        `json:"outputIdHex"`
-	Output      iotago.Output `json:"output"`
+	OutputIdHex        string        `json:"outputIdHex"`
+	Output             iotago.Output `json:"output"`
+	MilestoneTimestamp uint32        `json:"milestoneTimestamp"`
 }
 
 // GroupIdCheckResponse
