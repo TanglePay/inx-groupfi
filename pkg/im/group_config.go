@@ -134,22 +134,25 @@ type CustomField struct {
 	Value string `json:"value"`
 }
 type MessageGroupMetaJSON struct {
-	ChainId         uint32        `json:"chainId"`
-	SchemaVersion   uint16        `json:"schemaVersion"`
-	MessageType     uint8         `json:"messageType"`
-	AuthScheme      uint8         `json:"authScheme"`
-	QualifyType     string        `json:"qualifyType"`
-	ContractAddress string        `json:"contractAddress"`
-	GroupName       string        `json:"groupName"`
-	TokenThres      string        `json:"tokenThres"`
-	TokenDecimals   string        `json:"tokenDecimals"`
-	TokenThresValue string        `json:"tokenThresValue"`
-	CollectionName  string        `json:"collectionName"`
-	Symbol          string        `json:"symbol"`
-	ExtraChains     []*ExtraChain `json:"extraChains"`
-	Icon            string        `json:"icon"`
-	CustomFields    []CustomField `json:"customFields"`
-	DappGroupId     string        `json:"dappGroupId"`
+	ChainId            uint32        `json:"chainId"`
+	SchemaVersion      uint16        `json:"schemaVersion"`
+	MessageType        uint8         `json:"messageType"`
+	AuthScheme         uint8         `json:"authScheme"`
+	QualifyType        string        `json:"qualifyType"`
+	ContractAddress    string        `json:"contractAddress"`
+	GroupName          string        `json:"groupName"`
+	TokenThres         string        `json:"tokenThres"`
+	TokenDecimals      string        `json:"tokenDecimals"`
+	TokenThresValue    string        `json:"tokenThresValue"`
+	CollectionName     string        `json:"collectionName"`
+	Symbol             string        `json:"symbol"`
+	ExtraChains        []*ExtraChain `json:"extraChains"`
+	Icon               string        `json:"icon"`
+	CustomFields       []CustomField `json:"customFields"`
+	UriContains        string        `json:"uriContains"`
+	ContractType       string        `json:"contractType"`
+	QualifyDescription string        `json:"qualifyDescription"`
+	DappGroupId        string        `json:"dappGroupId"`
 }
 
 // struct for MessageGroupMetaJSON plus isPublic
