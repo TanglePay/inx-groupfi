@@ -2,6 +2,7 @@ package im
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 
 	"github.com/iotaledger/hive.go/core/logger"
@@ -12,6 +13,8 @@ import (
 
 // constant evm address len = 20
 const (
+	QualifyModeRaw    = 0x00
+	QualifyModeURI    = 0x01
 	EvmAddressLen     = 20
 	AddressTypeEvm    = 1
 	AddressTypeSolana = 2
@@ -63,7 +66,19 @@ func UnmarshalEvmQualify(outputId [OutputIdLen]byte,
 	logger.Infof("UnmarshalEvmQualify groupId %s", iotago.EncodeHex(groupId))
 	groupIdFixed := [GroupIdLen]byte{}
 	copy(groupIdFixed[:], groupId)
+	//
 	addressType := AddressTypeEvm
+	modeType := QualifyModeRaw
+	if commonHeader.SchemaVersion > 2 {
+		modeBytes, err := ReadBytesWithUint16Len(data, &idx, 1)
+		if err != nil {
+			return nil, err
+		}
+		modeType = int(modeBytes[0])
+
+	}
+	// log SchemaVersion, modeType
+	logger.Infof("UnmarshalEvmQualify SchemaVersion %d, modeType %d", commonHeader.SchemaVersion, modeType)
 	if commonHeader.SchemaVersion > 1 {
 		addressTypeBytes, err := ReadBytesWithUint16Len(data, &idx, 1)
 		if err != nil {
@@ -78,35 +93,60 @@ func UnmarshalEvmQualify(outputId [OutputIdLen]byte,
 		// log timestamp
 		logger.Infof("UnmarshalEvmQualify timestamp %d", timestamp)
 	}
-	addressLen := EvmAddressLen
-	if addressType == AddressTypeSolana {
-		addressLen = SolanaAddressLength
-	}
-	addressList := make([]string, 0)
-	for idx < len(data) {
-		if len(data)-idx < addressLen {
-			return nil, fmt.Errorf("invalid evm qualify data")
-		}
-		address, err := ReadBytesWithUint16Len(data, &idx, addressLen)
+	// case modeType == QualifyModeURI, rest of data is uri
+	if modeType == QualifyModeURI {
+		uriBytes, err := ReadBytesWithUint16Len(data, &idx, len(data)-idx)
 		if err != nil {
 			return nil, err
 		}
-		addressString := ""
-		if addressType == AddressTypeEvm {
-			addressString = iotago.EncodeHex(address)
-		} else if addressType == AddressTypeSolana {
-			solanaAddress, err := UnmarshalSolanaAddress(address)
+		uri := string(uriBytes)
+		content, err := DownloadUriContent(uri)
+		// log uri and content
+		logger.Infof("UnmarshalEvmQualify uri %s, content %s", uri, content)
+		if err != nil {
+			return nil, err
+		}
+		var addressList []string
+		// json unmarshal
+		err = json.Unmarshal([]byte(content), &addressList)
+		if err != nil {
+			return nil, err
+		}
+		return NewEvmQualify(outputId,
+			groupIdFixed, addressList, signatureBytes), nil
+	} else if modeType == QualifyModeRaw {
+		addressLen := EvmAddressLen
+		if addressType == AddressTypeSolana {
+			addressLen = SolanaAddressLength
+		}
+		addressList := make([]string, 0)
+		for idx < len(data) {
+			if len(data)-idx < addressLen {
+				return nil, fmt.Errorf("invalid evm qualify data")
+			}
+			address, err := ReadBytesWithUint16Len(data, &idx, addressLen)
 			if err != nil {
 				return nil, err
 			}
-			addressString = solanaAddress
+			addressString := ""
+			if addressType == AddressTypeEvm {
+				addressString = iotago.EncodeHex(address)
+			} else if addressType == AddressTypeSolana {
+				solanaAddress, err := UnmarshalSolanaAddress(address)
+				if err != nil {
+					return nil, err
+				}
+				addressString = solanaAddress
+			}
+			// log address
+			logger.Infof("UnmarshalEvmQualify address %s", addressString)
+			addressList = append(addressList, addressString)
 		}
-		// log address
-		logger.Infof("UnmarshalEvmQualify address %s", addressString)
-		addressList = append(addressList, addressString)
+		return NewEvmQualify(outputId,
+			groupIdFixed, addressList, signatureBytes), nil
+	} else {
+		return nil, fmt.Errorf("invalid mode type")
 	}
-	return NewEvmQualify(outputId,
-		groupIdFixed, addressList, signatureBytes), nil
 }
 
 // store one evm qualify
