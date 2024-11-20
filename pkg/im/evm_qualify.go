@@ -77,6 +77,8 @@ func UnmarshalEvmQualify(outputId [OutputIdLen]byte,
 		modeType = int(modeBytes[0])
 
 	}
+	// log SchemaVersion, modeType
+	logger.Infof("UnmarshalEvmQualify SchemaVersion %d, modeType %d", commonHeader.SchemaVersion, modeType)
 	if commonHeader.SchemaVersion > 1 {
 		addressTypeBytes, err := ReadBytesWithUint16Len(data, &idx, 1)
 		if err != nil {
@@ -99,6 +101,8 @@ func UnmarshalEvmQualify(outputId [OutputIdLen]byte,
 		}
 		uri := string(uriBytes)
 		content, err := DownloadUriContent(uri)
+		// log uri and content
+		logger.Infof("UnmarshalEvmQualify uri %s, content %s", uri, content)
 		if err != nil {
 			return nil, err
 		}
