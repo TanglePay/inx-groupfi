@@ -104,4 +104,8 @@ const (
 	ImStoreKeyPrefixProfile byte = 52
 
 	ImStoreKeyPrefixGroupFI byte = 53
+
+	ImStoreKeyPrefixGroupFICash byte = 54
+
+	ImStoreKeyPrefixRecentConsumedOutputIds byte = 55
 )

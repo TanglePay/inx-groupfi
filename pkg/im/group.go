@@ -128,6 +128,12 @@ type GroupIdCheckResponse struct {
 	IsExist    bool   `json:"isExist"`
 }
 
+// CashOutputResponse
+type CashOutputResponse struct {
+	CreatedCashOutputs      []*OutputIdOutputResponse `json:"createdCashOutputs"`
+	RecentConsumedOutoutIds []string                  `json:"recentConsumedOutoutIds"`
+}
+
 // NFTWithRespChan
 type NFTWithRespChan struct {
 	NFT      *NFT

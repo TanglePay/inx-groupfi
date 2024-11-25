@@ -10,8 +10,10 @@ import (
 
 // Constants
 var (
-	GroupFITagPrefix      = "GROUPFI" // Tag prefix to identify GroupFI outputs
-	GroupFITagPrefixBytes = []byte(GroupFITagPrefix)
+	GroupFITagPrefix          = "GROUPFI" // Tag prefix to identify GroupFI outputs
+	GroupFITagPrefixBytes     = []byte(GroupFITagPrefix)
+	GROUPFICASHTagPrefix      = "GROUPFICASH"
+	GROUPFICASHTagPrefixBytes = []byte(GROUPFICASHTagPrefix)
 )
 
 // GetGroupFIKey generates the storage key for a GroupFI output.
@@ -39,9 +41,19 @@ func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, milest
 	if err != nil {
 		return fmt.Errorf("failed to store GroupFIOutput in KV store: %w", err)
 	}
+	isCashOutput := FilterGroupFICashOutput(output, outputID, im)
+	if isCashOutput {
+		address, err := GetAddressFromOutput(output, im)
+		if err != nil {
+			return fmt.Errorf("failed to get address from output: %w", err)
+		}
+		addressSha256Hash := Sha256HashFixedAddress(address)
+		err = StoreGroupFICashOutput(addressSha256Hash, outputID, im)
+		if err != nil {
+			return fmt.Errorf("failed to store GroupFICashOutput in KV store: %w", err)
+		}
+	}
 
-	// log Stored GroupFI output, with outputID and key
-	// Logger.Infof("Stored GroupFI output with outputID %s and key %s and value %s", iotago.EncodeHex(outputID[:]), iotago.EncodeHex(key), iotago.EncodeHex(valueBytes))
 	return nil
 }
 
@@ -80,16 +92,26 @@ func GetGroupFIOutput(outputID [OutputIdLen]byte, im *Manager) (iotago.Output, u
 }
 
 // DeleteGroupFIOutput deletes a GroupFI output from the KV store based on outputID.
-func DeleteGroupFIOutput(outputID [OutputIdLen]byte, im *Manager) error {
+func DeleteGroupFIOutput(outputID [OutputIdLen]byte, output iotago.Output, im *Manager) error {
 	key := GetGroupFIKey(outputID)
 	if err := im.imStore.Delete(key); err != nil {
 		return fmt.Errorf("failed to delete GroupFIOutput from KV store: %w", err)
 	}
+	isCashOutput := FilterGroupFICashOutput(output, outputID, im)
+	if isCashOutput {
+		address, err := GetAddressFromOutput(output, im)
+		if err != nil {
+			return fmt.Errorf("failed to get address from output: %w", err)
+		}
+		addressSha256Hash := Sha256HashFixedAddress(address)
+		err = DeleteGroupFICashOutput(addressSha256Hash, outputID, im)
+		if err != nil {
+			return fmt.Errorf("failed to store GroupFICashOutput in KV store: %w", err)
+		}
+	}
 	return nil
 }
 
-// FilterGroupFIOutput checks if the output is a GroupFI output and stores it.
-// Returns the output, the converted EVM address, and a boolean indicating success.
 func FilterGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, im *Manager) (iotago.Output, bool) {
 	tagFeature := output.FeatureSet().TagFeature()
 	if tagFeature == nil || !bytes.HasPrefix(tagFeature.Tag, GroupFITagPrefixBytes) {
@@ -99,4 +121,14 @@ func FilterGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, im *M
 	// log Found Groupfi output with tag
 	Logger.Infof("Found Groupfi output with tag: %s", tagFeature.Tag)
 	return output, true
+}
+
+// FilterGroupFICashOutput checks if the output is a GroupFICash output
+func FilterGroupFICashOutput(output iotago.Output, outputID [OutputIdLen]byte, im *Manager) bool {
+	tagFeature := output.FeatureSet().TagFeature()
+	if tagFeature == nil || !bytes.HasPrefix(tagFeature.Tag, GROUPFICASHTagPrefixBytes) {
+		return false
+	}
+
+	return true
 }
