@@ -34,6 +34,10 @@ func DeleteGroupFICashOutput(addressSha256Hash [Sha256HashLen]byte, outputID [Ou
 	if err != nil {
 		return fmt.Errorf("failed to delete GroupFICashOutput in KV store: %w", err)
 	}
+	err = StoreRecentConsumedOutputId(addressSha256Hash, outputID, im)
+	if err != nil {
+		return fmt.Errorf("failed to store recent consumed output ID: %w", err)
+	}
 	return nil
 }
 
