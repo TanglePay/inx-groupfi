@@ -85,18 +85,10 @@ func GetRecentConsumedOutputIds(addressSha256Hash [Sha256HashLen]byte, im *Manag
 	var recentOutputIDs [][OutputIdLen]byte
 
 	err := im.imStore.Iterate(keyPrefix, func(key, value []byte) bool {
-		if len(key) < 1+Sha256HashLen+8+OutputIdLen {
-			// Invalid key length, skip
-			return true
-		}
-		// Extract the OutputID from the key
-		outputIDStart := 1 + Sha256HashLen + 8
+		// Extract the OutputID from the key, outputId is last outputIdLen bytes
 		var oid [OutputIdLen]byte
-		copy(oid[:], key[outputIDStart:outputIDStart+OutputIdLen])
+		copy(oid[:], key[len(key)-OutputIdLen:])
 		recentOutputIDs = append(recentOutputIDs, oid)
-		if len(recentOutputIDs) >= RecentOutputIdsLimit {
-			return false // Stop iteration after collecting 7
-		}
 		return true // Continue iteration
 	}, kvstore.IterDirectionBackward)
 
