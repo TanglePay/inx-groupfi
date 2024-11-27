@@ -1802,6 +1802,8 @@ func getAddressCashOutputs(c echo.Context) (*im.CashOutputResponse, error) {
 	if err != nil {
 		return nil, err
 	}
+	// log recent consumed output ids count
+	CoreComponent.LogInfof("get address cash outputs from address:%s, addressSha256:%s, found recent consumed output ids:%d", address, iotago.EncodeHex(addressSha256[:]), len(recentConsumedOutputIds))
 	var recentConsumedOutputHexIds []string
 	for _, outputId := range recentConsumedOutputIds {
 		recentConsumedOutputHexIds = append(recentConsumedOutputHexIds, iotago.EncodeHex(outputId[:]))
