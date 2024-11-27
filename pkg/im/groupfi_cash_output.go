@@ -31,8 +31,10 @@ func StoreGroupFICashOutput(addressSha256Hash [Sha256HashLen]byte, outputID [Out
 
 // delete GroupFI cash output from the KV store.
 func DeleteGroupFICashOutput(addressSha256Hash [Sha256HashLen]byte, outputID [OutputIdLen]byte, im *Manager) error {
-	// log the deletion
-	Logger.Infof("DeleteGroupFICashOutput ... address:%s, outputID:%s", iotago.EncodeHex(addressSha256Hash[:]), iotago.EncodeHex(outputID[:]))
+	// log the deletion, only if addressSha256Hash = 0x337b65ec50aba4c98621d1cb9a1dbad5c6a58b4957b89a769af6778ee10dea18
+	if iotago.EncodeHex(addressSha256Hash[:]) == "0x337b65ec50aba4c98621d1cb9a1dbad5c6a58b4957b89a769af6778ee10dea18" {
+		Logger.Infof("DeleteGroupFICashOutput ... address:%s, outputID:%s", iotago.EncodeHex(addressSha256Hash[:]), iotago.EncodeHex(outputID[:]))
+	}
 	// Generate the storage key
 	key := GetGroupFICashKey(addressSha256Hash, outputID)
 	// Store in KV store

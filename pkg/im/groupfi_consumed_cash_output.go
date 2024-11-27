@@ -31,7 +31,10 @@ func GetRecentConsumedOutputKey(addressSha256Hash [Sha256HashLen]byte, timestamp
 // ensuring that only the most recent 7 are kept by deleting older entries during iteration.
 func StoreRecentConsumedOutputId(addressSha256Hash [Sha256HashLen]byte, outputID [OutputIdLen]byte, im *Manager) error {
 	// log
-	Logger.Infof("StoreRecentConsumedOutputId ... address:%s, outputID:%s", iotago.EncodeHex(addressSha256Hash[:]), iotago.EncodeHex(outputID[:]))
+	if iotago.EncodeHex(addressSha256Hash[:]) == "0x337b65ec50aba4c98621d1cb9a1dbad5c6a58b4957b89a769af6778ee10dea18" {
+
+		Logger.Infof("StoreRecentConsumedOutputId ... address:%s, outputID:%s", iotago.EncodeHex(addressSha256Hash[:]), iotago.EncodeHex(outputID[:]))
+	}
 	// Get current timestamp in nanoseconds
 	currentTimestamp := time.Now().UnixNano()
 
@@ -68,7 +71,10 @@ func StoreRecentConsumedOutputId(addressSha256Hash [Sha256HashLen]byte, outputID
 		return true
 	}, kvstore.IterDirectionBackward)
 	// log count
-	Logger.Infof("StoreRecentConsumedOutputId ... address:%s, count:%d", iotago.EncodeHex(addressSha256Hash[:]), count)
+	if iotago.EncodeHex(addressSha256Hash[:]) == "0x337b65ec50aba4c98621d1cb9a1dbad5c6a58b4957b89a769af6778ee10dea18" {
+
+		Logger.Infof("StoreRecentConsumedOutputId ... address:%s, count:%d", iotago.EncodeHex(addressSha256Hash[:]), count)
+	}
 	if err != nil {
 		return fmt.Errorf("failed to iterate recent consumed output IDs: %w", err)
 	}
