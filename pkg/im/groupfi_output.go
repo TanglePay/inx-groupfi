@@ -118,8 +118,6 @@ func FilterGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, im *M
 		return nil, false
 	}
 
-	// log Found Groupfi output with tag
-	Logger.Infof("Found Groupfi output with tag: %s", tagFeature.Tag)
 	return output, true
 }
 
