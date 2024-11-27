@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
+	iotago "github.com/iotaledger/iota.go/v3"
 )
 
 // Constants
@@ -29,6 +30,8 @@ func GetRecentConsumedOutputKey(addressSha256Hash [Sha256HashLen]byte, timestamp
 // StoreRecentConsumedOutputId stores a recent consumed outputID with a timestamp,
 // ensuring that only the most recent 7 are kept by deleting older entries during iteration.
 func StoreRecentConsumedOutputId(addressSha256Hash [Sha256HashLen]byte, outputID [OutputIdLen]byte, im *Manager) error {
+	// log
+	Logger.Infof("StoreRecentConsumedOutputId ... address:%s, outputID:%s", iotago.EncodeHex(addressSha256Hash[:]), iotago.EncodeHex(outputID[:]))
 	// Get current timestamp in nanoseconds
 	currentTimestamp := time.Now().UnixNano()
 
@@ -64,7 +67,8 @@ func StoreRecentConsumedOutputId(addressSha256Hash [Sha256HashLen]byte, outputID
 		// Continue iteration
 		return true
 	}, kvstore.IterDirectionBackward)
-
+	// log count
+	Logger.Infof("StoreRecentConsumedOutputId ... address:%s, count:%d", iotago.EncodeHex(addressSha256Hash[:]), count)
 	if err != nil {
 		return fmt.Errorf("failed to iterate recent consumed output IDs: %w", err)
 	}

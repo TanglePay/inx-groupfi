@@ -1,6 +1,10 @@
 package im
 
-import "fmt"
+import (
+	"fmt"
+
+	iotago "github.com/iotaledger/iota.go/v3"
+)
 
 // for GroupFI cash output, we just store the output id, under user address hash
 // key for GroupFI cash output, prefix + addressSha256Hash + outputID
@@ -27,6 +31,8 @@ func StoreGroupFICashOutput(addressSha256Hash [Sha256HashLen]byte, outputID [Out
 
 // delete GroupFI cash output from the KV store.
 func DeleteGroupFICashOutput(addressSha256Hash [Sha256HashLen]byte, outputID [OutputIdLen]byte, im *Manager) error {
+	// log the deletion
+	Logger.Infof("DeleteGroupFICashOutput ... address:%s, outputID:%s", iotago.EncodeHex(addressSha256Hash[:]), iotago.EncodeHex(outputID[:]))
 	// Generate the storage key
 	key := GetGroupFICashKey(addressSha256Hash, outputID)
 	// Store in KV store
