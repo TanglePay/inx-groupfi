@@ -130,8 +130,8 @@ type GroupIdCheckResponse struct {
 
 // CashOutputResponse
 type CashOutputResponse struct {
-	CreatedCashOutputs      []*OutputIdOutputResponse `json:"createdCashOutputs"`
-	RecentConsumedOutoutIds []string                  `json:"recentConsumedOutoutIds"`
+	CreatedCashOutputIds    []string `json:"createdCashOutputIds"`
+	RecentConsumedOutoutIds []string `json:"recentConsumedOutoutIds"`
 }
 
 // NFTWithRespChan

@@ -1786,6 +1786,8 @@ func getAddressCashOutputs(c echo.Context) (*im.CashOutputResponse, error) {
 	}
 	CoreComponent.LogInfof("get address cash outputs from address:%s", address)
 	addressSha256 := im.Sha256HashFixedAddress(address)
+
+	// Get the output IDs and convert them to hex strings
 	outputIds, err := im.GetGroupFICashOutputs(addressSha256, deps.IMManager)
 	if err != nil {
 		return nil, err
@@ -1794,10 +1796,8 @@ func getAddressCashOutputs(c echo.Context) (*im.CashOutputResponse, error) {
 	for _, outputId := range outputIds {
 		outputHexIds = append(outputHexIds, iotago.EncodeHex(outputId[:]))
 	}
-	outputResps, err := processBatchOutputIds(outputHexIds, c.Request().Context())
-	if err != nil {
-		return nil, err
-	}
+
+	// Get recent consumed output IDs and convert them to hex strings
 	recentConsumedOutputIds, err := im.GetRecentConsumedOutputIds(addressSha256, deps.IMManager)
 	if err != nil {
 		return nil, err
@@ -1806,11 +1806,12 @@ func getAddressCashOutputs(c echo.Context) (*im.CashOutputResponse, error) {
 	for _, outputId := range recentConsumedOutputIds {
 		recentConsumedOutputHexIds = append(recentConsumedOutputHexIds, iotago.EncodeHex(outputId[:]))
 	}
+
+	// Return the response with updated field names
 	return &im.CashOutputResponse{
-		CreatedCashOutputs:      outputResps,
+		CreatedCashOutputIds:    outputHexIds, // Updated to reflect the new field name
 		RecentConsumedOutoutIds: recentConsumedOutputHexIds,
 	}, nil
-
 }
 
 // getGroupMessagesWithCount handles the request to get a list of {groupId, messageCount, timestampOfHour} after an optional start timestamp.
