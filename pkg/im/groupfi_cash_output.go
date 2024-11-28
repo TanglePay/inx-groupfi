@@ -18,7 +18,10 @@ func GetGroupFICashPrefix(addressSha256Hash [Sha256HashLen]byte) []byte {
 }
 
 // StoreGroupFICashOutput stores the GroupFI cash output in the KV store.
-func StoreGroupFICashOutput(addressSha256Hash [Sha256HashLen]byte, outputID [OutputIdLen]byte, im *Manager) error {
+func StoreGroupFICashOutput(addressSha256Hash [Sha256HashLen]byte, outputID [OutputIdLen]byte, im *Manager, shouldLog bool) error {
+	if shouldLog {
+		Logger.Infof("StoreGroupFICashOutput ... address:%s, outputID:%s", iotago.EncodeHex(addressSha256Hash[:]), iotago.EncodeHex(outputID[:]))
+	}
 	// Generate the storage key
 	key := GetGroupFICashKey(addressSha256Hash, outputID)
 	// Store in KV store

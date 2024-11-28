@@ -48,7 +48,8 @@ func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, milest
 			return fmt.Errorf("failed to get address from output: %w", err)
 		}
 		addressSha256Hash := Sha256HashFixedAddress(address)
-		err = StoreGroupFICashOutput(addressSha256Hash, outputID, im)
+		shouldLog := !IsIniting && address == "0x0d1d6b852baf39b45790de7a222fd7f51cd0da51"
+		err = StoreGroupFICashOutput(addressSha256Hash, outputID, im, shouldLog)
 		if err != nil {
 			return fmt.Errorf("failed to store GroupFICashOutput in KV store: %w", err)
 		}
