@@ -25,6 +25,15 @@ func GetGroupFIKey(outputID [OutputIdLen]byte) []byte {
 // StoreGroupFIOutput stores the GroupFI output in the KV store.
 // It marshals the iotago.Output to JSON and stores it under the key prefix + outputId.
 func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, milestoneTimestamp uint32, im *Manager) error {
+	address, err := GetAddressFromOutput(output, im)
+	if err != nil {
+		return fmt.Errorf("failed to get address from output: %w", err)
+	}
+	addressSha256Hash := Sha256HashFixedAddress(address)
+	shouldLog := address == "0x0d1d6b852baf39b45790de7a222fd7f51cd0da51"
+	if shouldLog {
+		Logger.Infof("StoreGroupFIOutput ... address:%s, outputID:%s", address, iotago.EncodeHex(outputID[:]))
+	}
 	// Marshal the iotago.Output to JSON
 	valueBytes, err := output.MarshalJSON()
 	if err != nil {
@@ -43,12 +52,7 @@ func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, milest
 	}
 	isCashOutput := FilterGroupFICashOutput(output, outputID, im)
 	if isCashOutput {
-		address, err := GetAddressFromOutput(output, im)
-		if err != nil {
-			return fmt.Errorf("failed to get address from output: %w", err)
-		}
-		addressSha256Hash := Sha256HashFixedAddress(address)
-		shouldLog := !IsIniting && address == "0x0d1d6b852baf39b45790de7a222fd7f51cd0da51"
+
 		err = StoreGroupFICashOutput(addressSha256Hash, outputID, im, shouldLog)
 		if err != nil {
 			return fmt.Errorf("failed to store GroupFICashOutput in KV store: %w", err)
