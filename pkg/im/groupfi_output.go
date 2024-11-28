@@ -37,6 +37,8 @@ func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, milest
 	// Marshal the iotago.Output to JSON
 	valueBytes, err := output.MarshalJSON()
 	if err != nil {
+		// log
+		Logger.Infof("StoreGroupFIOutput MarshalJSON err %v", err)
 		return fmt.Errorf("failed to marshal iotago.Output to JSON: %w", err)
 	}
 	outputType := output.Type()
@@ -48,9 +50,14 @@ func StoreGroupFIOutput(output iotago.Output, outputID [OutputIdLen]byte, milest
 	// Store in KV store
 	err = im.imStore.Set(key, valueBytes)
 	if err != nil {
+		// log
+		Logger.Infof("StoreGroupFIOutput Set err %v", err)
 		return fmt.Errorf("failed to store GroupFIOutput in KV store: %w", err)
 	}
 	isCashOutput := FilterGroupFICashOutput(output, outputID, im)
+	if shouldLog {
+		Logger.Infof("StoreGroupFIOutput isCashOutput %v", isCashOutput)
+	}
 	if isCashOutput {
 
 		err = StoreGroupFICashOutput(addressSha256Hash, outputID, im, shouldLog)
