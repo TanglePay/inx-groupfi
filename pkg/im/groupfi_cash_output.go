@@ -29,9 +29,12 @@ func StoreGroupFICashOutput(addressSha256Hash [Sha256HashLen]byte, outputID [Out
 	return nil
 }
 
+// 0x0d1d6b852baf39b45790de7a222fd7f51cd0da51
 // delete GroupFI cash output from the KV store.
-func DeleteGroupFICashOutput(addressSha256Hash [Sha256HashLen]byte, outputID [OutputIdLen]byte, im *Manager) error {
-	Logger.Infof("DeleteGroupFICashOutput ... address sha256 hash:%s, outputID:%s", iotago.EncodeHex(addressSha256Hash[:]), iotago.EncodeHex(outputID[:]))
+func DeleteGroupFICashOutput(addressSha256Hash [Sha256HashLen]byte, outputID [OutputIdLen]byte, im *Manager, shouldLog bool) error {
+	if shouldLog {
+		Logger.Infof("DeleteGroupFICashOutput ... address:%s, outputID:%s", iotago.EncodeHex(addressSha256Hash[:]), iotago.EncodeHex(outputID[:]))
+	}
 	// Generate the storage key
 	key := GetGroupFICashKey(addressSha256Hash, outputID)
 	// Store in KV store
@@ -39,7 +42,7 @@ func DeleteGroupFICashOutput(addressSha256Hash [Sha256HashLen]byte, outputID [Ou
 	if err != nil {
 		return fmt.Errorf("failed to delete GroupFICashOutput in KV store: %w", err)
 	}
-	err = StoreRecentConsumedOutputId(addressSha256Hash, outputID, im)
+	err = StoreRecentConsumedOutputId(addressSha256Hash, outputID, im, shouldLog)
 	if err != nil {
 		return fmt.Errorf("failed to store recent consumed output ID: %w", err)
 	}
