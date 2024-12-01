@@ -202,13 +202,19 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 
 			block, err := payload.GetBlock().UnwrapBlock(serializer.DeSeriModeNoValidation, nil)
 			if err != nil {
+				// log
+				CoreComponent.LogErrorf("LedgerUpdateBlock UnwrapBlock error:%s", err.Error())
 				continue
 			}
 			// check if block or payload is nil
 			if block == nil || block.Payload == nil {
+				// log
+				CoreComponent.LogErrorf("LedgerUpdateBlock block or payload is nil")
 				continue
 			}
 			if block.Payload.PayloadType() != iotago.PayloadTransaction {
+				// log
+				CoreComponent.LogErrorf("LedgerUpdateBlock block.Payload.PayloadType() != iotago.PayloadTransaction")
 				continue
 			}
 			transaction := block.Payload.(*iotago.Transaction)
