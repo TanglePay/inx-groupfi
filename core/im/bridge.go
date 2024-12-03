@@ -214,7 +214,7 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 			}
 			if block.Payload.PayloadType() != iotago.PayloadTransaction {
 				// log
-				CoreComponent.LogErrorf("LedgerUpdateBlock block.Payload.PayloadType() != iotago.PayloadTransaction")
+				// CoreComponent.LogErrorf("LedgerUpdateBlock block.Payload.PayloadType() != iotago.PayloadTransaction")
 				continue
 			}
 			transaction := block.Payload.(*iotago.Transaction)
