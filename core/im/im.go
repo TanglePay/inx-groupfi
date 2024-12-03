@@ -1661,9 +1661,6 @@ func batchCheckOutputId(c echo.Context) ([]*im.OutputIdCheckResponse, error) {
 }
 
 // batchOutputIdToOutput
-// batchOutputIdToOutput processes a batch of output IDs and retrieves their corresponding outputs.
-// It sets up a timeout before initiating the drain and performs the draining asynchronously.
-// The response channel is closed in the main function to handle potential ongoing usage after Drain.
 func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error) {
 	// Parse outputIds from the request body
 	outputIds, err := parseOutputIdsFromBody(c)
@@ -1672,6 +1669,13 @@ func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error)
 	}
 	CoreComponent.LogInfof("batch outputId to output from outputIds:%d", len(outputIds))
 
+	// Delegate the batch processing to the separate function
+	return processBatchOutputIds(outputIds, c.Request().Context())
+}
+
+// processBatchOutputIds initializes the batch status, manages concurrency, and collects responses for the given output IDs.
+// It can be reused wherever batch processing of output IDs is needed.
+func processBatchOutputIds(outputIds []string, parentCtx context.Context) ([]*im.OutputIdOutputResponse, error) {
 	// Initialize batch-level status
 	batchStatus := &im.BatchStatus{
 		IsCanceled: false,
@@ -1696,7 +1700,7 @@ func batchOutputIdToOutput(c echo.Context) ([]*im.OutputIdOutputResponse, error)
 	}
 
 	// Create a context with a total timeout of 5 seconds
-	ctx, cancel := context.WithTimeout(c.Request().Context(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(parentCtx, 5*time.Second)
 	defer cancel()
 
 	// Start draining in a separate goroutine
@@ -1772,6 +1776,44 @@ func checkGroupIdExistsBatch(c echo.Context) ([]*im.GroupIdCheckResponse, error)
 		}
 	}
 	return resp, nil
+}
+
+// getAddressCashOutputs
+func getAddressCashOutputs(c echo.Context) (*im.CashOutputResponse, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	CoreComponent.LogInfof("get address cash outputs from address:%s", address)
+	addressSha256 := im.Sha256HashFixedAddress(address)
+
+	// Get the output IDs and convert them to hex strings
+	outputIds, err := im.GetGroupFICashOutputs(addressSha256, deps.IMManager)
+	if err != nil {
+		return nil, err
+	}
+	var outputHexIds []string
+	for _, outputId := range outputIds {
+		outputHexIds = append(outputHexIds, iotago.EncodeHex(outputId[:]))
+	}
+
+	// Get recent consumed output IDs and convert them to hex strings
+	recentConsumedOutputIds, err := im.GetRecentConsumedOutputIds(addressSha256, deps.IMManager)
+	if err != nil {
+		return nil, err
+	}
+	// log recent consumed output ids count
+	CoreComponent.LogInfof("get address cash outputs from address:%s, addressSha256:%s, found recent consumed output ids:%d", address, iotago.EncodeHex(addressSha256[:]), len(recentConsumedOutputIds))
+	var recentConsumedOutputHexIds []string
+	for _, outputId := range recentConsumedOutputIds {
+		recentConsumedOutputHexIds = append(recentConsumedOutputHexIds, iotago.EncodeHex(outputId[:]))
+	}
+
+	// Return the response with updated field names
+	return &im.CashOutputResponse{
+		CreatedCashOutputIds:    outputHexIds, // Updated to reflect the new field name
+		RecentConsumedOutoutIds: recentConsumedOutputHexIds,
+	}, nil
 }
 
 // getGroupMessagesWithCount handles the request to get a list of {groupId, messageCount, timestampOfHour} after an optional start timestamp.

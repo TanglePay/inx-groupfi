@@ -112,7 +112,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			copy(iotaOutputIdFix[:], iotaOutputId)
 			_, isGroupfiOutput := im.FilterGroupFIOutput(iotaOutput, iotaOutputIdFix, deps.IMManager)
 			if isGroupfiOutput {
-				err := im.DeleteGroupFIOutput(iotaOutputIdFix, deps.IMManager)
+				err := im.DeleteGroupFIOutput(iotaOutputIdFix, iotaOutput, deps.IMManager)
 				if err != nil {
 					// log error
 					CoreComponent.LogErrorf("LedgerUpdate DeleteGroupFIOutput error:%s", err.Error())
@@ -202,13 +202,19 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 
 			block, err := payload.GetBlock().UnwrapBlock(serializer.DeSeriModeNoValidation, nil)
 			if err != nil {
+				// log
+				CoreComponent.LogErrorf("LedgerUpdateBlock UnwrapBlock error:%s", err.Error())
 				continue
 			}
 			// check if block or payload is nil
 			if block == nil || block.Payload == nil {
+				// log
+				CoreComponent.LogErrorf("LedgerUpdateBlock block or payload is nil")
 				continue
 			}
 			if block.Payload.PayloadType() != iotago.PayloadTransaction {
+				// log
+				CoreComponent.LogErrorf("LedgerUpdateBlock block.Payload.PayloadType() != iotago.PayloadTransaction")
 				continue
 			}
 			transaction := block.Payload.(*iotago.Transaction)

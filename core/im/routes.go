@@ -245,6 +245,9 @@ const (
 	RouteCheckGroupIdExists = "/checkgroupidexists"
 	// check if groupId exists batch
 	RouteCheckGroupIdExistsBatch = "/checkgroupidexistsbatch"
+
+	// get address cash outputs
+	RouteAddressCashOutputs = "/addresscashoutputs"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -1058,6 +1061,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
 
+	// RouteAddressCashOutputs
+	e.GET(RouteAddressCashOutputs, func(c echo.Context) error {
+		resp, err := getAddressCashOutputs(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 	// New endpoint for getting a list of group message counts after a certain anchor (for synchronization)
 	e.GET("/groupmessagecountsync", func(c echo.Context) error {
 		resp, err := getGroupMessagesWithCount(c)

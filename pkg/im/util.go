@@ -367,6 +367,21 @@ func CalculateDiff[T any](created, existing []*T, getKey func(*T) string) (toCre
 
 	return toCreate, toDelete
 }
+
+// get address from iota output
+func GetAddressFromOutput(output iotago.Output, im *Manager) (string, error) {
+	unlockConditionSet := output.UnlockConditionSet()
+	if unlockConditionSet == nil {
+		return "", fmt.Errorf("unlock condition set not found")
+	}
+	addressUnlock := unlockConditionSet.Address()
+	if addressUnlock == nil {
+		return "", fmt.Errorf("address not found")
+	}
+	address := addressUnlock.Address.Bech32(iotago.NetworkPrefix(HornetChainName))
+	address = im.ConvertAddressToActualAddress(address)
+	return address, nil
+}
 func StartOfHour(epochTimestamp uint32) uint32 {
 	t := time.Unix(int64(epochTimestamp), 0).UTC()
 	startOfHour := time.Date(t.Year(), t.Month(), t.Day(), t.Hour(), 0, 0, 0, time.UTC)
