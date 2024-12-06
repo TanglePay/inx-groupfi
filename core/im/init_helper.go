@@ -36,7 +36,7 @@ type OutputWithId struct {
 
 // handleGenericInit function will maintain a mark for is finished,
 // iterate all output under certain filter,
-func HandleGenericInitv2(initCtx *InitContext,
+func HandleGenericInit(initCtx *InitContext,
 	topic string,
 	outputIdsFetcher OutputIdsFetcher,
 	outputProcessors []OutputProcessor) {
@@ -124,8 +124,8 @@ Loop:
 					if itemProcessedCt == itemCt {
 						break CollectLoop
 					}
-					// 5 sec timeout
-				case <-time.After(5 * time.Second):
+					// 5 minutes timeout
+				case <-time.After(5 * time.Minute):
 					break CollectLoop
 				}
 			}
@@ -212,7 +212,7 @@ var NftOutputIdsByTagFetcher = func(tag string) OutputIdsFetcher {
 	}
 }
 
-func HandleGenericInit(initCtx *InitContext,
+func HandleGenericInitbak(initCtx *InitContext,
 	topic string,
 	outputIdsFetcher OutputIdsFetcher,
 	outputProcessors []OutputProcessor) {
