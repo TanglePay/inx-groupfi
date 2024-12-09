@@ -153,6 +153,7 @@ type MessageGroupMetaJSON struct {
 	ContractType       string        `json:"contractType"`
 	QualifyDescription string        `json:"qualifyDescription"`
 	DappGroupId        string        `json:"dappGroupId"`
+	GroupId            string        `json:"groupId"`
 }
 
 // struct for MessageGroupMetaJSON plus isPublic
@@ -408,10 +409,14 @@ func ReadGroupConfigMetaFromGroupId(groupId [GroupIdLen]byte, im *Manager) (*Mes
 	if err != nil {
 		return nil, err
 	}
+	// case not nil and groupConfig.GroupId is empty, calculate it
+	if groupConfig.GroupId == "" {
+		groupConfig.GroupId = GetDappGroupId(iotago.EncodeHex(groupId[:]), groupConfig)
+	}
 	return groupConfig, nil
 }
 
-// iterate all groupId, PrefixForGroupConfigMeta
+// iterate all groupId, PrefixForGroupConfigMetag
 func IterateAllGroupIdFromGroupConfigMetaStore(im *Manager, f func(groupId [GroupIdLen]byte) bool) error {
 	prefix := PrefixForGroupConfigMeta()
 	// iterate
