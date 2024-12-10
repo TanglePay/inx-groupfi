@@ -133,6 +133,14 @@ type CustomField struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
+
+// TokenRule represents a rule for ERC1155 tokens
+type TokenRule struct {
+	Type           uint8  `json:"type"`
+	TokenId        string `json:"tokenId"`
+	ThresholdValue string `json:"thresholdValue"`
+}
+
 type MessageGroupMetaJSON struct {
 	ChainId            uint32        `json:"chainId"`
 	SchemaVersion      uint16        `json:"schemaVersion"`
@@ -154,6 +162,7 @@ type MessageGroupMetaJSON struct {
 	QualifyDescription string        `json:"qualifyDescription"`
 	DappGroupId        string        `json:"dappGroupId"`
 	GroupId            string        `json:"groupId"`
+	TokenRules         []TokenRule   `json:"tokenRules,omitempty"`
 }
 
 // struct for MessageGroupMetaJSON plus isPublic
