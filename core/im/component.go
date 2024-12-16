@@ -294,7 +294,6 @@ func run() error {
 
 	nodeHTTPAPIClient := nodeclient.New(apiUrl)
 	im.NodeHTTPAPIClient = nodeHTTPAPIClient
-
 	// create a background worker that handles the init situation
 	if err := CoreComponent.Daemon().BackgroundWorker("LedgerInit", func(ctx context.Context) {
 		CoreComponent.LogInfo("Starting LedgerInit ... done")
@@ -303,6 +302,8 @@ func run() error {
 			CoreComponent.LogPanicf("failed to start worker: %s", err)
 		}
 		im.CurrentNodeProtocol = &resp.Protocol
+		im.CurrentMilestoneIndex = resp.Status.LatestMilestone.Index
+		im.CurrentMilestoneTimestamp = resp.Status.LatestMilestone.Timestamp
 		im.ListeningCtx = ctx
 		im.InitializeOutputCache(1500)
 		indexerClient, err := nodeHTTPAPIClient.Indexer(ctx)

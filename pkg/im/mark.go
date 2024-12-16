@@ -291,6 +291,10 @@ func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputIdAndMilestone
 			mark.MilestoneIndex = output.MilestoneIndex
 			mark.MilestoneTimestamp = output.MilestoneTimestamp
 		}
+		// mark.MilestoneTimestamp can not be greater than im.CurrentMilestoneTimestamp
+		if mark.MilestoneTimestamp > CurrentMilestoneTimestamp {
+			mark.MilestoneTimestamp = CurrentMilestoneTimestamp
+		}
 	}
 	return marks, address, nil
 }
