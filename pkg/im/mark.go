@@ -156,6 +156,18 @@ func (im *Manager) MarkExists(groupId [GroupIdLen]byte, address string) (bool, e
 	return im.imStore.Has(key)
 }
 
+// GetMark returns a mark for the given group ID and address
+func (im *Manager) GetMark(groupId [GroupIdLen]byte, address string) (*Mark, error) {
+	key := im.MarkKey(NewMark(address, groupId, 0, 0))
+	value, err := im.imStore.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	timestampUint32 := binary.LittleEndian.Uint32(value[:4])
+	return NewMark(address, groupId, 0, timestampUint32), nil
+}
+
 // MarkKeyPrefix returns the prefix for the given group id.
 func (im *Manager) MarkKeyPrefix(groupId [GroupIdLen]byte) []byte {
 	key := make([]byte, 1+GroupIdLen)
@@ -273,10 +285,12 @@ func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputIdAndMilestone
 	if err != nil {
 		return nil, "", err
 	}
-	for _, mark := range marks {
+	for i, mark := range marks {
 		mark.OutputId = outputId
-		mark.MilestoneIndex = output.MilestoneIndex
-		mark.MilestoneTimestamp = output.MilestoneTimestamp
+		if i == len(marks)-1 {
+			mark.MilestoneIndex = output.MilestoneIndex
+			mark.MilestoneTimestamp = output.MilestoneTimestamp
+		}
 	}
 	return marks, address, nil
 }
