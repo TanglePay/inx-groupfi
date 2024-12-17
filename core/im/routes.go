@@ -111,6 +111,8 @@ const (
 	APIRoute           = "groupfi/v1"
 	MQTTAPIRoute       = "groupfi/mqtt/v1"
 	RouteIMPublicItems = "/publicitems"
+	// public batch
+	RouteIMPublicItemsBatch = "/publicitemsbatch"
 	// nft
 	RouteIMNFTs = "/nfts"
 	// nfts that each with public key
@@ -718,6 +720,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// RouteIMPublicItems
 	e.GET(RouteIMPublicItems, func(c echo.Context) error {
 		resp, err := getPublicItems(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+	// RouteIMPublicItemsBatch
+	e.POST(RouteIMPublicItemsBatch, func(c echo.Context) error {
+		resp, err := getPublicItemsBatch(c)
 		if err != nil {
 			return err
 		}

@@ -1320,6 +1320,65 @@ func getPublicItems(c echo.Context) (*PublicItemsResponse, error) {
 	return resp, nil
 }
 
+// getPublicItemsBatch
+func getPublicItemsBatch(c echo.Context) ([]*PublicItemsResponse, error) {
+
+	// Parse request params
+	var params []PublicItemsRequestParam
+	err := c.Bind(&params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create response array
+	responses := make([]*PublicItemsResponse, len(params))
+
+	// Process each request param
+	for i, param := range params {
+		var startToken []byte
+		var endToken []byte
+		var err error
+
+		if param.StartToken != "" {
+			startToken, err = iotago.DecodeHex(param.StartToken)
+			if err != nil {
+				continue
+			}
+		}
+
+		if param.EndToken != "" {
+			endToken, err = iotago.DecodeHex(param.EndToken)
+			if err != nil {
+				continue
+			}
+		}
+
+		// Default direction is "head" if not specified
+		isReverse := param.Direction == "tail"
+
+		// Default size is 5 if not specified
+		size := param.Size
+		if size == 0 {
+			size = defaultSize
+		}
+
+		// Decode groupId
+		groupId, err := iotago.DecodeHex(param.GroupId)
+		if err != nil {
+			continue
+		}
+
+		items, err := deps.IMManager.ReadPublicItemsFromGroupId(groupId, startToken, endToken, size, isReverse, CoreComponent.Logger())
+		if err != nil {
+			continue
+		}
+
+		responses[i] = makePublicItemsResponse(items)
+	}
+
+	return responses, nil
+}
+
 // getAddressesDids given addresses
 func getAddressesDids(addresses []string) ([]*DidAddressResponse, error) {
 	respList := make([]*DidAddressResponse, len(addresses))
