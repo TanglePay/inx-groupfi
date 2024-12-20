@@ -287,7 +287,7 @@ func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputIdAndMilestone
 	}
 	for i, mark := range marks {
 		mark.OutputId = outputId
-		if i == len(marks)-1 {
+		if i == len(marks)-1 && !IsIniting {
 			mark.MilestoneIndex = output.MilestoneIndex
 			mark.MilestoneTimestamp = output.MilestoneTimestamp
 		}
