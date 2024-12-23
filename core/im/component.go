@@ -304,6 +304,8 @@ func run() error {
 		im.CurrentNodeProtocol = &resp.Protocol
 		im.CurrentMilestoneIndex = resp.Status.LatestMilestone.Index
 		im.CurrentMilestoneTimestamp = resp.Status.LatestMilestone.Timestamp
+		// log current milestone index and timestamp
+		CoreComponent.LogInfof("Starting LedgerInit ... CurrentMilestoneIndex:%d,CurrentMilestoneTimestamp:%d", im.CurrentMilestoneIndex, im.CurrentMilestoneTimestamp)
 		im.ListeningCtx = ctx
 		im.InitializeOutputCache(1500)
 		indexerClient, err := nodeHTTPAPIClient.Indexer(ctx)
