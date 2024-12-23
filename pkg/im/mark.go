@@ -2,7 +2,6 @@ package im
 
 import (
 	"bytes"
-	"encoding/binary"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
@@ -65,7 +64,8 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 	addressKey := im.AddressMarkKey(mark)
 	value := make([]byte, 4+len(mark.Address))
 	index := 0
-	binary.LittleEndian.PutUint32(value[index:], mark.MilestoneTimestamp)
+	timeBytes := Uint32ToBytes(mark.MilestoneTimestamp)
+	copy(value[index:], timeBytes)
 	index += 4
 	copy(value[index:], mark.Address)
 	// log mark key and value
@@ -164,7 +164,7 @@ func (im *Manager) GetMark(groupId [GroupIdLen]byte, address string) (*Mark, err
 		return nil, err
 	}
 
-	timestampUint32 := binary.LittleEndian.Uint32(value[:4])
+	timestampUint32 := BytesToUint32(value[:4])
 	return NewMark(address, groupId, 0, timestampUint32), nil
 }
 
@@ -195,7 +195,7 @@ func (im *Manager) MarkKeyAndValueToMark(key kvstore.Key, value kvstore.Value) *
 	var timestamp [TimestampLen]byte
 	copy(timestamp[:], value[:TimestampLen])
 	address := string(value[TimestampLen:])
-	timestampUint32 := binary.LittleEndian.Uint32(value[:4])
+	timestampUint32 := BytesToUint32(value[4:])
 	return NewMark(address, groupId, 0, timestampUint32)
 }
 
@@ -207,7 +207,7 @@ func (im *Manager) AddressMarkKeyAndValueToMark(key kvstore.Key, value kvstore.V
 	var timestamp [TimestampLen]byte
 	copy(timestamp[:], value[:TimestampLen])
 	address := string(value[TimestampLen:])
-	timestampUint32 := binary.LittleEndian.Uint32(value[:4])
+	timestampUint32 := BytesToUint32(value[:4])
 	return NewMark(address, groupId, 0, timestampUint32)
 }
 
@@ -265,7 +265,7 @@ func (im *Manager) DeserializeUserMarkedGroupIds(address string, data []byte) ([
 		if err != nil {
 			return nil, "", err
 		}
-		timestamp32 := binary.LittleEndian.Uint32(timestamp[:])
+		timestamp32 := BytesToUint32(timestamp)
 		marks = append(marks, NewMark(address, groupIdBytes, 0, timestamp32))
 	}
 	return marks, address, nil
