@@ -253,7 +253,7 @@ const (
 
 	// get address marks
 	RouteAddressMarks = "/addressmarks"
-}
+)
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
