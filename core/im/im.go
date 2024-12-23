@@ -1982,3 +1982,31 @@ func parseOptionalTimestampParam(c echo.Context, paramName string) (uint32, erro
 	}
 	return uint32(timestamp), nil
 }
+
+// getAddressMarks gets all marks associated with an address
+func getAddressMarks(c echo.Context) ([]*MarkResponse, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	CoreComponent.LogInfof("get marks from address:%s", address)
+	marks, err := deps.IMManager.GetMarksFromAddress(address, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert marks to response format
+	markResponses := make([]*MarkResponse, len(marks))
+	for i, mark := range marks {
+		markResponses[i] = &MarkResponse{
+			Address:            mark.Address,
+			GroupId:            iotago.EncodeHex(mark.GroupId[:]),
+			OutputId:           iotago.EncodeHex(mark.OutputId[:]),
+			MilestoneIndex:     mark.MilestoneIndex,
+			MilestoneTimestamp: mark.MilestoneTimestamp,
+		}
+	}
+
+	return markResponses, nil
+}

@@ -116,3 +116,12 @@ type PublicItemsRequestParam struct {
 	GroupId    string `json:"groupId"`
 	Size       int    `json:"size"`
 }
+
+// MarkResponse represents the response structure for a mark
+type MarkResponse struct {
+	Address            string `json:"address"`
+	GroupId            string `json:"groupId"`
+	OutputId           string `json:"outputId"`
+	MilestoneIndex     uint32 `json:"milestoneIndex"`
+	MilestoneTimestamp uint32 `json:"milestoneTimestamp"`
+}
