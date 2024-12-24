@@ -285,7 +285,7 @@ func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputIdAndMilestone
 	if err != nil {
 		return nil, "", err
 	}
-	for i, mark := range marks {
+	for _, mark := range marks {
 		mark.OutputId = outputId
 		/*
 			if i == len(marks)-1 && !IsIniting {
