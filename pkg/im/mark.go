@@ -285,18 +285,18 @@ func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputIdAndMilestone
 	if err != nil {
 		return nil, "", err
 	}
-	for _, mark := range marks {
+	for i, mark := range marks {
 		mark.OutputId = outputId
-		/*
-			if i == len(marks)-1 && !IsIniting {
-				mark.MilestoneIndex = output.MilestoneIndex
-				mark.MilestoneTimestamp = output.MilestoneTimestamp
-			}*/
+
+		if i == len(marks)-1 {
+			mark.MilestoneIndex = output.MilestoneIndex
+			mark.MilestoneTimestamp = output.MilestoneTimestamp
+		}
 		// mark.MilestoneTimestamp can not be greater than im.CurrentMilestoneTimestamp
-		/*
-			if mark.MilestoneTimestamp > CurrentMilestoneTimestamp {
-				mark.MilestoneTimestamp = CurrentMilestoneTimestamp
-			}*/
+
+		if mark.MilestoneTimestamp > CurrentMilestoneTimestamp {
+			mark.MilestoneTimestamp = CurrentMilestoneTimestamp
+		}
 	}
 	return marks, address, nil
 }
