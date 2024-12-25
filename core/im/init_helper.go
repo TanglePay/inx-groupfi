@@ -1,7 +1,6 @@
 package im
 
 import (
-	"bytes"
 	"context"
 	"sort"
 	"sync"
@@ -132,9 +131,9 @@ Loop:
 
 			initCtx.Logger.Infof("Collected %d outputs", len(outputs))
 
-			// Sort outputs by OutputId
+			// Sort outputs by MilestoneTimestamp, old to new
 			sort.Slice(outputs, func(i, j int) bool {
-				return bytes.Compare(outputs[i].OutputId, outputs[j].OutputId) < 0
+				return outputs[i].MilestoneTimestamp < outputs[j].MilestoneTimestamp
 			})
 
 			// Process each output in sorted order
