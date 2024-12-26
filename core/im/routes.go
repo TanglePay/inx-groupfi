@@ -111,6 +111,8 @@ const (
 	APIRoute           = "groupfi/v1"
 	MQTTAPIRoute       = "groupfi/mqtt/v1"
 	RouteIMPublicItems = "/publicitems"
+	// public batch
+	RouteIMPublicItemsBatch = "/publicitemsbatch"
 	// nft
 	RouteIMNFTs = "/nfts"
 	// nfts that each with public key
@@ -248,6 +250,9 @@ const (
 
 	// get address cash outputs
 	RouteAddressCashOutputs = "/addresscashoutputs"
+
+	// get address marks
+	RouteAddressMarks = "/addressmarks"
 )
 
 func AddCORS(next echo.HandlerFunc) echo.HandlerFunc {
@@ -723,6 +728,14 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
+	// RouteIMPublicItemsBatch
+	e.POST(RouteIMPublicItemsBatch, func(c echo.Context) error {
+		resp, err := getPublicItemsBatch(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
 	// group qualified addresses
 	e.GET(RouteGroupQualifiedAddresses, func(c echo.Context) error {
 		resp, err := getQualifiedAddressesForGroupId(c)
@@ -1081,6 +1094,15 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 	// New endpoint for getting message count for a group with an optional time range
 	e.GET("/groupmessagecountwithtimerange", func(c echo.Context) error {
 		resp, err := getMessageCountWithOptionalRange(c)
+		if err != nil {
+			return err
+		}
+		return httpserver.JSONResponse(c, http.StatusOK, resp)
+	})
+
+	// get address marks
+	e.GET(RouteAddressMarks, func(c echo.Context) error {
+		resp, err := getAddressMarks(c)
 		if err != nil {
 			return err
 		}

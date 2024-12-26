@@ -27,7 +27,7 @@ type GroupIdAndGroupNamePair struct {
 
 // get dapp groupId from groupId and group meta
 // dappGroupId = 'groupfi'+ groupNamespacestriped + keccak256(groupId)
-func GetDappGroupId(groupIdHex string, groupMeta *MessageGroupMetaJSON) string {
+func GetLegacyDappGroupId(groupIdHex string, groupMeta *MessageGroupMetaJSON) string {
 	var name string
 	if groupMeta.QualifyType == "token" {
 		name = groupMeta.Symbol
@@ -42,6 +42,20 @@ func GetDappGroupId(groupIdHex string, groupMeta *MessageGroupMetaJSON) string {
 	}
 	groupIdShortHash := SHA256HashBytesReturnString(groupId)
 	return "groupfi" + name + groupIdShortHash
+}
+
+// get dapp groupId from groupId and group meta
+func GetDappGroupId(groupIdHex string, groupMeta *MessageGroupMetaJSON) string {
+	var name string
+	if groupMeta.QualifyType == "token" {
+		name = groupMeta.Symbol
+	} else if groupMeta.QualifyType == "nft" {
+		name = groupMeta.CollectionName
+	}
+	// strip white space and tab
+	name = strings.ReplaceAll(name, " ", "")
+	groupId0xStripped := strings.TrimPrefix(groupIdHex, "0x")
+	return "groupfi" + name + groupId0xStripped
 }
 func ChainIdAndCollectionIdToGroupIdAndGroupNamePairs(chainId uint32, contractAddress string, im *Manager) []*GroupIdAndGroupNamePair {
 	var res []*GroupIdAndGroupNamePair
@@ -133,6 +147,14 @@ type CustomField struct {
 	Key   string `json:"key"`
 	Value string `json:"value"`
 }
+
+// TokenRule represents a rule for ERC1155 tokens
+type TokenRule struct {
+	Type           uint8  `json:"type"`
+	TokenId        string `json:"tokenId"`
+	ThresholdValue string `json:"thresholdValue"`
+}
+
 type MessageGroupMetaJSON struct {
 	ChainId            uint32        `json:"chainId"`
 	SchemaVersion      uint16        `json:"schemaVersion"`
@@ -153,6 +175,8 @@ type MessageGroupMetaJSON struct {
 	ContractType       string        `json:"contractType"`
 	QualifyDescription string        `json:"qualifyDescription"`
 	DappGroupId        string        `json:"dappGroupId"`
+	GroupId            string        `json:"groupId"`
+	TokenRules         []TokenRule   `json:"tokenRules,omitempty"`
 }
 
 // struct for MessageGroupMetaJSON plus isPublic
@@ -408,10 +432,14 @@ func ReadGroupConfigMetaFromGroupId(groupId [GroupIdLen]byte, im *Manager) (*Mes
 	if err != nil {
 		return nil, err
 	}
+	// case not nil and groupConfig.GroupId is empty, calculate it
+	if groupConfig.GroupId == "" {
+		groupConfig.GroupId = GetDappGroupId(iotago.EncodeHex(groupId[:]), groupConfig)
+	}
 	return groupConfig, nil
 }
 
-// iterate all groupId, PrefixForGroupConfigMeta
+// iterate all groupId, PrefixForGroupConfigMetag
 func IterateAllGroupIdFromGroupConfigMetaStore(im *Manager, f func(groupId [GroupIdLen]byte) bool) error {
 	prefix := PrefixForGroupConfigMeta()
 	// iterate
@@ -1373,8 +1401,14 @@ func HandleGroupNFTOutputConsumed(configWrapper *ConfigNftOutputWrapper, logger 
 			return err
 		}
 		dappGroupId := GetDappGroupId(iotago.EncodeHex(groupId[:]), config)
+		legacyDappGroupId := GetLegacyDappGroupId(iotago.EncodeHex(groupId[:]), config)
 		// delete groupId from dappGroupId
 		err = DeleteGroupIdFromDappGroupId(dappGroupId, im)
+		if err != nil {
+			return err
+		}
+		// delete groupId from legacyDappGroupId
+		err = DeleteGroupIdFromDappGroupId(legacyDappGroupId, im)
 		if err != nil {
 			return err
 		}
@@ -1407,8 +1441,15 @@ func HandleGroupNFTOutputCreated(configWrapper *ConfigNftOutputWrapper, logger *
 		}
 		// store groupId from dappGroupId
 		dappGroupId := GetDappGroupId(groupIdHex, config)
-		config.DappGroupId = dappGroupId
+		legacyDappGroupId := GetLegacyDappGroupId(groupIdHex, config)
+		config.DappGroupId = legacyDappGroupId
+		config.GroupId = dappGroupId
 		err = StoreDappGroupIdToGroupId(dappGroupId, groupId, im)
+		if err != nil {
+			return err
+		}
+		// store groupId from legacyDappGroupId
+		err = StoreDappGroupIdToGroupId(legacyDappGroupId, groupId, im)
 		if err != nil {
 			return err
 		}

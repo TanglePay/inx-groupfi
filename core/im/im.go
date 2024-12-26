@@ -1320,6 +1320,65 @@ func getPublicItems(c echo.Context) (*PublicItemsResponse, error) {
 	return resp, nil
 }
 
+// getPublicItemsBatch
+func getPublicItemsBatch(c echo.Context) ([]*PublicItemsResponse, error) {
+
+	// Parse request params
+	var params []PublicItemsRequestParam
+	err := c.Bind(&params)
+	if err != nil {
+		return nil, err
+	}
+
+	// Create response array
+	responses := make([]*PublicItemsResponse, len(params))
+
+	// Process each request param
+	for i, param := range params {
+		var startToken []byte
+		var endToken []byte
+		var err error
+
+		if param.StartToken != "" {
+			startToken, err = iotago.DecodeHex(param.StartToken)
+			if err != nil {
+				continue
+			}
+		}
+
+		if param.EndToken != "" {
+			endToken, err = iotago.DecodeHex(param.EndToken)
+			if err != nil {
+				continue
+			}
+		}
+
+		// Default direction is "head" if not specified
+		isReverse := param.Direction == "tail"
+
+		// Default size is 5 if not specified
+		size := param.Size
+		if size == 0 {
+			size = defaultSize
+		}
+
+		// Decode groupId
+		groupId, err := iotago.DecodeHex(param.GroupId)
+		if err != nil {
+			continue
+		}
+
+		items, err := deps.IMManager.ReadPublicItemsFromGroupId(groupId, startToken, endToken, size, isReverse, CoreComponent.Logger())
+		if err != nil {
+			continue
+		}
+
+		responses[i] = makePublicItemsResponse(items)
+	}
+
+	return responses, nil
+}
+
 // getAddressesDids given addresses
 func getAddressesDids(addresses []string) ([]*DidAddressResponse, error) {
 	respList := make([]*DidAddressResponse, len(addresses))
@@ -1922,4 +1981,32 @@ func parseOptionalTimestampParam(c echo.Context, paramName string) (uint32, erro
 		return 0, err
 	}
 	return uint32(timestamp), nil
+}
+
+// getAddressMarks gets all marks associated with an address
+func getAddressMarks(c echo.Context) ([]*MarkResponse, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+
+	CoreComponent.LogInfof("get marks from address:%s", address)
+	marks, err := deps.IMManager.GetMarksFromAddress(address, CoreComponent.Logger())
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert marks to response format
+	markResponses := make([]*MarkResponse, len(marks))
+	for i, mark := range marks {
+		markResponses[i] = &MarkResponse{
+			Address:            mark.Address,
+			GroupId:            iotago.EncodeHex(mark.GroupId[:]),
+			OutputId:           iotago.EncodeHex(mark.OutputId[:]),
+			MilestoneIndex:     mark.MilestoneIndex,
+			MilestoneTimestamp: mark.MilestoneTimestamp,
+		}
+	}
+
+	return markResponses, nil
 }

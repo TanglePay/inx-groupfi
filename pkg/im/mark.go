@@ -2,7 +2,6 @@ package im
 
 import (
 	"bytes"
-	"encoding/binary"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	"github.com/iotaledger/hive.go/core/logger"
@@ -65,7 +64,8 @@ func (im *Manager) StoreMark(mark *Mark, isActuallyMarked bool, logger *logger.L
 	addressKey := im.AddressMarkKey(mark)
 	value := make([]byte, 4+len(mark.Address))
 	index := 0
-	binary.LittleEndian.PutUint32(value[index:], mark.MilestoneTimestamp)
+	timeBytes := Uint32ToBytes(mark.MilestoneTimestamp)
+	copy(value[index:], timeBytes)
 	index += 4
 	copy(value[index:], mark.Address)
 	// log mark key and value
@@ -156,6 +156,18 @@ func (im *Manager) MarkExists(groupId [GroupIdLen]byte, address string) (bool, e
 	return im.imStore.Has(key)
 }
 
+// GetMark returns a mark for the given group ID and address
+func (im *Manager) GetMark(groupId [GroupIdLen]byte, address string) (*Mark, error) {
+	key := im.MarkKey(NewMark(address, groupId, 0, 0))
+	value, err := im.imStore.Get(key)
+	if err != nil {
+		return nil, err
+	}
+
+	timestampUint32 := BytesToUint32(value[:4])
+	return NewMark(address, groupId, 0, timestampUint32), nil
+}
+
 // MarkKeyPrefix returns the prefix for the given group id.
 func (im *Manager) MarkKeyPrefix(groupId [GroupIdLen]byte) []byte {
 	key := make([]byte, 1+GroupIdLen)
@@ -183,7 +195,7 @@ func (im *Manager) MarkKeyAndValueToMark(key kvstore.Key, value kvstore.Value) *
 	var timestamp [TimestampLen]byte
 	copy(timestamp[:], value[:TimestampLen])
 	address := string(value[TimestampLen:])
-	timestampUint32 := binary.LittleEndian.Uint32(value[:4])
+	timestampUint32 := BytesToUint32(value[4:])
 	return NewMark(address, groupId, 0, timestampUint32)
 }
 
@@ -195,7 +207,7 @@ func (im *Manager) AddressMarkKeyAndValueToMark(key kvstore.Key, value kvstore.V
 	var timestamp [TimestampLen]byte
 	copy(timestamp[:], value[:TimestampLen])
 	address := string(value[TimestampLen:])
-	timestampUint32 := binary.LittleEndian.Uint32(value[:4])
+	timestampUint32 := BytesToUint32(value[:4])
 	return NewMark(address, groupId, 0, timestampUint32)
 }
 
@@ -253,7 +265,7 @@ func (im *Manager) DeserializeUserMarkedGroupIds(address string, data []byte) ([
 		if err != nil {
 			return nil, "", err
 		}
-		timestamp32 := binary.LittleEndian.Uint32(timestamp[:])
+		timestamp32 := BytesToUint32(timestamp)
 		marks = append(marks, NewMark(address, groupIdBytes, 0, timestamp32))
 	}
 	return marks, address, nil
@@ -273,10 +285,18 @@ func (im *Manager) GetMarksFromBasicOutput(output *OutputAndOutputIdAndMilestone
 	if err != nil {
 		return nil, "", err
 	}
-	for _, mark := range marks {
+	for i, mark := range marks {
 		mark.OutputId = outputId
-		mark.MilestoneIndex = output.MilestoneIndex
-		mark.MilestoneTimestamp = output.MilestoneTimestamp
+
+		if i == len(marks)-1 {
+			mark.MilestoneIndex = output.MilestoneIndex
+			mark.MilestoneTimestamp = output.MilestoneTimestamp
+		}
+		// mark.MilestoneTimestamp can not be greater than im.CurrentMilestoneTimestamp
+
+		if mark.MilestoneTimestamp > CurrentMilestoneTimestamp {
+			mark.MilestoneTimestamp = CurrentMilestoneTimestamp
+		}
 	}
 	return marks, address, nil
 }

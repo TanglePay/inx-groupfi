@@ -240,9 +240,10 @@ func messageKeyPrefixFromGroupIdAndMileStone(groupId []byte, mileStoneIndex uint
 }
 
 func (im *Manager) storeSingleMessage(message *Message, logger *logger.Logger) error {
-	valuePayload := make([]byte, 4+OutputIdLen)
+	valuePayload := make([]byte, 4+OutputIdLen+GroupIdLen)
 	binary.BigEndian.PutUint32(valuePayload, message.MileStoneTimestamp)
 	copy(valuePayload[4:], message.OutputId)
+	copy(valuePayload[4+OutputIdLen:], message.GroupId)
 
 	go func() {
 		var groupId32 [GroupIdLen]byte
@@ -423,12 +424,13 @@ func (im *Manager) ReadMessageFromPrefix(keyPrefix []byte, size int, coninueatio
 
 // parse message value paylod
 func (im *Manager) ParseMessageValuePayload(value []byte) (*Message, error) {
-	if len(value) != 4+OutputIdLen {
+	if len(value) != 4+OutputIdLen+GroupIdLen {
 		return nil, errors.New("invalid value length")
 	}
 	m := &Message{
 		MileStoneTimestamp: binary.BigEndian.Uint32(value[:4]),
-		OutputId:           value[4:],
+		OutputId:           value[4 : 4+OutputIdLen],
+		GroupId:            value[4+OutputIdLen:],
 	}
 	return m, nil
 }
