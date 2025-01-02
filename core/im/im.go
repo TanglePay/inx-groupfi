@@ -1677,9 +1677,13 @@ func getGroupStateSyncUnderAddress(c echo.Context) (*im.GroupStateSyncResponse, 
 			LastTimeReadLatestMessageTimestamp: item.LastTimeReadLatestMessageTimestamp,
 		})
 	}
-
+	output, _, err := im.GetGroupFIOutput(groupStateSync.OutputId, deps.IMManager)
+	if err != nil {
+		return nil, err
+	}
 	resp := &im.GroupStateSyncResponse{
 		OutputId: iotago.EncodeHex(groupStateSync.OutputId[:]),
+		Output:   output,
 		Items:    respItems,
 	}
 	return resp, nil
