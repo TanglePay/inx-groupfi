@@ -108,4 +108,6 @@ const (
 	ImStoreKeyPrefixGroupFICash byte = 54
 
 	ImStoreKeyPrefixRecentConsumedOutputIds byte = 55
+
+	ImInboxEventTypeGroupStateSync byte = 56
 )

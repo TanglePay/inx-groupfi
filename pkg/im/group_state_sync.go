@@ -199,6 +199,18 @@ func StoreGroupStateSync(groupStateSync *GroupStateSyncForStorage,
 	if err != nil {
 		return err
 	}
+
+	// Generate event for the address
+	err = GenAndPushGroupStateSyncChangedEvent(
+		addressHash,
+		CurrentMilestoneTimestamp,
+		im,
+		Logger,
+	)
+	if err != nil {
+		Logger.Errorf("Failed to generate group state sync event: %v", err)
+	}
+
 	return nil
 }
 
