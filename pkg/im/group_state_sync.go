@@ -253,15 +253,20 @@ func FilterGroupStateSyncOutput(output iotago.Output,
 	if output.FeatureSet().MetadataFeature() == nil {
 		return nil, "", false
 	}
-
+	// log has metadata
+	Logger.Infof("FilterGroupStateSyncOutput has metadata: %s", iotago.EncodeHex(output.FeatureSet().MetadataFeature().Data))
 	// unmarshal group state sync
 	groupStateSync, err := UnmarshalGroupStateSync(output.FeatureSet().MetadataFeature().Data)
 	if err != nil {
+		Logger.Errorf("FilterGroupStateSyncOutput unmarshalGroupStateSync error: %s", err)
 		return nil, "", false
 	}
+	// log unmarshal group state sync success
+	Logger.Infof("FilterGroupStateSyncOutput unmarshal group state sync success: %s", iotago.EncodeHex(output.FeatureSet().MetadataFeature().Data))
 	unlockConditionSet := output.UnlockConditionSet()
 	smrAddress := unlockConditionSet.Address().Address.Bech32(iotago.NetworkPrefix(HornetChainName))
 	evmAddress := Im.ConvertAddressToActualAddress(smrAddress)
-
+	// log got evm address
+	Logger.Infof("FilterGroupStateSyncOutput got evm address: %s", evmAddress)
 	return NewGroupStateSyncStorage(outputID, groupStateSync.SchemaVersion, groupStateSync.Items), evmAddress, true
 }
