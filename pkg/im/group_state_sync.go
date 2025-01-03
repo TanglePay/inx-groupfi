@@ -195,23 +195,7 @@ func StoreGroupStateSync(groupStateSync *GroupStateSyncForStorage,
 	addressHash := Sha256HashFixedAddress(address)
 	key := GetGroupStateSyncKey(addressHash, groupStateSync.OutputId)
 	value := marshalGroupStateSyncStorage(groupStateSync)
-	err := im.imStore.Set(key, value)
-	if err != nil {
-		return err
-	}
-
-	// Generate event for the address
-	err = GenAndPushGroupStateSyncChangedEvent(
-		addressHash,
-		CurrentMilestoneTimestamp,
-		im,
-		Logger,
-	)
-	if err != nil {
-		Logger.Errorf("Failed to generate group state sync event: %v", err)
-	}
-
-	return nil
+	return im.imStore.Set(key, value)
 }
 
 // delete group state sync
