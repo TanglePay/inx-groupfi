@@ -117,7 +117,8 @@ func GenAndPushGroupStateSyncChangedEvent(
 	milestoneTimestamp uint32,
 	im *Manager,
 	logger *logger.Logger) error {
-
+	// log gen
+	Logger.Infof("GenAndPushGroupStateSyncChangedEvent gen group state sync changed event: %s", iotago.EncodeHex(addressSha256Hash[:]))
 	event := NewGroupStateSyncChangedEvent(
 		addressSha256Hash,
 		milestoneTimestamp,

@@ -192,6 +192,8 @@ func GetGroupStateSyncKey(addressHash [Sha256HashLen]byte, outputId [OutputIdLen
 func StoreGroupStateSync(groupStateSync *GroupStateSyncForStorage,
 	address string,
 	im *Manager) error {
+	// log store
+	Logger.Infof("StoreGroupStateSync store group state sync: %s", iotago.EncodeHex(groupStateSync.OutputId[:]))
 	addressHash := Sha256HashFixedAddress(address)
 	key := GetGroupStateSyncKey(addressHash, groupStateSync.OutputId)
 	value := marshalGroupStateSyncStorage(groupStateSync)
@@ -246,7 +248,8 @@ func FilterGroupStateSyncOutput(output iotago.Output,
 		!bytes.Equal(output.FeatureSet().TagFeature().Tag, groupStateSyncTag) {
 		return nil, "", false
 	}
-
+	// log found
+	Logger.Infof("FilterGroupStateSyncOutput found group state sync output: %s", iotago.EncodeHex(outputID[:]))
 	if output.FeatureSet().MetadataFeature() == nil {
 		return nil, "", false
 	}
