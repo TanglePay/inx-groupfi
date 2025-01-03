@@ -100,8 +100,21 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 				createdGroupConfig = append(createdGroupConfig, groupConfig)
 			}
 
-			_, address, is := im.FilterGroupStateSyncOutput(iotaOutput, iotaOutputIdFix, deps.IMManager)
+			groupStateSync, address, is := im.FilterGroupStateSyncOutput(iotaOutput, iotaOutputIdFix, deps.IMManager)
 			if is {
+				err = im.DeleteGroupStateSync(address, deps.IMManager)
+				if err != nil {
+					// log error
+					CoreComponent.LogErrorf("LedgerUpdate DeleteGroupStateSync error:%s", err.Error())
+				}
+
+				err = im.StoreGroupStateSync(groupStateSync, address, deps.IMManager)
+				if err != nil {
+					// log error
+					CoreComponent.LogErrorf("LedgerUpdate StoreGroupStateSync error:%s", err.Error())
+					continue
+				}
+
 				addressHash := im.Sha256HashFixedAddress(address)
 				err := im.GenAndPushGroupStateSyncChangedEvent(
 					addressHash,
@@ -325,20 +338,6 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 					}
 					if pairX != nil {
 						deps.IMManager.HandlePairXCreated(pairX, CoreComponent.Logger())
-						continue
-					}
-					groupStateSync, address, is := im.FilterGroupStateSyncOutput(output, outputId, deps.IMManager)
-					if is {
-						err = im.DeleteGroupStateSync(address, deps.IMManager)
-						if err != nil {
-							// log error
-							CoreComponent.LogErrorf("LedgerUpdate DeleteGroupStateSync error:%s", err.Error())
-						}
-						err = im.StoreGroupStateSync(groupStateSync, address, deps.IMManager)
-						if err != nil {
-							// log error
-							CoreComponent.LogErrorf("LedgerUpdate StoreGroupStateSync error:%s", err.Error())
-						}
 						continue
 					}
 				}
