@@ -2,6 +2,7 @@ package im
 
 import (
 	"bytes"
+	"fmt"
 
 	"github.com/iotaledger/hive.go/core/kvstore"
 	iotago "github.com/iotaledger/iota.go/v3"
@@ -92,34 +93,44 @@ func NewGroupStateSyncItem(groupId [GroupIdLen]byte, lastTimeReadLatestMessageTi
 	}
 }
 
-// UnmarshalGroupStateSyncItem parses the serialized data and returns a GroupStateSyncItem.
+// UnmarshalGroupStateSync parses the serialized data and returns a GroupStateSync.
 func UnmarshalGroupStateSync(bytes []byte) (*GroupStateSync, error) {
 	idx := 0
+
+	// Read schema version (uint8)
 	schemaVersionBytes, err := ReadBytesWithUint16Len(bytes, &idx, 1)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read schema version: %w", err)
 	}
 	schemaVersion := schemaVersionBytes[0]
+
+	// Read items length (uint16)
 	itemsLengthBytes, err := ReadBytesWithUint16Len(bytes, &idx, 2)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to read items length: %w", err)
 	}
 	itemsLength := int(BytesToUint16(itemsLengthBytes))
+
 	items := make([]*GroupStateSyncItem, itemsLength)
 	for i := 0; i < itemsLength; i++ {
+		// Read group ID
 		groupIdBytes, err := ReadBytesWithUint16Len(bytes, &idx, GroupIdLen)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to read group ID: %w", err)
 		}
 		var groupId [GroupIdLen]byte
 		copy(groupId[:], groupIdBytes)
-		lastTimeReadLatestMessageTimestampBytes, err := ReadBytesWithUint16Len(bytes, &idx, 4)
+
+		// Read timestamp
+		timestampBytes, err := ReadBytesWithUint16Len(bytes, &idx, 4)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to read timestamp: %w", err)
 		}
-		lastTimeReadLatestMessageTimestamp := BytesToUint32(lastTimeReadLatestMessageTimestampBytes)
+		lastTimeReadLatestMessageTimestamp := BytesToUint32(timestampBytes)
+
 		items[i] = NewGroupStateSyncItem(groupId, lastTimeReadLatestMessageTimestamp)
 	}
+
 	return NewGroupStateSync(schemaVersion, items), nil
 }
 
