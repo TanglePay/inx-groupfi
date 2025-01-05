@@ -110,7 +110,8 @@ func UnmarshalGroupStateSync(bytes []byte) (*GroupStateSync, error) {
 		return nil, fmt.Errorf("failed to read items length: %w", err)
 	}
 	itemsLength := int(BytesToUint16(itemsLengthBytes))
-
+	// log itemsLength, total bytes
+	Logger.Infof("UnmarshalGroupStateSync itemsLength: %d, total bytes: %d", itemsLength, len(bytes))
 	items := make([]*GroupStateSyncItem, itemsLength)
 	for i := 0; i < itemsLength; i++ {
 		// Read group ID
