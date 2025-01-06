@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/iotaledger/hive.go/core/kvstore"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -140,8 +139,6 @@ func marshalGroupStateSyncStorage(groupStateSync *GroupStateSyncForStorage) []by
 	idx := 0
 	var bytes []byte
 	AppendBytesWithUint16Len(&bytes, &idx, []byte{groupStateSync.SchemaVersion}, false)
-	// output id
-	AppendBytesWithUint16Len(&bytes, &idx, groupStateSync.OutputId[:], false)
 	// items length
 	AppendBytesWithUint16Len(&bytes, &idx, Uint16ToBytes(uint16(len(groupStateSync.Items))), false)
 	for _, item := range groupStateSync.Items {
@@ -150,6 +147,8 @@ func marshalGroupStateSyncStorage(groupStateSync *GroupStateSyncForStorage) []by
 		// last time read latest message timestamp
 		AppendBytesWithUint16Len(&bytes, &idx, Uint32ToBytes(item.LastTimeReadLatestMessageTimestamp), false)
 	}
+	// output id at the end
+	AppendBytesWithUint16Len(&bytes, &idx, groupStateSync.OutputId[:], false)
 	return bytes
 }
 
@@ -161,12 +160,7 @@ func unmarshalGroupStateSyncStorage(bytes []byte) (*GroupStateSyncForStorage, er
 		return nil, err
 	}
 	schemaVersion := schemaVersionBytes[0]
-	outputIdBytes, err := ReadBytesWithUint16Len(bytes, &idx, OutputIdLen)
-	if err != nil {
-		return nil, err
-	}
-	var outputId [OutputIdLen]byte
-	copy(outputId[:], outputIdBytes)
+
 	itemsLengthBytes, err := ReadBytesWithUint16Len(bytes, &idx, 2)
 	if err != nil {
 		return nil, err
@@ -187,16 +181,24 @@ func unmarshalGroupStateSyncStorage(bytes []byte) (*GroupStateSyncForStorage, er
 		lastTimeReadLatestMessageTimestamp := BytesToUint32(lastTimeReadLatestMessageTimestampBytes)
 		items[i] = NewGroupStateSyncItem(groupId, lastTimeReadLatestMessageTimestamp)
 	}
+
+	// Read output id from the end
+	outputIdBytes, err := ReadBytesWithUint16Len(bytes, &idx, OutputIdLen)
+	if err != nil {
+		return nil, err
+	}
+	var outputId [OutputIdLen]byte
+	copy(outputId[:], outputIdBytes)
+
 	return NewGroupStateSyncStorage(outputId, schemaVersion, items), nil
 }
 
-// key = prefix + address hash + output id
-func GetGroupStateSyncKey(addressHash [Sha256HashLen]byte, outputId [OutputIdLen]byte) []byte {
+// key = prefix + address hash
+func GetGroupStateSyncKey(addressHash [Sha256HashLen]byte) []byte {
 	idx := 0
 	var key []byte
 	AppendBytesWithUint16Len(&key, &idx, []byte{ImStoreKeyPrefixGroupStateSync}, false)
 	AppendBytesWithUint16Len(&key, &idx, addressHash[:], false)
-	AppendBytesWithUint16Len(&key, &idx, outputId[:], false)
 	return key
 }
 
@@ -207,48 +209,32 @@ func StoreGroupStateSync(groupStateSync *GroupStateSyncForStorage,
 	// log store
 	Logger.Infof("StoreGroupStateSync store group state sync: %s", iotago.EncodeHex(groupStateSync.OutputId[:]))
 	addressHash := Sha256HashFixedAddress(address)
-	key := GetGroupStateSyncKey(addressHash, groupStateSync.OutputId)
+	key := GetGroupStateSyncKey(addressHash)
 	value := marshalGroupStateSyncStorage(groupStateSync)
 	return im.imStore.Set(key, value)
 }
 
 // delete group state sync
 func DeleteGroupStateSync(address string, im *Manager) error {
-	keyPrefix := GetGroupStateSyncKeyPrefix(address)
-	err := im.imStore.DeletePrefix(keyPrefix)
-	return err
-}
-
-// keyprefix = prefix + address hash
-func GetGroupStateSyncKeyPrefix(address string) []byte {
 	addressHash := Sha256HashFixedAddress(address)
-	idx := 0
-	var key []byte
-	AppendBytesWithUint16Len(&key, &idx, []byte{ImStoreKeyPrefixGroupStateSync}, false)
-	AppendBytesWithUint16Len(&key, &idx, addressHash[:], false)
-	return key
+	key := GetGroupStateSyncKey(addressHash)
+	return im.imStore.Delete(key)
 }
 
 // get group state sync from address
 func GetGroupStateSyncFromAddress(address string, im *Manager) (*GroupStateSyncForStorage, error) {
-	keyPrefix := GetGroupStateSyncKeyPrefix(address)
-	// iterate all group state sync
-	var groupStateSyncs []*GroupStateSyncForStorage
-	err := im.imStore.Iterate(keyPrefix, func(key kvstore.Key, value kvstore.Value) bool {
-		groupStateSync, err := unmarshalGroupStateSyncStorage(value)
-		if err != nil {
-			Logger.Errorf("GetGroupStateSyncFromAddress unmarshalGroupStateSyncStorage error: %s", err)
-		}
-		groupStateSyncs = append(groupStateSyncs, groupStateSync)
-		return true
-	})
+	addressHash := Sha256HashFixedAddress(address)
+	key := GetGroupStateSyncKey(addressHash)
+
+	value, err := im.imStore.Get(key)
 	if err != nil {
 		return nil, err
 	}
-	if len(groupStateSyncs) == 0 {
+	if value == nil {
 		return nil, nil
 	}
-	return groupStateSyncs[0], nil
+
+	return unmarshalGroupStateSyncStorage(value)
 }
 
 // filter output, check if output is group state sync
