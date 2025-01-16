@@ -684,7 +684,7 @@ func getPublicGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 }
 
 // getMarkedGroupConfigs
-func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
+func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSONPlus, error) {
 	// get address from query param
 	address, err := parseAddressQueryParam(c)
 	if err != nil {
@@ -700,13 +700,19 @@ func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 		groupIdHexList = append(groupIdHexList, iotago.EncodeHex(mark.GroupId[:]))
 	}
 	// loop groupIdHexList, get groupConfigs
-	var groupConfigs []*im.MessageGroupMetaJSON
+	var groupConfigs []*im.MessageGroupMetaJSONPlus
 	for _, groupIdHex := range groupIdHexList {
 		config := deps.IMManager.GroupIdToGroupConfig(groupIdHex)
-		// if config is not nil, append to groupConfigs
-		if config != nil {
-			groupConfigs = append(groupConfigs, config)
+		if config == nil {
+			continue
 		}
+		isPublic := deps.IMManager.GetIsGroupPublicWithGroupId(groupIdHex)
+
+		plusConfig := &im.MessageGroupMetaJSONPlus{
+			MessageGroupMetaJSON: *config,
+			IsPublic:             isPublic,
+		}
+		groupConfigs = append(groupConfigs, plusConfig)
 	}
 	return groupConfigs, nil
 }
@@ -1158,6 +1164,20 @@ func getAddressMarkGroupDetails(c echo.Context) ([]*AddressGroupDetailsResponseL
 		}
 	}
 	return groupDetails, nil
+}
+
+// getAddressMarkGroupConfigs
+func getAddressMarkGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSONPlus, error) {
+	address, err := parseAddressQueryParam(c)
+	if err != nil {
+		return nil, err
+	}
+	marks, err := getAddressMarkGroupMarks(address)
+	if err != nil {
+		return nil, err
+	}
+	groupConfigs := make([]*AddressMarkGroupConfigResponse, len(marks))
+
 }
 
 // getAddressMarkGroupMarks
