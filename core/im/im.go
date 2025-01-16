@@ -684,7 +684,7 @@ func getPublicGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 }
 
 // getMarkedGroupConfigs
-func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
+func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSONPlus, error) {
 	// get address from query param
 	address, err := parseAddressQueryParam(c)
 	if err != nil {
