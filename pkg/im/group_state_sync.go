@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/iotaledger/hive.go/core/kvstore"
 	iotago "github.com/iotaledger/iota.go/v3"
 )
 
@@ -228,6 +229,9 @@ func GetGroupStateSyncFromAddress(address string, im *Manager) (*GroupStateSyncF
 
 	value, err := im.imStore.Get(key)
 	if err != nil {
+		if err == kvstore.ErrKeyNotFound {
+			return nil, nil
+		}
 		return nil, err
 	}
 	if value == nil {
