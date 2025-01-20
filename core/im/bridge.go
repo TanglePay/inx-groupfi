@@ -27,6 +27,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		im.LastTimeReceiveEventFromHornet = im.GetCurrentEpochTimestamp()
 		// log
 		CoreComponent.LogInfof("LedgerUpdate start:%d, end::%d, milestoneIndex:%d, milestoneTimestamp:%d", startIndex, endIndex, index, im.CurrentMilestoneTimestamp)
+
 		var createdMessage []*im.Message
 		var createdNft []*im.NFT
 		var createdShared []*im.GroupShared
@@ -98,6 +99,33 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 			if groupConfig != nil {
 				createdGroupConfig = append(createdGroupConfig, groupConfig)
 			}
+
+			groupStateSync, address, is := im.FilterGroupStateSyncOutput(iotaOutput, iotaOutputIdFix, deps.IMManager)
+			if is {
+				err = im.DeleteGroupStateSync(address, deps.IMManager)
+				if err != nil {
+					// log error
+					CoreComponent.LogErrorf("LedgerUpdate DeleteGroupStateSync error:%s", err.Error())
+				}
+
+				err = im.StoreGroupStateSync(groupStateSync, address, deps.IMManager)
+				if err != nil {
+					// log error
+					CoreComponent.LogErrorf("LedgerUpdate StoreGroupStateSync error:%s", err.Error())
+					continue
+				}
+
+				addressHash := im.Sha256HashFixedAddress(address)
+				err := im.GenAndPushGroupStateSyncChangedEvent(
+					addressHash,
+					output.MilestoneTimestampBooked,
+					deps.IMManager,
+					CoreComponent.Logger(),
+				)
+				if err != nil {
+					CoreComponent.LogErrorf("Failed to generate group state sync event: %v", err)
+				}
+			}
 		}
 		for _, spent := range update.Consumed {
 			output := spent.GetOutput()
@@ -156,6 +184,7 @@ func LedgerUpdates(ctx context.Context, startIndex iotago.MilestoneIndex, endInd
 		if len(createdGroupConfig) > 0 || len(consumedGroupConfig) > 0 {
 			deps.IMManager.HandleGroupConfigNFTOutputConsumedOrCreated(consumedGroupConfig, createdGroupConfig, CoreComponent.Logger())
 		}
+
 		dataFromListenning := &im.DataFromListenning{
 			CreatedMessage: createdMessage,
 			CreatedNft:     createdNft,
@@ -309,20 +338,6 @@ func LedgerUpdateBlock(ctx context.Context, startIndex iotago.MilestoneIndex, en
 					}
 					if pairX != nil {
 						deps.IMManager.HandlePairXCreated(pairX, CoreComponent.Logger())
-						continue
-					}
-					groupStateSync, address, is := im.FilterGroupStateSyncOutput(output, outputId, deps.IMManager)
-					if is {
-						err = im.DeleteGroupStateSync(address, deps.IMManager)
-						if err != nil {
-							// log error
-							CoreComponent.LogErrorf("LedgerUpdate DeleteGroupStateSync error:%s", err.Error())
-						}
-						err = im.StoreGroupStateSync(groupStateSync, address, deps.IMManager)
-						if err != nil {
-							// log error
-							CoreComponent.LogErrorf("LedgerUpdate StoreGroupStateSync error:%s", err.Error())
-						}
 						continue
 					}
 				}

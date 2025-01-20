@@ -882,6 +882,7 @@ func setupRoutes(e *echo.Echo, ctx context.Context, client *nodeclient.Client) {
 		}
 		return httpserver.JSONResponse(c, http.StatusOK, resp)
 	})
+
 	// get public key of one address
 	e.GET("/getaddresspublickey", func(c echo.Context) error {
 		address, err := parseAddressQueryParam(c)

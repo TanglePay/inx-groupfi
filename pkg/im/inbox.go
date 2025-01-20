@@ -22,6 +22,7 @@ const (
 	ImInboxEventTypeLikeChanged          byte   = 9
 	ImInboxEventTypeGroupIsPublicChanged byte   = 10
 	ImInboxKeyPrefixProfileChangedEvent  byte   = 11
+	ImInboxEventTypeGroupStateSync       byte   = 12
 	DefaultEventTtl                      uint32 = 15 // 15 seconds
 )
 
@@ -268,7 +269,18 @@ func (im *Manager) ReadInbox(addressSha256Hash []byte, coninueationToken []byte,
 			}
 			eventItem = profileChangedEvent
 		}
-
+		// GroupStateSyncChangedEvent
+		if eventType == ImInboxEventTypeGroupStateSync {
+			// log
+			logger.Infof("ReadInbox GroupStateSyncChangedEvent key %s", iotago.EncodeHex(key))
+			groupStateSyncChangedEvent, err := UnserializeGroupStateSyncChangedEvent(value)
+			if err != nil {
+				// log and continue
+				logger.Errorf("UnserializeGroupStateSyncChangedEvent error %v", err)
+				return true
+			}
+			eventItem = groupStateSyncChangedEvent
+		}
 		eventItem.SetToken(token)
 		eventItem.SetEventType(eventType)
 		res = append(res, eventItem)

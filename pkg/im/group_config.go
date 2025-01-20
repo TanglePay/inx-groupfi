@@ -996,6 +996,7 @@ type GroupStateSyncResponseItem struct {
 // GroupStateSyncResponse
 type GroupStateSyncResponse struct {
 	OutputId string                        `json:"outputId"`
+	Output   iotago.Output                 `json:"output"`
 	Items    []*GroupStateSyncResponseItem `json:"items"`
 }
 

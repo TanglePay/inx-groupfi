@@ -684,7 +684,7 @@ func getPublicGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 }
 
 // getMarkedGroupConfigs
-func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
+func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSONPlus, error) {
 	// get address from query param
 	address, err := parseAddressQueryParam(c)
 	if err != nil {
@@ -700,13 +700,16 @@ func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSON, error) {
 		groupIdHexList = append(groupIdHexList, iotago.EncodeHex(mark.GroupId[:]))
 	}
 	// loop groupIdHexList, get groupConfigs
-	var groupConfigs []*im.MessageGroupMetaJSON
+	var groupConfigs []*im.MessageGroupMetaJSONPlus
 	for _, groupIdHex := range groupIdHexList {
 		config := deps.IMManager.GroupIdToGroupConfig(groupIdHex)
-		// if config is not nil, append to groupConfigs
-		if config != nil {
-			groupConfigs = append(groupConfigs, config)
+		isPublic := deps.IMManager.GetIsGroupPublicWithGroupId(groupIdHex)
+
+		plusConfig := &im.MessageGroupMetaJSONPlus{
+			MessageGroupMetaJSON: *config,
+			IsPublic:             isPublic,
 		}
+		groupConfigs = append(groupConfigs, plusConfig)
 	}
 	return groupConfigs, nil
 }
@@ -1677,9 +1680,13 @@ func getGroupStateSyncUnderAddress(c echo.Context) (*im.GroupStateSyncResponse, 
 			LastTimeReadLatestMessageTimestamp: item.LastTimeReadLatestMessageTimestamp,
 		})
 	}
-
+	output, _, err := im.GetGroupFIOutput(groupStateSync.OutputId, deps.IMManager)
+	if err != nil {
+		return nil, err
+	}
 	resp := &im.GroupStateSyncResponse{
 		OutputId: iotago.EncodeHex(groupStateSync.OutputId[:]),
+		Output:   output,
 		Items:    respItems,
 	}
 	return resp, nil
