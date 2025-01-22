@@ -694,8 +694,6 @@ func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSONPlus, erro
 	if err != nil {
 		return nil, err
 	}
-	// log get marks from address
-	CoreComponent.LogInfof("get marked group configs from address:%s,found marks:%d", address, len(marks))
 	// loop marks, get groupIdHexList
 	var groupIdHexList []string
 	for _, mark := range marks {
@@ -705,6 +703,12 @@ func getMarkedGroupConfigs(c echo.Context) ([]*im.MessageGroupMetaJSONPlus, erro
 	var groupConfigs []*im.MessageGroupMetaJSONPlus
 	for _, groupIdHex := range groupIdHexList {
 		config := deps.IMManager.GroupIdToGroupConfig(groupIdHex)
+		// Skip if config is nil
+		if config == nil {
+			CoreComponent.LogWarnf("Nil config found for groupId: %s", groupIdHex)
+			continue
+		}
+
 		isPublic := deps.IMManager.GetIsGroupPublicWithGroupId(groupIdHex)
 
 		plusConfig := &im.MessageGroupMetaJSONPlus{
